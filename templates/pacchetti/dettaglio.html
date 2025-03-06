@@ -1,0 +1,184 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ pacchetto.nome }} - Gestionale Palestra{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Home</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('lista_pacchetti') }}">Pacchetti</a></li>
+        <li class="breadcrumb-item active">{{ pacchetto.nome }}</li>
+    </ol>
+</nav>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-box me-2"></i>{{ pacchetto.nome }}
+                </h5>
+                <div>
+                    <a href="{{ url_for('modifica_pacchetto', pacchetto_id=pacchetto.id) }}" 
+                       class="btn btn-light btn-sm">
+                        <i class="fas fa-edit me-1"></i>Modifica
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <dl class="row">
+                            <dt class="col-sm-4">Prezzo</dt>
+                            <dd class="col-sm-8">€{{ "%.2f"|format(pacchetto.prezzo) }}</dd>
+
+                            <dt class="col-sm-4">Durata</dt>
+                            <dd class="col-sm-8">{{ pacchetto.durata_giorni }} giorni</dd>
+
+                            <dt class="col-sm-4">Lezioni</dt>
+                            <dd class="col-sm-8">{{ pacchetto.numero_lezioni }}</dd>
+                        </dl>
+                    </div>
+                    <div class="col-md-6">
+                        <dl class="row">
+                            <dt class="col-sm-4">Stato</dt>
+                            <dd class="col-sm-8">
+                                {% if pacchetto.attivo %}
+                                    <span class="badge bg-success">Attivo</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Non Attivo</span>
+                                {% endif %}
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+
+                {% if pacchetto.descrizione %}
+                    <div class="mt-3">
+                        <h6 class="text-muted mb-2">Descrizione</h6>
+                        <p class="mb-0">{{ pacchetto.descrizione }}</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Abbonamenti Attivi -->
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-users me-2"></i>Abbonamenti Attivi
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if abbonamenti %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Cliente</th>
+                                    <th>Data Inizio</th>
+                                    <th>Data Fine</th>
+                                    <th>Stato</th>
+                                    <th>Azioni</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for abbonamento in abbonamenti %}
+                                    <tr>
+                                        <td>{{ abbonamento.nome_cliente }}</td>
+                                        <td>{{ abbonamento.data_inizio|format_date }}</td>
+                                        <td>{{ abbonamento.data_fine|format_date }}</td>
+                                        <td>
+                                            {% if abbonamento.data_fine|to_date < oggi %}
+                                                <span class="badge bg-danger">Scaduto</span>
+                                            {% else %}
+                                                <span class="badge bg-success">Attivo</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <a href="{{ url_for('dettaglio_abbonamento', abbonamento_id=abbonamento.id) }}" 
+                                               class="btn btn-sm btn-info">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>Nessun abbonamento attivo per questo pacchetto.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <!-- Statistiche -->
+        <div class="card mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>Statistiche
+                </h5>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-8">Abbonamenti Attivi</dt>
+                    <dd class="col-sm-4">{{ statistiche.abbonamenti_attivi }}</dd>
+
+                    <dt class="col-sm-8">Totale Abbonamenti</dt>
+                    <dd class="col-sm-4">{{ statistiche.totale_abbonamenti }}</dd>
+
+                    <dt class="col-sm-8">Incasso Totale</dt>
+                    <dd class="col-sm-4">€{{ "%.2f"|format(statistiche.incasso_totale) }}</dd>
+                </dl>
+            </div>
+        </div>
+
+        <!-- Grafico Vendite -->
+        {% if vendite_mensili %}
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-chart-line me-2"></i>Andamento Vendite
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="venditeMensili"></canvas>
+                </div>
+            </div>
+
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    const ctx = document.getElementById('venditeMensili').getContext('2d');
+                    new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: {{ mesi|tojson }},
+                            datasets: [{
+                                label: 'Vendite Mensili',
+                                data: {{ vendite_mensili|tojson }},
+                                borderColor: 'rgb(75, 192, 192)',
+                                tension: 0.1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        stepSize: 1
+                                    }
+                                }
+                            }
+                        }
+                    });
+                });
+            </script>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

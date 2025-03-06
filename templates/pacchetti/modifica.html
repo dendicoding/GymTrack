@@ -1,0 +1,157 @@
+{% extends 'base.html' %}
+
+{% block title %}Modifica {{ pacchetto.nome }} - Gestionale Palestra{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Home</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('lista_pacchetti') }}">Pacchetti</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('dettaglio_pacchetto', pacchetto_id=pacchetto.id) }}">{{ pacchetto.nome }}</a></li>
+        <li class="breadcrumb-item active">Modifica</li>
+    </ol>
+</nav>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-warning">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-edit me-2"></i>Modifica Pacchetto
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="nome" class="form-label">Nome Pacchetto</label>
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="fas fa-tag"></i>
+                            </span>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="nome" 
+                                   name="nome" 
+                                   value="{{ pacchetto.nome }}"
+                                   required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="descrizione" class="form-label">Descrizione</label>
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="fas fa-align-left"></i>
+                            </span>
+                            <textarea class="form-control" 
+                                      id="descrizione" 
+                                      name="descrizione" 
+                                      rows="3">{{ pacchetto.descrizione }}</textarea>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="prezzo" class="form-label">Prezzo</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">€</span>
+                                    <input type="number" 
+                                           class="form-control" 
+                                           id="prezzo" 
+                                           name="prezzo" 
+                                           step="0.01" 
+                                           value="{{ pacchetto.prezzo }}"
+                                           required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="numero_lezioni" class="form-label">Numero Lezioni</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="fas fa-list-ol"></i>
+                                    </span>
+                                    <input type="number" 
+                                           class="form-control" 
+                                           id="numero_lezioni" 
+                                           name="numero_lezioni" 
+                                           value="{{ pacchetto.numero_lezioni }}"
+                                           required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="durata_giorni" class="form-label">Durata (giorni)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="fas fa-calendar-day"></i>
+                                    </span>
+                                    <input type="number" 
+                                           class="form-control" 
+                                           id="durata_giorni" 
+                                           name="durata_giorni" 
+                                           value="{{ pacchetto.durata_giorni }}"
+                                           required>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" 
+                                   type="checkbox" 
+                                   id="attivo" 
+                                   name="attivo" 
+                                   {% if pacchetto.attivo %}checked{% endif %}>
+                            <label class="form-check-label" for="attivo">Pacchetto Attivo</label>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('dettaglio_pacchetto', pacchetto_id=pacchetto.id) }}" 
+                           class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-1"></i>Annulla
+                        </a>
+                        <button type="submit" class="btn btn-warning">
+                            <i class="fas fa-save me-1"></i>Salva Modifiche
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Informazioni
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Attenzione!</strong>
+                    <p class="mb-0">La modifica del pacchetto non influirà sugli abbonamenti già esistenti.</p>
+                </div>
+                
+                <p class="card-text">
+                    <i class="fas fa-lightbulb me-2 text-warning"></i>
+                    Puoi modificare:
+                </p>
+                <ul class="list-unstyled ms-4">
+                    <li><i class="fas fa-check text-success me-2"></i>Nome e descrizione</li>
+                    <li><i class="fas fa-check text-success me-2"></i>Prezzo per nuovi abbonamenti</li>
+                    <li><i class="fas fa-check text-success me-2"></i>Numero di lezioni incluse</li>
+                    <li><i class="fas fa-check text-success me-2"></i>Durata del pacchetto</li>
+                    <li><i class="fas fa-check text-success me-2"></i>Stato di attivazione</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

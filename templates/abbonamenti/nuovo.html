@@ -1,0 +1,136 @@
+{% extends 'base.html' %}
+
+{% block title %}Nuovo Abbonamento - {{ cliente.nome }} {{ cliente.cognome }}{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Home</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('lista_clienti') }}">Clienti</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('dettaglio_cliente', cliente_id=cliente.id) }}">{{ cliente.nome }} {{ cliente.cognome }}</a></li>
+        <li class="breadcrumb-item active">Nuovo Abbonamento</li>
+    </ol>
+</nav>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-plus-circle me-2"></i>Nuovo Abbonamento
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="formAbbonamento">
+                    <div class="mb-3">
+                        <label for="pacchetto" class="form-label">Pacchetto</label>
+                        <select class="form-select" id="pacchetto" name="pacchetto_id" required onchange="updatePrezzo()">
+                            <option value="">Seleziona un pacchetto...</option>
+                            {% for pacchetto in pacchetti %}
+                                <option value="{{ pacchetto.id }}" data-prezzo="{{ pacchetto.prezzo }}">
+                                    {{ pacchetto.nome }} - €{{ pacchetto.prezzo }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="data_inizio" class="form-label">Data Inizio</label>
+                        <input type="date" class="form-control" id="data_inizio" name="data_inizio" 
+                               value="{{ oggi }}" required>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="prezzo_totale" class="form-label">Prezzo Totale</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">€</span>
+                                    <input type="number" class="form-control" id="prezzo_totale" 
+                                           name="prezzo_totale" step="0.01" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="numero_rate" class="form-label">Numero Rate</label>
+                                <input type="number" class="form-control" id="numero_rate" 
+                                       name="numero_rate" min="1" value="1" required 
+                                       onchange="calcolaRate()">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="infoRate" class="alert alert-info mb-3" style="display: none;">
+                        <h6 class="alert-heading">Riepilogo Rate</h6>
+                        <p class="mb-0">
+                            Importo per rata: <strong id="importoRata">€0.00</strong><br>
+                            Scadenze: ogni 30 giorni a partire dalla data di inizio
+                        </p>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="note" class="form-label">Note (opzionale)</label>
+                        <textarea class="form-control" id="note" name="note" rows="3"></textarea>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('dettaglio_cliente', cliente_id=cliente.id) }}" 
+                           class="btn btn-secondary">
+                            <i class="fas fa-times me-1"></i>Annulla
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>Salva Abbonamento
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Informazioni
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="card-text">
+                    <i class="fas fa-lightbulb me-2 text-warning"></i>
+                    Creando un nuovo abbonamento:
+                </p>
+                <ul class="list-unstyled ms-4">
+                    <li><i class="fas fa-check text-success me-2"></i>Il cliente potrà utilizzare i servizi</li>
+                    <li><i class="fas fa-check text-success me-2"></i>Verranno generate le rate di pagamento</li>
+                    <li><i class="fas fa-check text-success me-2"></i>Le rate avranno scadenza ogni 30 giorni</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function updatePrezzo() {
+    const select = document.getElementById('pacchetto');
+    const option = select.options[select.selectedIndex];
+    const prezzo = option.dataset.prezzo || 0;
+    document.getElementById('prezzo_totale').value = prezzo;
+    calcolaRate();
+}
+
+function calcolaRate() {
+    const prezzoTotale = parseFloat(document.getElementById('prezzo_totale').value) || 0;
+    const numeroRate = parseInt(document.getElementById('numero_rate').value) || 1;
+    const importoRata = (prezzoTotale / numeroRate).toFixed(2);
+    
+    document.getElementById('importoRata').textContent = `€${importoRata}`;
+    document.getElementById('infoRate').style.display = numeroRate > 1 ? 'block' : 'none';
+}
+
+// Inizializza i calcoli al caricamento della pagina
+document.addEventListener('DOMContentLoaded', function() {
+    updatePrezzo();
+});
+</script>
+{% endblock %}

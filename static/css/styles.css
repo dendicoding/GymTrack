@@ -1,0 +1,366 @@
+html, body {
+    height: 100%; /* Imposta l'altezza al 100% per il corretto posizionamento del footer */
+    margin: 0; /* Rimuove il margine predefinito */
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    padding: 0;
+    background-color: #f4f4f4; /* Colore di sfondo più chiaro */
+    display: flex;
+    flex-direction: column; /* Disposizione verticale */
+}
+
+header {
+    background: #4CAF50; /* Verde brillante */
+    color: #fff;
+    padding: 10px 20px; /* Ridotto il padding per rendere l'intestazione più bassa */
+    text-align: left; /* Allinea il testo a sinistra */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+nav ul {
+    list-style: none;
+    padding: 0;
+}
+
+nav ul li {
+    display: inline;
+    margin: 0 15px;
+}
+
+nav ul li a {
+    color: #fff;
+    text-decoration: none;
+    font-weight: bold;
+    transition: color 0.3s;
+}
+
+nav ul li a:hover {
+    color: #d1e7dd; /* Colore hover più chiaro */
+}
+
+main {
+    flex: 1; /* Permette al main di occupare lo spazio rimanente */
+    padding: 30px;
+    margin: 0; /* Rimuove il margine per occupare l'intera larghezza */
+    width: 100%; /* Assicura che il main occupi il 100% della larghezza */
+    display: flex;
+    justify-content: center; /* Centra i contenuti orizzontalmente */
+    align-items: center; /* Centra i contenuti verticalmente */
+    flex-direction: column; /* Disposizione verticale per i contenuti */
+}
+
+h2 {
+    color: #333;
+    border-bottom: 2px solid #4CAF50;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+}
+
+ul {
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px; /* Spaziatura tra le card */
+}
+
+ul li {
+    background: #fff;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+ul li:hover {
+    transform: translateY(-5px); /* Effetto di sollevamento */
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+}
+
+.flashes {
+    list-style: none;
+    padding: 10px;
+    margin: 0;
+}
+
+.flashes li {
+    margin: 10px 0;
+    padding: 10px;
+    border-radius: 5px;
+}
+
+.success {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.error {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+footer {
+    text-align: center;
+    padding: 20px 0;
+    background: #333;
+    color: #fff;
+    position: fixed; /* Posizione fissa */
+    bottom: 0; /* Posiziona il footer in fondo alla pagina */
+    width: 100%;
+}
+
+button {
+    background-color: #4CAF50; /* Verde brillante */
+    color: white; /* Assicurati che il testo sia sempre visibile */
+    border: none;
+    border-radius: 5px;
+    padding: 10px 15px;
+    cursor: pointer;
+    transition: background-color 0.3s, transform 0.3s;
+}
+
+button:hover {
+    background-color: #45a049; /* Verde scuro */
+    transform: scale(1.05); /* Leggero ingrandimento al passaggio del mouse */
+}
+
+a.button-link {
+    background-color: #007BFF; /* Blu */
+    color: white;
+    padding: 10px 15px;
+    border-radius: 5px;
+    text-decoration: none;
+    transition: background-color 0.3s, transform 0.3s;
+}
+
+a.button-link:hover {
+    background-color: #0056b3; /* Blu scuro */
+    transform: scale(1.05); /* Leggero ingrandimento al passaggio del mouse */
+}
+
+.button-container {
+    display: flex; /* Usa flexbox per allineare i pulsanti orizzontalmente */
+    justify-content: center; /* Centra i pulsanti orizzontalmente */
+    gap: 20px; /* Spaziatura tra i pulsanti */
+    margin: 30px 0; /* Margine sopra e sotto */
+}
+
+.square-button {
+    background-color: #4CAF50; /* Verde brillante */
+    color: white;
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+    text-decoration: none;
+    transition: background-color 0.3s, transform 0.3s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 150px; /* Altezza fissa per i pulsanti */
+    width: 150px; /* Larghezza fissa per i pulsanti */
+}
+
+.square-button i {
+    font-size: 24px; /* Dimensione dell'icona */
+    margin-bottom: 10px; /* Spazio tra icona e testo */
+}
+
+.square-button:hover {
+    background-color: #45a049; /* Verde scuro al passaggio del mouse */
+    transform: translateY(-3px); /* Effetto di sollevamento */
+}
+
+table {
+    width: 80%;
+    border-collapse: collapse;
+    margin: 20px 0;
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+th, td {
+    padding: 15px;
+    text-align: left;
+}
+
+th {
+    background: linear-gradient(135deg, #4CAF50, #388E3C);
+    color: white;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+tr:hover {
+    background-color: #f1f1f1;
+    transform: scale(1.01);
+    transition: 0.2s ease-in-out;
+}
+
+td {
+    color: #333;
+    border-bottom: 1px solid #ddd;
+}
+tr:last-child td {
+    border-bottom: none;
+}
+tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+@media (max-width: 768px) {
+    table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+}
+
+/* Stili del Calendario */
+.calendar-container {
+    height: calc(100vh - 100px);
+    padding: 15px;
+    margin: 0;
+}
+
+.calendar-container .calendar-card {
+    height: 100%;
+    margin: 0;
+}
+
+.calendar-container .calendar-body {
+    height: calc(100% - 60px);
+    padding: 0;
+}
+
+.calendar-container .calendar-table {
+    height: 100%;
+    table-layout: fixed;
+    margin: 0;
+}
+
+.calendar-container .calendar-table th {
+    background-color: #4a5568;
+    color: white;
+    text-align: center;
+    padding: 12px;
+    font-size: 1.1em;
+    font-weight: 500;
+}
+
+.calendar-container .calendar-day {
+    height: 140px;
+    padding: 10px;
+    position: relative;
+    background-color: white;
+    transition: all 0.2s ease;
+    margin: 0;
+    overflow-y: auto;  
+}
+
+.calendar-container .has-rates {
+    background-color: #fff3f3 !important;
+    border: 2px solid #dc3545 !important;
+}
+
+.calendar-container .day-number {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    font-size: 1.1em;
+    font-weight: 500;
+    color: #4a5568;
+}
+
+.calendar-container .rate-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    font-size: 1em;
+    padding: 5px 10px;
+    border-radius: 15px;
+    background-color: #dc3545;
+    color: white;
+    font-weight: bold;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.calendar-container .rate-info {
+    margin-top: 35px;
+    font-size: 0.95em;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;  /* Allinea gli elementi a sinistra */
+}
+
+.calendar-container .rate-info .badge {
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.calendar-container .rate-info .badge:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+
+.calendar-container .cliente-item {
+    padding: 6px 10px;
+    margin-bottom: 6px;
+    background-color: #dc3545;
+    border-radius: 6px;
+    color: white;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.calendar-container .cliente-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.calendar-container .cliente-item i {
+    margin-right: 6px;
+}
+
+.calendar-container .empty-day {
+    background-color: #f8f9fa;
+}
+
+.calendar-container .nav-buttons {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.calendar-container .nav-buttons .btn {
+    padding: 8px 16px;
+    font-weight: 500;
+    font-size: 1em;
+}
+
+.calendar-container .month-title {
+    font-size: 1.3em;
+    font-weight: 600;
+    padding: 0 15px;
+    color: white;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .calendar-container .calendar-day {
+        height: 120px;
+    }
+    
+    .calendar-container .cliente-item {
+        font-size: 0.85em;
+    }
+}

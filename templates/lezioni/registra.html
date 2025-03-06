@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+
+{% block title %}Registra Lezione - {{ cliente.nome }} {{ cliente.cognome }}{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Home</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('lista_clienti') }}">Clienti</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('dettaglio_cliente', cliente_id=cliente.id) }}">{{ cliente.nome }} {{ cliente.cognome }}</a></li>
+        <li class="breadcrumb-item active">Registra Lezione</li>
+    </ol>
+</nav>
+
+<div class="card">
+    <div class="card-header bg-primary text-white">
+        <h5 class="card-title mb-0">
+            <i class="fas fa-plus-circle me-2"></i>Registra Lezione
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="alert alert-info">
+            <strong>Abbonamento:</strong> {{ abbonamento.tipo }}<br>
+            <strong>Lezioni rimanenti:</strong> {{ abbonamento.numero_lezioni - abbonamento.lezioni_utilizzate }}
+        </div>
+        
+        <form method="POST">
+            <div class="mb-3">
+                <label for="data" class="form-label">Data</label>
+                <input type="date" class="form-control" id="data" name="data" value="{{ oggi }}" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="note" class="form-label">Note</label>
+                <textarea class="form-control" id="note" name="note" rows="3"></textarea>
+            </div>
+
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save me-1"></i>Registra Lezione
+            </button>
+            <a href="{{ url_for('dettaglio_cliente', cliente_id=cliente.id) }}" class="btn btn-secondary">
+                <i class="fas fa-times me-1"></i>Annulla
+            </a>
+        </form>
+    </div>
+</div>
+{% endblock %} 

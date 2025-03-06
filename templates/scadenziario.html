@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+
+{% block title %}Scadenziario Rate{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header bg-primary text-white">
+        <h5 class="card-title mb-0">
+            <i class="fas fa-calendar-alt me-2"></i>Scadenziario Rate
+        </h5>
+    </div>
+    <div class="card-body">
+        {% if rate %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Scadenza</th>
+                            <th>Cliente</th>
+                            <th>Pacchetto</th>
+                            <th>Importo</th>
+                            <th>Stato</th>
+                            <th>Azioni</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for rata in rate %}
+                            <tr class="{{ 'table-danger' if rata.data_scadenza|to_date < oggi }}">
+                                <td>{{ rata.data_scadenza|format_date }}</td>
+                                <td>
+                                    <a href="{{ url_for('dettaglio_cliente', cliente_id=rata.cliente_id) }}">
+                                        {{ rata.nome_cliente }}
+                                    </a>
+                                </td>
+                                <td>{{ rata.tipo_pacchetto }}</td>
+                                <td>€{{ "%.2f"|format(rata.importo) }}</td>
+                                <td>
+                                    {% if rata.data_scadenza|to_date < oggi %}
+                                        <span class="badge bg-danger">Scaduta</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">In Scadenza</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('dettaglio_abbonamento', abbonamento_id=rata.abbonamento_id) }}" 
+                                       class="btn btn-sm btn-info" title="Dettagli">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="{{ url_for('paga_rata', rata_id=rata.id) }}" 
+                                       class="btn btn-sm btn-success" title="Registra Pagamento">
+                                        <i class="fas fa-money-bill-wave"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>Non ci sono rate da pagare.
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %} 

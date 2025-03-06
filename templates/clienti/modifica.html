@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+
+{% block title %}Modifica Cliente{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="card">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-user-edit me-2"></i>Modifica Cliente
+            </h5>
+        </div>
+        <div class="card-body">
+            <form method="POST" class="needs-validation" novalidate>
+                <div class="row g-3">
+                    <!-- Prima riga -->
+                    <div class="col-md-6">
+                        <div class="form-floating mb-3">
+                            <input type="text" class="form-control" id="nome" name="nome" 
+                                   value="{{ cliente['nome'] }}" required>
+                            <label for="nome">Nome</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-floating mb-3">
+                            <input type="text" class="form-control" id="cognome" name="cognome" 
+                                   value="{{ cliente['cognome'] }}" required>
+                            <label for="cognome">Cognome</label>
+                        </div>
+                    </div>
+
+                    <!-- Seconda riga -->
+                    <div class="col-md-6">
+                        <div class="form-floating mb-3">
+                            <input type="email" class="form-control" id="email" name="email" 
+                                   value="{{ cliente['email'] }}">
+                            <label for="email">Email</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-floating mb-3">
+                            <input type="tel" class="form-control" id="telefono" name="telefono" 
+                                   value="{{ cliente['telefono'] }}">
+                            <label for="telefono">Telefono</label>
+                        </div>
+                    </div>
+
+                    <!-- Terza riga -->
+                    <div class="col-md-6">
+                        <div class="form-floating mb-3">
+                            <input type="date" class="form-control" id="data_nascita" name="data_nascita" 
+                                   value="{{ cliente['data_nascita'] }}">
+                            <label for="data_nascita">Data di Nascita</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-floating mb-3">
+                            <select class="form-select" id="tipo" name="tipo" required>
+                                <option value="lead" {% if cliente['tipo'] == 'lead' %}selected{% endif %}>Lead</option>
+                                <option value="effettivo" {% if cliente['tipo'] == 'effettivo' %}selected{% endif %}>Effettivo</option>
+                            </select>
+                            <label for="tipo">Tipo Cliente</label>
+                        </div>
+                    </div>
+
+                    <!-- Quarta riga -->
+                    <div class="col-12">
+                        <div class="form-floating mb-3">
+                            <input type="text" class="form-control" id="indirizzo" name="indirizzo" 
+                                   value="{{ cliente['indirizzo'] }}">
+                            <label for="indirizzo">Indirizzo</label>
+                        </div>
+                    </div>
+
+                    <!-- Quinta riga -->
+                    <div class="col-md-8">
+                        <div class="form-floating mb-3">
+                            <input type="text" class="form-control" id="citta" name="citta" 
+                                   value="{{ cliente['citta'] }}">
+                            <label for="citta">Città</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-floating mb-3">
+                            <input type="text" class="form-control" id="cap" name="cap" 
+                                   value="{{ cliente['cap'] }}">
+                            <label for="cap">CAP</label>
+                        </div>
+                    </div>
+
+                    <!-- Sesta riga -->
+                    <div class="col-12">
+                        <div class="form-floating mb-3">
+                            <textarea class="form-control" id="note" name="note" 
+                                      style="height: 100px">{{ cliente['note'] }}</textarea>
+                            <label for="note">Note</label>
+                        </div>
+                    </div>
+
+                    <!-- Pulsanti -->
+                    <div class="col-12 text-end">
+                        <a href="{{ url_for('dettaglio_cliente', cliente_id=cliente['id']) }}" 
+                           class="btn btn-secondary">
+                            <i class="fas fa-times me-2"></i>Annulla
+                        </a>
+                        <button type="submit" class="btn btn-primary ms-2">
+                            <i class="fas fa-save me-2"></i>Salva Modifiche
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+// Validazione form Bootstrap
+(function () {
+    'use strict'
+    var forms = document.querySelectorAll('.needs-validation')
+    Array.prototype.slice.call(forms).forEach(function (form) {
+        form.addEventListener('submit', function (event) {
+            if (!form.checkValidity()) {
+                event.preventDefault()
+                event.stopPropagation()
+            }
+            form.classList.add('was-validated')
+        }, false)
+    })
+})()
+</script>
+{% endblock %}
+{% endblock %}

@@ -1,0 +1,228 @@
+{% extends 'base.html' %}
+
+{% block title %}Dettaglio Abbonamento - {{ cliente.nome }} {{ cliente.cognome }}{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Home</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('lista_clienti') }}">Clienti</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('dettaglio_cliente', cliente_id=cliente.id) }}">{{ cliente.nome }} {{ cliente.cognome }}</a></li>
+        <li class="breadcrumb-item active">Dettaglio Abbonamento</li>
+    </ol>
+</nav>
+
+<div class="row">
+    <div class="col-md-8">
+        <!-- Dettagli Abbonamento -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-ticket-alt me-2"></i>Dettagli Abbonamento
+                </h5>
+                <div>
+                    <!-- Aggiungi il pulsante di eliminazione -->
+                    <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                        <i class="fas fa-trash me-1"></i>Elimina
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <dl class="row">
+                            <dt class="col-sm-4">Pacchetto</dt>
+                            <dd class="col-sm-8">{{ abbonamento.tipo }}</dd>
+
+                            <dt class="col-sm-4">Data Inizio</dt>
+                            <dd class="col-sm-8">{{ abbonamento.data_inizio|format_date }}</dd>
+
+                            <dt class="col-sm-4">Data Fine</dt>
+                            <dd class="col-sm-8">{{ abbonamento.data_fine|format_date }}</dd>
+                        </dl>
+                    </div>
+                    <div class="col-md-6">
+                        <dl class="row">
+                            <dt class="col-sm-4">Lezioni</dt>
+                            <dd class="col-sm-8">{{ abbonamento.lezioni_utilizzate }}/{{ abbonamento.numero_lezioni }}</dd>
+
+                            <dt class="col-sm-4">Prezzo</dt>
+                            <dd class="col-sm-8">€{{ abbonamento.prezzo_totale }}</dd>
+
+                            <dt class="col-sm-4">Rate</dt>
+                            <dd class="col-sm-8">{{ abbonamento.numero_rate }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Rate -->
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-money-bill-wave me-2"></i>Rate
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Rata #</th>
+                                <th>Scadenza</th>
+                                <th>Importo</th>
+                                <th>Stato</th>
+                                <th>Data Pagamento</th>
+                                <th>Azioni</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for rata in rate %}
+                            <tr>
+                                <td>{{ rata.numero_rata }}/{{ abbonamento.numero_rate }}</td>
+                                <td>{{ rata.data_scadenza|format_date }}</td>
+                                <td>€{{ "%.2f"|format(rata.importo) }}</td>
+                                <td>
+                                    {% if rata.pagato %}
+                                        <span class="badge bg-success">Pagata</span>
+                                    {% else %}
+                                        {% if rata.data_scadenza|to_date < oggi %}
+                                            <span class="badge bg-danger">Scaduta</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">Da Pagare</span>
+                                        {% endif %}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if rata.data_pagamento %}
+                                        {{ rata.data_pagamento|format_date }}
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if not rata.pagato %}
+                                        <a href="{{ url_for('paga_rata', rata_id=rata.id) }}" 
+                                           class="btn btn-sm btn-success">
+                                            <i class="fas fa-money-bill-wave"></i> Paga
+                                        </a>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lezioni -->
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-calendar-alt me-2"></i>Lezioni
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if lezioni %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Note</th>
+                                    <th>Registrata da</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for lezione in lezioni %}
+                                    <tr>
+                                        <td>{{ lezione.data|format_date }}</td>
+                                        <td>{{ lezione.note or '—' }}</td>
+                                        <td>{{ lezione.registrata_da_nome }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>Nessuna lezione registrata.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <!-- Riepilogo Pagamenti -->
+        <div class="card mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>Riepilogo Pagamenti
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <h6 class="text-muted">Stato Rate</h6>
+                    <div class="progress" style="height: 25px;">
+                        {% set rate_pagate = rate|selectattr('pagato')|list|length %}
+                        {% set percentuale = (rate_pagate / abbonamento.numero_rate * 100)|round %}
+                        <div class="progress-bar bg-success" 
+                             role="progressbar" 
+                             style="width: {{ percentuale }}%"
+                             aria-valuenow="{{ rate_pagate }}" 
+                             aria-valuemin="0" 
+                             aria-valuemax="{{ abbonamento.numero_rate }}">
+                            {{ rate_pagate }}/{{ abbonamento.numero_rate }} Rate
+                        </div>
+                    </div>
+                </div>
+
+                <dl class="row mb-0">
+                    <dt class="col-sm-7">Importo Totale</dt>
+                    <dd class="col-sm-5">€{{ "%.2f"|format(abbonamento.prezzo_totale) }}</dd>
+
+                    <dt class="col-sm-7">Importo Pagato</dt>
+                    <dd class="col-sm-5">€{{ "%.2f"|format(rate|selectattr('pagato')|sum(attribute='importo')) }}</dd>
+
+                    <dt class="col-sm-7">Da Pagare</dt>
+                    <dd class="col-sm-5">€{{ "%.2f"|format(rate|rejectattr('pagato')|sum(attribute='importo')) }}</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal di conferma eliminazione -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Conferma Eliminazione
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Sei sicuro di voler eliminare questo abbonamento?</p>
+                <ul class="text-danger">
+                    <li>Verranno eliminate tutte le rate associate</li>
+                    <li>Verranno eliminate tutte le lezioni registrate</li>
+                    <li>Questa azione non può essere annullata</li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                <form action="{{ url_for('elimina_abbonamento', abbonamento_id=abbonamento.id) }}" method="POST" class="d-inline">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-1"></i>Elimina
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

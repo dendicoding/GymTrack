@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+
+{% block title %}Nuovo Cliente - Gestionale Palestra{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Home</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('lista_clienti') }}">Clienti</a></li>
+        <li class="breadcrumb-item active">Nuovo Cliente</li>
+    </ol>
+</nav>
+
+<div class="card">
+    <div class="card-header bg-primary text-white">
+        <h5 class="card-title mb-0">
+            <i class="fas fa-user-plus me-2"></i>Aggiungi Nuovo Cliente
+        </h5>
+    </div>
+    <div class="card-body">
+        <form action="{{ url_for('nuovo_cliente') }}" method="post">
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <h5>Informazioni Personali</h5>
+                    
+                    <div class="mb-3">
+                        <label for="tipo" class="form-label">Tipo di Cliente *</label>
+                        <select class="form-select" id="tipo" name="tipo" required>
+                            <option value="lead">Lead (Potenziale)</option>
+                            <option value="effettivo">Effettivo</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="nome" class="form-label">Nome *</label>
+                        <input type="text" class="form-control" id="nome" name="nome" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="cognome" class="form-label">Cognome *</label>
+                        <input type="text" class="form-control" id="cognome" name="cognome" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="data_nascita" class="form-label">Data di Nascita</label>
+                        <input type="date" class="form-control" id="data_nascita" name="data_nascita">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="email" name="email">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="telefono" class="form-label">Telefono</label>
+                        <input type="tel" class="form-control" id="telefono" name="telefono">
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <h5>Indirizzo</h5>
+                    
+                    <div class="mb-3">
+                        <label for="indirizzo" class="form-label">Indirizzo</label>
+                        <input type="text" class="form-control" id="indirizzo" name="indirizzo">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="citta" class="form-label">Città</label>
+                        <input type="text" class="form-control" id="citta" name="citta">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="cap" class="form-label">CAP</label>
+                        <input type="text" class="form-control" id="cap" name="cap">
+                    </div>
+                    
+                    <h5 class="mt-4">Note</h5>
+                    <div class="mb-3">
+                        <label for="note" class="form-label">Note Aggiuntive</label>
+                        <textarea class="form-control" id="note" name="note" rows="4"></textarea>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="text-end">
+                <a href="{{ url_for('lista_clienti') }}" class="btn btn-secondary me-2">
+                    <i class="fas fa-times me-1"></i>Annulla
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save me-1"></i>Salva Cliente
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,263 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ cliente.nome }} {{ cliente.cognome }} - Dettaglio Cliente{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Home</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('lista_clienti') }}">Clienti</a></li>
+        <li class="breadcrumb-item active">{{ cliente.nome }} {{ cliente.cognome }}</li>
+    </ol>
+</nav>
+
+<div class="row mb-4">
+    <div class="col-md-8">
+        <!-- Informazioni Cliente -->
+        <div class="card">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-user me-2"></i>{{ cliente.nome }} {{ cliente.cognome }}
+                    {% if cliente.tipo == 'lead' %}
+                        <span class="badge bg-warning ms-2">Lead</span>
+                    {% else %}
+                        <span class="badge bg-success ms-2">Effettivo</span>
+                    {% endif %}
+                </h5>
+                <div class="btn-group">
+                    {% if cliente.tipo == 'lead' %}
+                        <button type="button" 
+                                class="btn btn-warning btn-sm" 
+                                data-bs-toggle="modal" 
+                                data-bs-target="#promozioneModal">
+                            <i class="fas fa-user-graduate me-1"></i>Promuovi a Effettivo
+                        </button>
+                    {% endif %}
+                    <a href="{{ url_for('modifica_cliente', cliente_id=cliente.id) }}" 
+                       class="btn btn-light btn-sm">
+                        <i class="fas fa-edit me-1"></i>Modifica
+                    </a>
+                    <button type="button" 
+                            class="btn btn-danger btn-sm" 
+                            data-bs-toggle="modal" 
+                            data-bs-target="#eliminaModal">
+                        <i class="fas fa-trash me-1"></i>Elimina
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-muted mb-3">Informazioni Personali</h6>
+                        <dl class="row">
+                            <dt class="col-sm-4">Email</dt>
+                            <dd class="col-sm-8">{{ cliente.email or '—' }}</dd>
+
+                            <dt class="col-sm-4">Telefono</dt>
+                            <dd class="col-sm-8">{{ cliente.telefono or '—' }}</dd>
+
+                            <dt class="col-sm-4">Data Nascita</dt>
+                            <dd class="col-sm-8">{{ cliente.data_nascita|format_date or '—' }}</dd>
+                        </dl>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-muted mb-3">Indirizzo</h6>
+                        <dl class="row">
+                            <dt class="col-sm-4">Via</dt>
+                            <dd class="col-sm-8">{{ cliente.indirizzo or '—' }}</dd>
+
+                            <dt class="col-sm-4">Città</dt>
+                            <dd class="col-sm-8">{{ cliente.citta or '—' }}</dd>
+
+                            <dt class="col-sm-4">CAP</dt>
+                            <dd class="col-sm-8">{{ cliente.cap or '—' }}</dd>
+                        </dl>
+                    </div>
+                </div>
+
+                {% if cliente.note %}
+                <div class="mt-3">
+                    <h6 class="text-muted mb-2">Note</h6>
+                    <p class="mb-0">{{ cliente.note }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Abbonamenti -->
+        <div class="card mt-4">
+            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-ticket-alt me-2"></i>Abbonamenti
+                </h5>
+                <div>
+                    <a href="{{ url_for('nuovo_abbonamento', cliente_id=cliente.id) }}" 
+                       class="btn btn-light btn-sm">
+                        <i class="fas fa-plus me-1"></i>Nuovo Abbonamento
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if abbonamenti %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Pacchetto</th>
+                                    <th>Data Inizio</th>
+                                    <th>Data Fine</th>
+                                    <th>Lezioni</th>
+                                    <th>Stato Rate</th>
+                                    <th>Azioni</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for abb in abbonamenti %}
+                                    <tr>
+                                        <td>{{ abb.nome_pacchetto }}</td>
+                                        <td>{{ abb.data_inizio|format_date }}</td>
+                                        <td>{{ abb.data_fine|format_date }}</td>
+                                        <td>
+                                            {{ abb.lezioni_utilizzate }}/{{ abb.numero_lezioni }}
+                                        </td>
+                                        <td>
+                                            {% set rate_pagate = abb.rate_pagate|default(0) %}
+                                            {% set rate_totali = abb.numero_rate|default(1) %}
+                                            <div class="progress" style="height: 20px;">
+                                                <div class="progress-bar bg-success" 
+                                                     role="progressbar" 
+                                                     style="width: {{ (rate_pagate/rate_totali * 100)|round }}%"
+                                                     aria-valuenow="{{ rate_pagate }}" 
+                                                     aria-valuemin="0" 
+                                                     aria-valuemax="{{ rate_totali }}">
+                                                    {{ rate_pagate }}/{{ rate_totali }}
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <a href="{{ url_for('dettaglio_abbonamento', abbonamento_id=abb.id) }}" 
+                                               class="btn btn-sm btn-info">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>Nessun abbonamento attivo.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Lezioni -->
+        <div class="card mt-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-calendar-alt me-2"></i>Ultime Lezioni
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if lezioni %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Pacchetto</th>
+                                    <th>Note</th>
+                                    <th>Stato</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for lezione in lezioni %}
+                                    <tr>
+                                        <td>{{ lezione.data|format_date }}</td>
+                                        <td>{{ lezione.nome_pacchetto }}</td>
+                                        <td>{{ lezione.note or '—' }}</td>
+                                        <td>
+                                            {% if lezione.completata %}
+                                                <span class="badge bg-success">Completata</span>
+                                            {% else %}
+                                                <span class="badge bg-warning">In programma</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>Nessuna lezione registrata.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <!-- Stato Cliente -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Stato Cliente
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span>Tipo</span>
+                    <span class="badge bg-{{ 'primary' if cliente.tipo == 'effettivo' else 'warning' }}">
+                        {{ cliente.tipo|title }}
+                    </span>
+                </div>
+                
+                {% if cliente.tipo == 'lead' %}
+                    <a href="{{ url_for('promuovi_cliente', cliente_id=cliente.id) }}" 
+                       class="btn btn-success btn-sm w-100">
+                        <i class="fas fa-user-graduate me-1"></i>Promuovi a Cliente Effettivo
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal per la promozione -->
+<div class="modal fade" id="promozioneModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title">
+                    <i class="fas fa-user-graduate me-2"></i>Promuovi a Cliente Effettivo
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Stai per promuovere <strong>{{ cliente.nome }} {{ cliente.cognome }}</strong> 
+                   da Lead a Cliente Effettivo.</p>
+                <p>Questa azione:</p>
+                <ul>
+                    <li>Cambierà lo stato del cliente da Lead a Effettivo</li>
+                    <li>Registrerà la data di promozione</li>
+                    <li>Non può essere annullata</li>
+                </ul>
+                <p>Sei sicuro di voler procedere?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Annulla
+                </button>
+                <form action="{{ url_for('promuovi_cliente', cliente_id=cliente.id) }}" method="POST" class="d-inline">
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-user-graduate me-2"></i>Promuovi
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

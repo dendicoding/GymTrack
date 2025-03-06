@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+
+{% block title %}Pacchetti - Gestionale Palestra{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="display-5">
+            <i class="fas fa-box me-2"></i>Pacchetti
+        </h1>
+        <p class="text-muted">Gestisci i pacchetti disponibili per i tuoi clienti</p>
+    </div>
+    <div>
+        <a href="{{ url_for('nuovo_pacchetto') }}" class="btn btn-primary">
+            <i class="fas fa-plus me-1"></i>Nuovo Pacchetto
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="mb-3">
+            <div class="input-group">
+                <span class="input-group-text">
+                    <i class="fas fa-search"></i>
+                </span>
+                <input type="text" 
+                       id="cercaPacchetto" 
+                       class="form-control" 
+                       placeholder="Cerca pacchetto...">
+            </div>
+        </div>
+
+        {% if pacchetti %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Nome</th>
+                            <th>Descrizione</th>
+                            <th>Prezzo</th>
+                            <th>Lezioni</th>
+                            <th>Durata</th>
+                            <th>Stato</th>
+                            <th>Azioni</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for pacchetto in pacchetti %}
+                            <tr class="align-middle">
+                                <td>{{ pacchetto.nome }}</td>
+                                <td>
+                                    {% if pacchetto.descrizione %}
+                                        {{ pacchetto.descrizione|truncate(50) }}
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ pacchetto.prezzo|format_currency }}</td>
+                                <td>{{ pacchetto.numero_lezioni }}</td>
+                                <td>{{ pacchetto.durata_giorni }} giorni</td>
+                                <td>
+                                    {% if pacchetto.attivo %}
+                                        <span class="badge bg-success">Attivo</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Disattivo</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group">
+                                        <a href="{{ url_for('dettaglio_pacchetto', pacchetto_id=pacchetto.id) }}" 
+                                           class="btn btn-sm btn-info" 
+                                           title="Dettagli">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{{ url_for('modifica_pacchetto', pacchetto_id=pacchetto.id) }}" 
+                                           class="btn btn-sm btn-warning" 
+                                           title="Modifica">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>Nessun pacchetto disponibile.
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const cercaPacchetto = document.getElementById('cercaPacchetto');
+    
+    cercaPacchetto.addEventListener('keyup', function() {
+        const testoCercato = this.value.toLowerCase();
+        const righe = document.querySelectorAll('tbody tr');
+        
+        righe.forEach(function(riga) {
+            const testoRiga = riga.textContent.toLowerCase();
+            riga.style.display = testoRiga.includes(testoCercato) ? '' : 'none';
+        });
+    });
+});
+</script>
+{% endblock %}

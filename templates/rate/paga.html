@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+
+{% block title %}Registra Pagamento - {{ rata.nome_cliente }}{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Home</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('lista_clienti') }}">Clienti</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('dettaglio_cliente', cliente_id=rata.cliente_id) }}">{{ rata.nome_cliente }}</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('dettaglio_abbonamento', abbonamento_id=rata.abbonamento_id) }}">Abbonamento</a></li>
+        <li class="breadcrumb-item active">Registra Pagamento</li>
+    </ol>
+</nav>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-money-bill-wave me-2"></i>Registra Pagamento Rata
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info mb-4">
+                    <h6 class="alert-heading">Dettagli Rata</h6>
+                    <p class="mb-0">
+                        <strong>Cliente:</strong> {{ rata.nome_cliente }}<br>
+                        <strong>Pacchetto:</strong> {{ rata.tipo_pacchetto }}<br>
+                        <strong>Importo:</strong> {{ rata.importo|format_currency }}<br>
+                        <strong>Scadenza:</strong> {{ rata.data_scadenza|format_date }}
+                    </p>
+                </div>
+
+                <form method="POST">
+                    <div class="mb-4">
+                        <label for="data_pagamento" class="form-label">Data Pagamento</label>
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="fas fa-calendar"></i>
+                            </span>
+                            <input type="date" 
+                                   class="form-control" 
+                                   id="data_pagamento" 
+                                   name="data_pagamento"
+                                   value="{{ oggi }}"
+                                   required>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('dettaglio_abbonamento', abbonamento_id=rata.abbonamento_id) }}" 
+                           class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-1"></i>Annulla
+                        </a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-check me-1"></i>Conferma Pagamento
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Informazioni
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="card-text">
+                    <i class="fas fa-exclamation-circle text-warning me-2"></i>
+                    Registrando il pagamento:
+                </p>
+                <ul class="list-unstyled ms-4">
+                    <li><i class="fas fa-check text-success me-2"></i>La rata verrà segnata come pagata</li>
+                    <li><i class="fas fa-check text-success me-2"></i>Verrà registrata la data di pagamento</li>
+                    <li><i class="fas fa-check text-success me-2"></i>L'operazione non può essere annullata</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 
