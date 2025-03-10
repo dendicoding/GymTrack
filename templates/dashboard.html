@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Dashboard - Gestionale Palestra{% endblock %}
+{% block title %}Dashboard{% endblock %}
 
 {% block content %}
 <div class="row mb-4">
@@ -8,24 +8,25 @@
         <h1 class="display-5">
             <i class="fas fa-tachometer-alt me-2"></i>Dashboard
         </h1>
-        <p class="lead">Benvenuto nel gestionale della tua palestra</p>
+        <p class="lead">Panoramica della tua palestra</p>
     </div>
 </div>
 
+<!-- Key Metrics -->
 <div class="row mb-4">
     <div class="col-md-3">
-        <div class="card bg-primary text-white mb-3">
+        <div class="card bg-primary text-white h-100">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h6 class="card-title mb-0">Clienti Attivi</h6>
+                        <h6 class="card-title mb-0">Clienti Effettivi</h6>
                         <h2 class="mt-2 mb-0">{{ stats.totale_clienti }}</h2>
                     </div>
                     <i class="fas fa-users fa-3x opacity-50"></i>
                 </div>
             </div>
             <div class="card-footer d-flex justify-content-between">
-                <span>Dettagli</span>
+                <span>Visualizza</span>
                 <a href="{{ url_for('lista_clienti', tipo='effettivo') }}" class="text-white">
                     <i class="fas fa-arrow-circle-right"></i>
                 </a>
@@ -34,7 +35,7 @@
     </div>
     
     <div class="col-md-3">
-        <div class="card bg-success text-white mb-3">
+        <div class="card bg-success text-white h-100">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
@@ -45,7 +46,7 @@
                 </div>
             </div>
             <div class="card-footer d-flex justify-content-between">
-                <span>Dettagli</span>
+                <span>Visualizza</span>
                 <a href="{{ url_for('lista_clienti', tipo='lead') }}" class="text-white">
                     <i class="fas fa-arrow-circle-right"></i>
                 </a>
@@ -54,7 +55,7 @@
     </div>
     
     <div class="col-md-3">
-        <div class="card bg-info text-white mb-3">
+        <div class="card bg-info text-white h-100">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
@@ -65,8 +66,8 @@
                 </div>
             </div>
             <div class="card-footer d-flex justify-content-between">
-                <span>Abbonamenti</span>
-                <a href="{{ url_for('lista_clienti', tipo='effettivo') }}" class="text-white">
+                <span>Gestisci</span>
+                <a href="{{ url_for('lista_pacchetti') }}" class="text-white">
                     <i class="fas fa-arrow-circle-right"></i>
                 </a>
             </div>
@@ -74,7 +75,7 @@
     </div>
     
     <div class="col-md-3">
-        <div class="card bg-warning text-white mb-3">
+        <div class="card bg-warning text-white h-100">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
@@ -86,7 +87,7 @@
             </div>
             <div class="card-footer d-flex justify-content-between">
                 <span>Dettagli</span>
-                <a href="#" class="text-white">
+                <a href="{{ url_for('incassi_mese') }}" class="text-white">
                     <i class="fas fa-arrow-circle-right"></i>
                 </a>
             </div>
@@ -94,57 +95,138 @@
     </div>
 </div>
 
-<div class="row">
+<!-- Financial Section -->
+<div class="row mb-4">
     <div class="col-md-6">
-        <div class="card mb-4">
-            <div class="card-header bg-danger text-white">
-                <i class="fas fa-exclamation-circle me-1"></i>
-                Rate in Scadenza
+        <div class="card h-100">
+            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-line me-1"></i>Previsione Finanziaria
+                </h5>
             </div>
             <div class="card-body">
-                <div class="row mb-2">
+                <div class="row">
                     <div class="col-md-6">
-                        <div class="alert alert-danger mb-0">
-                            <strong>{{ stats.rate_oggi }}</strong> rate in scadenza oggi
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="me-3">
+                                <i class="fas fa-calendar-alt fa-2x text-primary"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-0">Mese Corrente</h6>
+                                <h4 class="mb-0">€{{ "%.2f"|format(stats.incassi_mese) }}</h4>
+                            </div>
                         </div>
                     </div>
                     <div class="col-md-6">
-                        <div class="alert alert-warning mb-0">
-                            <strong>{{ stats.rate_scadute }}</strong> rate scadute non pagate
+                        <div class="d-flex align-items-center">
+                            <div class="me-3">
+                                <i class="fas fa-calendar-plus fa-2x text-success"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-0">Previsione Prossimo Mese</h6>
+                                <h4 class="mb-0">€{{ "%.2f"|format(stats.previsione_mese_prossimo) }}</h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <hr>
+                <p class="mb-0">
+                    <i class="fas fa-info-circle text-info me-1"></i>
+                    La previsione è basata sulle rate con scadenza nel prossimo mese.
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header bg-danger text-white">
+                <i class="fas fa-exclamation-circle me-1"></i>
+                Pagamenti da Gestire
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="alert alert-danger mb-0 d-flex align-items-center">
+                            <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
+                            <div>
+                                <div class="fw-bold">In scadenza oggi</div>
+                                <h4 class="mb-0">{{ stats.rate_oggi }}</h4>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="alert alert-warning mb-0 d-flex align-items-center">
+                            <i class="fas fa-clock fa-2x me-3"></i>
+                            <div>
+                                <div class="fw-bold">Rate scadute</div>
+                                <h4 class="mb-0">{{ stats.rate_scadute }}</h4>
+                            </div>
                         </div>
                     </div>
                 </div>
                 <a href="{{ url_for('scadenziario') }}" class="btn btn-danger">
-                    <i class="fas fa-eye me-1"></i>Visualizza Scadenziario
+                    <i class="fas fa-eye me-1"></i>Gestisci Scadenziario
                 </a>
             </div>
         </div>
-        
-        <div class="card">
+    </div>
+</div>
+
+<!-- Action Section -->
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-4 mb-md-0">
             <div class="card-header bg-primary text-white">
-                <i class="fas fa-user-plus me-1"></i>
-                Aggiungi Nuovo Cliente
+                <i class="fas fa-tasks me-1"></i>
+                Azioni Rapide
             </div>
             <div class="card-body">
-                <p>Inserisci un nuovo cliente lead o effettivo nel sistema</p>
-                <a href="{{ url_for('nuovo_cliente') }}" class="btn btn-primary">
-                    <i class="fas fa-plus-circle me-1"></i>Nuovo Cliente
-                </a>
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <a href="{{ url_for('nuovo_cliente') }}" class="btn btn-outline-primary w-100 h-100 d-flex flex-column align-items-center justify-content-center p-3">
+                            <i class="fas fa-user-plus fa-2x mb-2"></i>
+                            <span>Nuovo Cliente</span>
+                        </a>
+                    </div>
+                    <div class="col-6">
+                        <a href="{{ url_for('lista_clienti') }}" class="btn btn-outline-info w-100 h-100 d-flex flex-column align-items-center justify-content-center p-3">
+                            <i class="fas fa-users fa-2x mb-2"></i>
+                            <span>Tutti i Clienti</span>
+                        </a>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
     
     <div class="col-md-6">
         <div class="card">
-            <div class="card-header bg-primary text-white">
+            <div class="card-header bg-info text-white">
                 <i class="fas fa-calendar-alt me-1"></i>
-                Calendario Prossime Scadenze
+                Prossime 5 Scadenze
             </div>
             <div class="card-body">
-                <a href="{{ url_for('calendario') }}" class="btn btn-primary mb-3">
-                    <i class="fas fa-calendar-alt me-1"></i>Visualizza Calendario Completo
+                {% if stats.prossime_scadenze %}
+                    <div class="list-group mb-3">
+                        {% for scadenza in stats.prossime_scadenze[:5] %}
+                            <a href="{{ url_for('dettaglio_cliente', cliente_id=scadenza.cliente_id) }}" class="list-group-item list-group-item-action">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">{{ scadenza.cliente_nome }} {{ scadenza.cliente_cognome }}</h6>
+                                    <small class="text-danger">{{ scadenza.data_scadenza|format_date }}</small>
+                                </div>
+                                <p class="mb-1">€{{ "%.2f"|format(scadenza.importo) }} - {{ scadenza.descrizione }} - #{{scadenza.numero_rata}} su {{scadenza.numero_rate}}</p>
+                            </a>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>Nessuna scadenza imminente.
+                    </div>
+                {% endif %}
+                <a href="{{ url_for('calendario') }}" class="btn btn-info">
+                    <i class="fas fa-calendar-alt me-1"></i>Visualizza Calendario
                 </a>
-                
             </div>
         </div>
     </div>

@@ -203,7 +203,7 @@ def nuovo_pacchetto():
         durata_giorni = int(request.form.get('durata_giorni'))
         attivo = 'attivo' in request.form
         
-        if db.create_pacchetto(nome, descrizione, prezzo, numero_lezioni, durata_giorni, attivo):
+        if db.add_pacchetto(nome, descrizione, prezzo, numero_lezioni, durata_giorni, attivo):
             flash('Pacchetto creato con successo', 'success')
             return redirect(url_for('lista_pacchetti'))
         else:
@@ -298,7 +298,7 @@ def registra_lezione(abbonamento_id):
     
     # Verifica se l'abbonamento è ancora valido
     oggi = datetime.now().date()
-    data_scadenza = datetime.strptime(abbonamento['data_scadenza'], '%Y-%m-%d').date()
+    data_scadenza = datetime.strptime(abbonamento['data_fine'], '%Y-%m-%d').date()
     
     if data_scadenza < oggi:
         flash('Abbonamento scaduto', 'error')
@@ -438,6 +438,12 @@ def scadenziario():
     rate = db.get_rate_scadenza()
     oggi = date.today()
     return render_template('scadenziario.html', rate=rate, oggi=oggi)
+
+@app.route('/incassi_mese')
+def incassi_mese():
+    rate = db.get_rate_incassate_mese()
+    oggi = date.today()
+    return render_template('incassi_mese.html', rate=rate, oggi=oggi)
 
 @app.route('/abbonamenti/<int:abbonamento_id>/elimina', methods=['POST'])
 def elimina_abbonamento(abbonamento_id):

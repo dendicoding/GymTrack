@@ -25,14 +25,6 @@
                     {% endif %}
                 </h5>
                 <div class="btn-group">
-                    {% if cliente.tipo == 'lead' %}
-                        <button type="button" 
-                                class="btn btn-warning btn-sm" 
-                                data-bs-toggle="modal" 
-                                data-bs-target="#promozioneModal">
-                            <i class="fas fa-user-graduate me-1"></i>Promuovi a Effettivo
-                        </button>
-                    {% endif %}
                     <a href="{{ url_for('modifica_cliente', cliente_id=cliente.id) }}" 
                        class="btn btn-light btn-sm">
                         <i class="fas fa-edit me-1"></i>Modifica
@@ -84,74 +76,81 @@
             </div>
         </div>
 
-        <!-- Abbonamenti -->
-        <div class="card mt-4">
-            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0">
-                    <i class="fas fa-ticket-alt me-2"></i>Abbonamenti
-                </h5>
-                <div>
-                    <a href="{{ url_for('nuovo_abbonamento', cliente_id=cliente.id) }}" 
-                       class="btn btn-light btn-sm">
-                        <i class="fas fa-plus me-1"></i>Nuovo Abbonamento
-                    </a>
-                </div>
-            </div>
-            <div class="card-body">
-                {% if abbonamenti %}
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Pacchetto</th>
-                                    <th>Data Inizio</th>
-                                    <th>Data Fine</th>
-                                    <th>Lezioni</th>
-                                    <th>Stato Rate</th>
-                                    <th>Azioni</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for abb in abbonamenti %}
-                                    <tr>
-                                        <td>{{ abb.nome_pacchetto }}</td>
-                                        <td>{{ abb.data_inizio|format_date }}</td>
-                                        <td>{{ abb.data_fine|format_date }}</td>
-                                        <td>
-                                            {{ abb.lezioni_utilizzate }}/{{ abb.numero_lezioni }}
-                                        </td>
-                                        <td>
-                                            {% set rate_pagate = abb.rate_pagate|default(0) %}
-                                            {% set rate_totali = abb.numero_rate|default(1) %}
-                                            <div class="progress" style="height: 20px;">
-                                                <div class="progress-bar bg-success" 
-                                                     role="progressbar" 
-                                                     style="width: {{ (rate_pagate/rate_totali * 100)|round }}%"
-                                                     aria-valuenow="{{ rate_pagate }}" 
-                                                     aria-valuemin="0" 
-                                                     aria-valuemax="{{ rate_totali }}">
-                                                    {{ rate_pagate }}/{{ rate_totali }}
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <a href="{{ url_for('dettaglio_abbonamento', abbonamento_id=abb.id) }}" 
-                                               class="btn btn-sm btn-info">
-                                                <i class="fas fa-eye"></i>
-                                            </a>
-                                        </td>
-                                    </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                {% else %}
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle me-2"></i>Nessun abbonamento attivo.
-                    </div>
-                {% endif %}
-            </div>
+<!-- Abbonamenti -->
+<div class="card mt-4">
+    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">
+            <i class="fas fa-ticket-alt me-2"></i>Abbonamenti
+        </h5>
+        <div>
+            <a href="{{ url_for('nuovo_abbonamento', cliente_id=cliente.id) }}" 
+               class="btn btn-light btn-sm">
+                <i class="fas fa-plus me-1"></i>Nuovo Abbonamento
+            </a>
         </div>
+        
+    </div>
+    <div class="card-body">
+        {% if abbonamenti %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Pacchetto</th>
+                            <th>Data Inizio</th>
+                            <th>Data Fine</th>
+                            <th>Lezioni</th>
+                            <th>Stato Rate</th>
+                            <th>Azioni</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for abb in abbonamenti %}
+                            <tr>
+                                <td>{{ abb.nome_pacchetto }}</td>
+                                <td>{{ abb.data_inizio|format_date }}</td>
+                                <td>{{ abb.data_fine|format_date }}</td>
+                                <td>
+                                    {{ abb.lezioni_utilizzate }}/{{ abb.numero_lezioni }}
+                                </td>
+                                <td>
+                                    {% set rate_pagate = abb.rate_pagate|default(0) %}
+                                    {% set rate_totali = abb.numero_rate|default(1) %}
+                                    <div class="progress" style="height: 20px;">
+                                        <div class="progress-bar bg-success" 
+                                             role="progressbar" 
+                                             style="width: {{ (rate_pagate/rate_totali * 100)|round }}%"
+                                             aria-valuenow="{{ rate_pagate }}" 
+                                             aria-valuemin="0" 
+                                             aria-valuemax="{{ rate_totali }}">
+                                            {{ rate_pagate }}/{{ rate_totali }}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="btn-group">
+                                        <a href="{{ url_for('dettaglio_abbonamento', abbonamento_id=abb.id) }}" 
+                                           class="btn btn-sm btn-info">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{{ url_for('registra_lezione', abbonamento_id=abb.id) }}" 
+                                           class="btn btn-sm btn-primary">
+                                            <i class="fas fa-plus-circle me-1"></i>Registra Lezione
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>Nessun abbonamento attivo.
+            </div>
+        {% endif %}
+    </div>
+</div>
 
         <!-- Lezioni -->
         <div class="card mt-4">
@@ -169,7 +168,6 @@
                                     <th>Data</th>
                                     <th>Pacchetto</th>
                                     <th>Note</th>
-                                    <th>Stato</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -178,13 +176,6 @@
                                         <td>{{ lezione.data|format_date }}</td>
                                         <td>{{ lezione.nome_pacchetto }}</td>
                                         <td>{{ lezione.note or '—' }}</td>
-                                        <td>
-                                            {% if lezione.completata %}
-                                                <span class="badge bg-success">Completata</span>
-                                            {% else %}
-                                                <span class="badge bg-warning">In programma</span>
-                                            {% endif %}
-                                        </td>
                                     </tr>
                                 {% endfor %}
                             </tbody>

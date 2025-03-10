@@ -193,7 +193,7 @@ def delete_cliente(cliente_id):
 # Funzioni di utilità per i pacchetti
 def get_all_pacchetti():
     conn = get_db_connection()
-    pacchetti = conn.execute('SELECT * FROM pacchetti WHERE attivo = 1 ORDER BY nome').fetchall()
+    pacchetti = conn.execute('SELECT * FROM pacchetti ORDER BY nome').fetchall()
     conn.close()
     return pacchetti
 
@@ -203,14 +203,14 @@ def get_pacchetto(pacchetto_id):
     conn.close()
     return pacchetto
 
-def add_pacchetto(nome, descrizione, prezzo, numero_lezioni, durata_giorni):
+def add_pacchetto(nome, descrizione, prezzo, numero_lezioni, durata_giorni, attivo):
     conn = get_db_connection()
     cursor = conn.cursor()
     
     cursor.execute('''
     INSERT INTO pacchetti (nome, descrizione, prezzo, numero_lezioni, durata_giorni, attivo)
-    VALUES (?, ?, ?, ?, ?, 1)
-    ''', (nome, descrizione, prezzo, numero_lezioni, durata_giorni))
+    VALUES (?, ?, ?, ?, ?, ?)
+    ''', (nome, descrizione, prezzo, numero_lezioni, durata_giorni, attivo))
     
     conn.commit()
     pacchetto_id = cursor.lastrowid
@@ -227,6 +227,8 @@ def update_pacchetto(pacchetto_id, nome, descrizione, prezzo, numero_lezioni, du
     
     conn.commit()
     conn.close()
+    return pacchetto_id
+
 
 # Funzioni per gli abbonamenti
 def create_abbonamento(cliente_id, pacchetto_id, data_inizio, prezzo_totale, numero_rate=1):
@@ -309,6 +311,31 @@ def get_rate_scadenza():
             WHERE r.pagato = 0
             ORDER BY r.data_scadenza ASC
         ''').fetchall()
+        return rate
+    finally:
+        conn.close()
+
+def get_rate_incassate_mese():
+    mese_inizio = datetime.now().replace(day=1).strftime("%Y-%m-%d")
+    mese_fine = (datetime.now().replace(day=1) + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+    mese_fine = mese_fine.strftime("%Y-%m-%d")
+    
+    conn = get_db_connection()
+    try:
+        rate = conn.execute('''
+            SELECT 
+                r.*,
+                c.nome || ' ' || c.cognome AS nome_cliente,
+                c.id AS cliente_id,
+                p.nome AS tipo_pacchetto,
+                a.id AS abbonamento_id
+            FROM rate r
+            JOIN abbonamenti a ON r.abbonamento_id = a.id
+            JOIN clienti c ON a.cliente_id = c.id
+            JOIN pacchetti p ON a.pacchetto_id = p.id
+            WHERE data_pagamento BETWEEN ? AND ? AND pagato = 1
+            ORDER BY r.data_scadenza ASC;
+        ''',(mese_inizio, mese_fine)).fetchall()
         return rate
     finally:
         conn.close()
@@ -463,10 +490,39 @@ def get_statistiche_dashboard():
     
     # Incassi del mese corrente
     mese_inizio = datetime.now().replace(day=1).strftime("%Y-%m-%d")
-    mese_fine = datetime.now().replace(day=31).strftime("%Y-%m-%d")
+    mese_fine = (datetime.now().replace(day=1) + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+    mese_fine = mese_fine.strftime("%Y-%m-%d")
+    
     stats['incassi_mese'] = conn.execute(
         "SELECT SUM(importo) FROM rate WHERE data_pagamento BETWEEN ? AND ? AND pagato = 1",
         (mese_inizio, mese_fine)).fetchone()[0] or 0
+    
+    # Get the first day of next month
+    prossimo_mese_inizio_dt = (datetime.now().replace(day=1) + timedelta(days=32)).replace(day=1)
+    prossimo_mese_inizio = prossimo_mese_inizio_dt.strftime("%Y-%m-%d")
+
+    # Get the last day of next month
+    prossimo_mese_fine_dt = (prossimo_mese_inizio_dt + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+    prossimo_mese_fine = prossimo_mese_fine_dt.strftime("%Y-%m-%d")
+    
+    stats['previsione_mese_prossimo'] = conn.execute(
+        "SELECT SUM(importo) FROM rate WHERE data_scadenza BETWEEN ? AND ? AND pagato = 0",
+        (prossimo_mese_inizio, prossimo_mese_fine)).fetchone()[0] or 0
+    
+    # Prossime scadenze
+    prossime_scadenze = conn.execute("""
+        SELECT r.*, c.id as cliente_id, c.nome as cliente_nome, c.cognome as cliente_cognome,
+               p.nome as descrizione, a.numero_rate
+        FROM rate r
+        JOIN abbonamenti a ON r.abbonamento_id = a.id
+        JOIN clienti c ON a.cliente_id = c.id
+        JOIN pacchetti p ON r.abbonamento_id = p.id                         
+        WHERE r.pagato = 0
+        ORDER BY r.data_scadenza ASC
+        LIMIT 5
+    """).fetchall()
+    
+    stats['prossime_scadenze'] = prossime_scadenze
     
     conn.close()
     return stats
