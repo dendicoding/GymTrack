@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Nuovo Abbonamento - {{ cliente.nome }} {{ cliente.cognome }}{% endblock %}
+{% block title %}Nuovo Pacchetto - {{ cliente.nome }} {{ cliente.cognome }}{% endblock %}
 
 {% block content %}
 <nav aria-label="breadcrumb">
@@ -8,7 +8,7 @@
         <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Home</a></li>
         <li class="breadcrumb-item"><a href="{{ url_for('lista_clienti') }}">Clienti</a></li>
         <li class="breadcrumb-item"><a href="{{ url_for('dettaglio_cliente', cliente_id=cliente.id) }}">{{ cliente.nome }} {{ cliente.cognome }}</a></li>
-        <li class="breadcrumb-item active">Nuovo Abbonamento</li>
+        <li class="breadcrumb-item active">Nuovo Pacchetto</li>
     </ol>
 </nav>
 
@@ -17,7 +17,7 @@
         <div class="card">
             <div class="card-header bg-primary text-white">
                 <h5 class="card-title mb-0">
-                    <i class="fas fa-plus-circle me-2"></i>Nuovo Abbonamento
+                    <i class="fas fa-plus-circle me-2"></i>Nuovo Pacchetto
                 </h5>
             </div>
             <div class="card-body">
@@ -80,7 +80,7 @@
                             <i class="fas fa-times me-1"></i>Annulla
                         </a>
                         <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save me-1"></i>Salva Abbonamento
+                            <i class="fas fa-save me-1"></i>Salva Pacchetto
                         </button>
                     </div>
                 </form>
@@ -98,7 +98,7 @@
             <div class="card-body">
                 <p class="card-text">
                     <i class="fas fa-lightbulb me-2 text-warning"></i>
-                    Creando un nuovo abbonamento:
+                    Creando un nuovo pacchetto:
                 </p>
                 <ul class="list-unstyled ms-4">
                     <li><i class="fas fa-check text-success me-2"></i>Il cliente potrà utilizzare i servizi</li>
