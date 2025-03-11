@@ -488,6 +488,9 @@ def get_statistiche_dashboard():
     stats['rate_scadute'] = conn.execute(
         "SELECT COUNT(*) FROM rate WHERE data_scadenza < ? AND pagato = 0", (oggi,)).fetchone()[0]
     
+    stats['rate_scadute_importo'] = conn.execute(
+        "SELECT SUM(importo) FROM rate WHERE data_scadenza < ? AND pagato = 0", (oggi,)).fetchone()[0]
+    
     # Incassi del mese corrente
     mese_inizio = datetime.now().replace(day=1).strftime("%Y-%m-%d")
     mese_fine = (datetime.now().replace(day=1) + timedelta(days=32)).replace(day=1) - timedelta(days=1)
@@ -495,6 +498,10 @@ def get_statistiche_dashboard():
     
     stats['incassi_mese'] = conn.execute(
         "SELECT SUM(importo) FROM rate WHERE data_pagamento BETWEEN ? AND ? AND pagato = 1",
+        (mese_inizio, mese_fine)).fetchone()[0] or 0
+    
+    stats['previsione_mese'] = conn.execute(
+        "SELECT SUM(importo) FROM rate WHERE data_scadenza BETWEEN ? AND ? AND pagato = 0",
         (mese_inizio, mese_fine)).fetchone()[0] or 0
     
     # Get the first day of next month

@@ -112,8 +112,8 @@
                                 <i class="fas fa-calendar-alt fa-2x text-primary"></i>
                             </div>
                             <div>
-                                <h6 class="mb-0">Mese Corrente</h6>
-                                <h4 class="mb-0">€{{ "%.2f"|format(stats.incassi_mese) }}</h4>
+                                <h6 class="mb-0">Previsione Mese Corrente</h6>
+                                <h4 class="mb-0">€{{ "%.2f"|format(stats.previsione_mese) }}</h4>
                             </div>
                         </div>
                     </div>
@@ -132,14 +132,14 @@
                 <hr>
                 <p class="mb-0">
                     <i class="fas fa-info-circle text-info me-1"></i>
-                    La previsione è basata sulle rate con scadenza nel prossimo mese.
+                    La previsione è basata sulle rate con scadenza nel periodo indicato, non ancora saldate.
                 </p>
             </div>
         </div>
     </div>
     
     <div class="col-md-6">
-        <div class="card h-100">
+        <div class="card mb-4 mb-md-0">
             <div class="card-header bg-danger text-white">
                 <i class="fas fa-exclamation-circle me-1"></i>
                 Pagamenti da Gestire
@@ -160,7 +160,7 @@
                             <i class="fas fa-clock fa-2x me-3"></i>
                             <div>
                                 <div class="fw-bold">Rate scadute</div>
-                                <h4 class="mb-0">{{ stats.rate_scadute }}</h4>
+                                <h4 class="mb-0">{{ stats.rate_scadute }} (Totale: €{{ "%.2f"|format(stats.rate_scadute_importo) }})</h4>
                             </div>
                         </div>
                     </div>
