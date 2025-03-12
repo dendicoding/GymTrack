@@ -64,7 +64,8 @@ def month_name_filter(month_number):
 def index():
     #rate_in_scadenza = db.get_rate_scadenza(7)
     stats = db.get_statistiche_dashboard()
-    return render_template('dashboard.html', stats=stats)
+    oggi = date.today()
+    return render_template('dashboard.html', stats=stats, oggi=oggi)
 
 # --- GESTIONE CLIENTI ---
 @app.route('/clienti')
@@ -472,5 +473,5 @@ def server_error(e):
 
 if __name__ == '__main__':
     db.init_db()
-    db.migrate_database()
+    #db.migrate_database()
     app.run(debug=True)

@@ -210,7 +210,8 @@
                 {% if stats.prossime_scadenze %}
                     <div class="list-group mb-3">
                         {% for scadenza in stats.prossime_scadenze[:5] %}
-                            <a href="{{ url_for('dettaglio_cliente', cliente_id=scadenza.cliente_id) }}" class="list-group-item list-group-item-action">
+                            <a href="{{ url_for('dettaglio_cliente', cliente_id=scadenza.cliente_id) }}" 
+                               class="list-group-item list-group-item-action {{ 'list-group-item list-group-item-danger' if scadenza.data_scadenza|to_date < oggi }}">
                                 <div class="d-flex w-100 justify-content-between">
                                     <h6 class="mb-1">{{ scadenza.cliente_nome }} {{ scadenza.cliente_cognome }}</h6>
                                     <small class="text-danger">{{ scadenza.data_scadenza|format_date }}</small>

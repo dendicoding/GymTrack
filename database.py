@@ -467,6 +467,8 @@ def completa_lezione(lezione_id):
 # Funzioni per la dashboard
 def get_statistiche_dashboard():
     conn = get_db_connection()
+    oggi = datetime.now().strftime("%Y-%m-%d")
+
     stats = {}
     
     # Numero totale di clienti
@@ -523,11 +525,12 @@ def get_statistiche_dashboard():
         FROM rate r
         JOIN abbonamenti a ON r.abbonamento_id = a.id
         JOIN clienti c ON a.cliente_id = c.id
-        JOIN pacchetti p ON r.abbonamento_id = p.id                         
+        JOIN pacchetti p ON a.pacchetto_id = p.id                         
         WHERE r.pagato = 0
-        ORDER BY r.data_scadenza ASC
-        LIMIT 5
+        ORDER BY r.data_scadenza 
+        
     """).fetchall()
+
     
     stats['prossime_scadenze'] = prossime_scadenze
     
