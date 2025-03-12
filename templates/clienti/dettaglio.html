@@ -174,7 +174,7 @@
                                 {% for lezione in lezioni %}
                                     <tr>
                                         <td>{{ lezione.data|format_date }}</td>
-                                        <td>{{ lezione.nome_pacchetto }}</td>
+                                        <td>{{ lezione.tipo }}</td>
                                         <td>{{ lezione.note or '—' }}</td>
                                     </tr>
                                 {% endfor %}
