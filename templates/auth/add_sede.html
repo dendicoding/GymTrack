@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+
+{% block title %}Aggiungi Sede - Sistema Gestione{% endblock %}
+
+{% block content %}
+<div class="container">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('index') }}">Sistema Gestione</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('index') }}">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('gestione_gerarchia') }}">Gestione Gerarchia</a>
+                    </li>
+                </ul>
+                <div class="navbar-text text-white me-3">
+                    Benvenuto, {{ session.get('user_name') }} ({{ session.get('user_role') }})
+                </div>
+                <a href="{{ url_for('logout') }}" class="btn btn-outline-light">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="mb-0">Aggiungi Sede</h3>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('add_sede') }}">
+                        <div class="mb-3">
+                            <label for="nome" class="form-label">Nome Sede</label>
+                            <input type="text" class="form-control" id="nome" name="nome" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="indirizzo" class="form-label">Indirizzo</label>
+                            <input type="text" class="form-control" id="indirizzo" name="indirizzo" required>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-8">
+                                <label for="citta" class="form-label">Città</label>
+                                <input type="text" class="form-control" id="citta" name="citta" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="cap" class="form-label">CAP</label>
+                                <input type="text" class="form-control" id="cap" name="cap" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="email" name="email" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Password</label>
+                            <input type="password" class="form-control" id="password" name="password" required>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('gestione_gerarchia') }}" class="btn btn-secondary">Annulla</a>
+                            <button type="submit" class="btn btn-primary">Salva</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+{% endblock %}

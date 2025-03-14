@@ -1,7 +1,7 @@
 import database as db
 
 class Cliente:
-    def __init__(self, nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo):
+    def __init__(self, nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo, codice_fiscale):
         self.nome = nome
         self.cognome = cognome
         self.email = email
@@ -12,10 +12,12 @@ class Cliente:
         self.cap = cap
         self.note = note
         self.tipo = tipo
+        self.codice_fiscale = codice_fiscale  # Nuovo campo
+
 
     def salva(self):
         return db.add_cliente(self.nome, self.cognome, self.email, self.telefono, self.data_nascita, 
-                              self.indirizzo, self.citta, self.cap, self.note, self.tipo)
+                              self.indirizzo, self.citta, self.cap, self.note, self.tipo, self.codice_fiscale)
 
     @staticmethod
     def get_cliente(cliente_id):

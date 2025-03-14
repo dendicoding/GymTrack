@@ -1,0 +1,298 @@
+<div class="container mt-4">
+    <ul class="list-unstyled">
+        {% for franchisor in hierarchy %}
+            <li class="mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <a class="btn btn-link" data-bs-toggle="collapse" href="#franchisor{{ franchisor.id }}" role="button" aria-expanded="false" aria-controls="franchisor{{ franchisor.id }}">
+                            <i class="fas fa-building"></i> Franchisor: {{ franchisor.nome }}
+                        </a>
+                        <button class="btn btn-primary btn-sm float-end" data-bs-toggle="modal" data-bs-target="#addAreaManagerModal{{ franchisor.id }}">
+                            <i class="fas fa-plus"></i> Aggiungi Area Manager
+                        </button>
+                        <button class="btn btn-warning btn-sm float-end me-2" data-bs-toggle="modal" data-bs-target="#modifyFranchisorModal{{ franchisor.id }}">
+                            <i class="fas fa-edit"></i> Modifica
+                        </button>
+                        <button class="btn btn-danger btn-sm float-end me-2" data-bs-toggle="modal" data-bs-target="#deleteFranchisorModal{{ franchisor.id }}">
+                            <i class="fas fa-trash"></i> Elimina
+                        </button>
+                    </div>
+                    <div class="collapse" id="franchisor{{ franchisor.id }}">
+                        <div class="card-body">
+                            <ul class="list-unstyled">
+                                {% if franchisor.area_managers %}
+                                    {% for area_manager in franchisor.area_managers %}
+                                        <li class="mb-3">
+                                            <a class="btn btn-link" data-bs-toggle="collapse" href="#areaManager{{ area_manager.id }}" role="button" aria-expanded="false" aria-controls="areaManager{{ area_manager.id }}">
+                                                <i class="fas fa-user-tie"></i> Area Manager: {{ area_manager.nome }} {{ area_manager.cognome }}
+                                            </a>
+                                            <button class="btn btn-primary btn-sm float-end" data-bs-toggle="modal" data-bs-target="#addCompanyModal{{ area_manager.id }}">
+                                                <i class="fas fa-plus"></i> Aggiungi Società
+                                            </button>
+                                            <button class="btn btn-warning btn-sm float-end me-2" data-bs-toggle="modal" data-bs-target="#modifyAreaManagerModal{{ area_manager.id }}">
+                                                <i class="fas fa-edit"></i> Modifica
+                                            </button>
+                                            <button class="btn btn-danger btn-sm float-end me-2" data-bs-toggle="modal" data-bs-target="#deleteAreaManagerModal{{ area_manager.id }}">
+                                                <i class="fas fa-trash"></i> Elimina
+                                            </button>
+                                            <div class="collapse" id="areaManager{{ area_manager.id }}">
+                                                <div class="card mt-2">
+                                                    <div class="card-body">
+                                                        <ul class="list-unstyled">
+                                                            {% if area_manager.societa %}
+                                                                {% for company in area_manager.societa %}
+                                                                    <li class="mb-2">
+                                                                        <a class="btn btn-link" data-bs-toggle="collapse" href="#company{{ company.id }}" role="button" aria-expanded="false" aria-controls="company{{ company.id }}">
+                                                                            <i class="fas fa-building"></i> Company: {{ company.nome }}
+                                                                        </a>
+                                                                        <button class="btn btn-warning btn-sm float-end me-2" data-bs-toggle="modal" data-bs-target="#modifyCompanyModal{{ company.id }}">
+                                                                            <i class="fas fa-edit"></i> Modifica
+                                                                        </button>
+                                                                        <button class="btn btn-danger btn-sm float-end me-2" data-bs-toggle="modal" data-bs-target="#deleteCompanyModal{{ company.id }}">
+                                                                            <i class="fas fa-trash"></i> Elimina
+                                                                        </button>
+                                                                        <button class="btn btn-primary btn-sm float-end" data-bs-toggle="modal" data-bs-target="#addSedeModal{{ company.id }}">
+                                                                            <i class="fas fa-plus"></i> Aggiungi Sede
+                                                                        </button>
+                                                                        <div class="collapse" id="company{{ company.id }}">
+                                                                            <div class="card mt-2">
+                                                                                <div class="card-body">
+                                                                                    <ul class="list-unstyled">
+                                                                                        {% for sede in company.sedi %}
+                                                                                            <li>
+                                                                                                <i class="fas fa-map-marker-alt"></i> Sede: {{ sede.nome }} - {{ sede.indirizzo }}, {{ sede.citta }}
+                                                                                                <button class="btn btn-warning btn-sm float-end me-2" data-bs-toggle="modal" data-bs-target="#modifySedeModal{{ sede.id }}">
+                                                                                                    <i class="fas fa-edit"></i> Modify
+                                                                                                </button>
+                                                                                            </li>
+                                                                                        {% endfor %}
+                                                                                    </ul>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </li>
+
+                                                                    <!-- Modal for Modifying Company -->
+                                                                    <div class="modal fade" id="modifyCompanyModal{{ company.id }}" tabindex="-1" aria-labelledby="modifyCompanyModalLabel{{ company.id }}" aria-hidden="true">
+                                                                        <div class="modal-dialog">
+                                                                            <div class="modal-content">
+                                                                                <div class="modal-header">
+                                                                                    <h5 class="modal-title" id="modifyCompanyModalLabel{{ company.id }}">Modify Company</h5>
+                                                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                                                </div>
+                                                                                <div class="modal-body">
+                                                                                    <form action="{{ url_for('update_company_route', company_id=company.id) }}" method="POST">
+                                                                                        <div class="mb-3">
+                                                                                            <label for="companyName{{ company.id }}" class="form-label">Name</label>
+                                                                                            <input type="text" class="form-control" id="companyName{{ company.id }}" name="nome" value="{{ company.nome }}" required>
+                                                                                        </div>
+                                                                                        <div class="mb-3">
+                                                                                            <label for="companyEmail{{ company.id }}" class="form-label">Email</label>
+                                                                                            <input type="email" class="form-control" id="companyEmail{{ company.id }}" name="email" value="{{ company.email }}" required>
+                                                                                        </div>
+                                                                                        <div class="mb-3">
+                                                                                            <label for="companyPassword{{ company.id }}" class="form-label">Password</label>
+                                                                                            <input type="password" class="form-control" id="companyPassword{{ company.id }}" name="password" required>
+                                                                                        </div>
+                                                                                        <button type="submit" class="btn btn-primary">Update Company</button>
+                                                                                    </form>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <!-- Modal for Adding Sede -->
+                                                                    <div class="modal fade" id="addSedeModal{{ company.id }}" tabindex="-1" aria-labelledby="addSedeModalLabel{{ company.id }}" aria-hidden="true">
+                                                                        <div class="modal-dialog">
+                                                                            <div class="modal-content">
+                                                                                <div class="modal-header">
+                                                                                    <h5 class="modal-title" id="addSedeModalLabel{{ company.id }}">Add Sede</h5>
+                                                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                                                </div>
+                                                                                <div class="modal-body">
+                                                                                    <form action="{{ url_for('add_sede') }}" method="POST">
+                                                                                        <input type="hidden" name="societa_id" value="{{ company.id }}">
+                                                                                        <div class="mb-3">
+                                                                                            <label for="sedeName{{ company.id }}" class="form-label">Sede Name</label>
+                                                                                            <input type="text" class="form-control" id="sedeName{{ company.id }}" name="nome" required>
+                                                                                        </div>
+                                                                                        <div class="mb-3">
+                                                                                            <label for="sedeAddress{{ company.id }}" class="form-label">Address</label>
+                                                                                            <input type="text" class="form-control" id="sedeAddress{{ company.id }}" name="indirizzo" required>
+                                                                                        </div>
+                                                                                        <div class="mb-3">
+                                                                                            <label for="sedeCity{{ company.id }}" class="form-label">City</label>
+                                                                                            <input type="text" class="form-control" id="sedeCity{{ company.id }}" name="citta" required>
+                                                                                        </div>
+                                                                                        <div class="mb-3">
+                                                                                            <label for="sedeCAP{{ company.id }}" class="form-label">CAP</label>
+                                                                                            <input type="text" class="form-control" id="sedeCAP{{ company.id }}" name="cap" required>
+                                                                                        </div>
+                                                                                        <div class="mb-3">
+                                                                                            <label for="sedeEmail{{ company.id }}" class="form-label">Email</label>
+                                                                                            <input type="email" class="form-control" id="sedeEmail{{ company.id }}" name="email" required>
+                                                                                        </div>
+                                                                                        <div class="mb-3">
+                                                                                            <label for="sedePassword{{ company.id }}" class="form-label">Password</label>
+                                                                                            <input type="password" class="form-control" id="sedePassword{{ company.id }}" name="password" required>
+                                                                                        </div>
+                                                                                        <button type="submit" class="btn btn-primary">Add Sede</button>
+                                                                                    </form>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <!-- Modal for Deleting Company -->
+                                                                    <div class="modal fade" id="deleteCompanyModal{{ company.id }}" tabindex="-1" aria-labelledby="deleteCompanyModalLabel{{ company.id }}" aria-hidden="true">
+                                                                        <div class="modal-dialog">
+                                                                            <div class="modal-content">
+                                                                                <div class="modal-header">
+                                                                                    <h5 class="modal-title" id="deleteCompanyModalLabel{{ company.id }}">Delete Company</h5>
+                                                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                                                </div>
+                                                                                <div class="modal-body">
+                                                                                    <p>Are you sure you want to delete this company?</p>
+                                                                                </div>
+                                                                                <div class="modal-footer">
+                                                                                    <form action="{{ url_for('delete_company_route', company_id=company.id) }}" method="POST">
+                                                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                                                        <button type="submit" class="btn btn-danger">Delete</button>
+                                                                                    </form>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+
+                                                                {% endfor %}
+                                                            {% else %}
+                                                                <li>Non sono presenti società per questo area manager.</li>
+                                                            {% endif %}
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </li>
+
+                                        <!-- Modal for Modifying Area Manager -->
+                                        <div class="modal fade" id="modifyAreaManagerModal{{ area_manager.id }}" tabindex="-1" aria-labelledby="modifyAreaManagerModalLabel{{ area_manager.id }}" aria-hidden="true">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title" id="modifyAreaManagerModalLabel{{ area_manager.id }}">Modify Area Manager</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <form action="{{ url_for('update_area_manager_route', area_manager_id=area_manager.id) }}" method="POST">
+                                                            <div class="mb-3">
+                                                                <label for="areaManagerName{{ area_manager.id }}" class="form-label">Name</label>
+                                                                <input type="text" class="form-control" id="areaManagerName{{ area_manager.id }}" name="nome" value="{{ area_manager.nome }}" required>
+                                                            </div>
+                                                            <div class="mb-3">
+                                                                <label for="areaManagerSurname{{ area_manager.id }}" class="form-label">Surname</label>
+                                                                <input type="text" class="form-control" id="areaManagerSurname{{ area_manager.id }}" name="cognome" value="{{ area_manager.cognome }}" required>
+                                                            </div>
+                                                            <div class="mb-3">
+                                                                <label for="areaManagerEmail{{ area_manager.id }}" class="form-label">Email</label>
+                                                                <input type="email" class="form-control" id="areaManagerEmail{{ area_manager.id }}" name="email" value="{{ area_manager.email }}" required>
+                                                            </div>
+                                                            <div class="mb-3">
+                                                                <label for="areaManagerPassword{{ area_manager.id }}" class="form-label">Password</label>
+                                                                <input type="password" class="form-control" id="areaManagerPassword{{ area_manager.id }}" name="password" required>
+                                                            </div>
+                                                            <button type="submit" class="btn btn-primary">Update Area Manager</button>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Modal for Deleting Area Manager -->
+                                        <div class="modal fade" id="deleteAreaManagerModal{{ area_manager.id }}" tabindex="-1" aria-labelledby="deleteAreaManagerModalLabel{{ area_manager.id }}" aria-hidden="true">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title" id="deleteAreaManagerModalLabel{{ area_manager.id }}">Delete Area Manager</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <p>Are you sure you want to delete this area manager?</p>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <form action="{{ url_for('delete_area_manager_route', area_manager_id=area_manager.id) }}" method="POST">
+                                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                            <button type="submit" class="btn btn-danger">Delete</button>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                    {% endfor %}
+                                {% else %}
+                                    <li>Non sono presenti area managers per questo franchisor.</li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </li>
+
+            <!-- Modal for Adding Area Manager -->
+            <div class="modal fade" id="addAreaManagerModal{{ franchisor.id }}" tabindex="-1" aria-labelledby="addAreaManagerModalLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="addAreaManagerModalLabel">Add Area Manager</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form action="{{ url_for('add_area_manager') }}" method="POST">
+                                <input type="hidden" name="franchisor_id" value="{{ franchisor.id }}">
+                                <div class="mb-3">
+                                    <label for="areaManagerName" class="form-label">Name</label>
+                                    <input type="text" class="form-control" id="areaManagerName" name="nome" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="areaManagerSurname" class="form-label">Surname</label>
+                                    <input type="text" class="form-control" id="areaManagerSurname" name="cognome" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="areaManagerEmail" class="form-label">Email</label>
+                                    <input type="email" class="form-control" id="areaManagerEmail" name="email" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="areaManagerPassword" class="form-label">Password</label>
+                                    <input type="password" class="form-control" id="areaManagerPassword" name="password" required>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Add Area Manager</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal for Deleting Franchisor -->
+            <div class="modal fade" id="deleteFranchisorModal{{ franchisor.id }}" tabindex="-1" aria-labelledby="deleteFranchisorModalLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="deleteFranchisorModalLabel">Delete Franchisor</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p>Are you sure you want to delete this franchisor?</p>
+                        </div>
+                        <div class="modal-footer">
+                            <form action="{{ url_for('delete_franchisor_route', franchisor_id=franchisor.id) }}" method="POST">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="submit" class="btn btn-danger">Delete</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        {% endfor %}
+    </ul>
+</div>

@@ -8,8 +8,12 @@ from models.abbonamento import Abbonamento
 from calendar import monthcalendar
 from collections import defaultdict
 
+from flask import session, g
+from functools import wraps
 app = Flask(__name__)
 app.secret_key = 'sviluppo_palestra_2025'  # Chiave necessaria per flash messages
+# Aggiungi questa configurazione per la sessione
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)
 
 # Inizializzazione del database
 db.init_db()
@@ -17,6 +21,172 @@ db.init_db()
 
 # Set locale for currency formatting (use 'it_IT' for Italian format)
 locale.setlocale(locale.LC_ALL, 'it_IT.UTF-8')  # Adjust as needed
+
+# Aggiungi questa funzione per il login_required
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            flash('Devi effettuare il login per accedere a questa pagina', 'error')
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+# Aggiungi alla funzione init_db
+@app.before_request
+def setup():
+    db.init_db()
+    db.create_user_tables()
+
+# Aggiungi queste route per il login e la registrazione
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        email = request.form['email']
+        password = request.form['password']
+        role = request.form['role']
+        
+        user = db.authenticate_user(email, password, role)
+        
+        if user:
+            session['user_id'] = user['id']
+            session['user_name'] = user['nome']
+            session['user_role'] = role
+            
+            flash(f'Benvenuto, {user["nome"]}!', 'success')
+            return redirect(url_for('index'))
+        else:
+            flash('Email o password non validi', 'error')
+    
+    return render_template('auth/login.html')
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    flash('Logout effettuato con successo', 'success')
+    return redirect(url_for('login'))
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        nome = request.form['nome']
+        email = request.form['email']
+        password = request.form['password']
+        
+        franchisor_id = db.register_franchisor(nome, email, password)
+        
+        if franchisor_id:
+            flash('Registrazione completata con successo!', 'success')
+            return redirect(url_for('login'))
+        else:
+            flash('Errore durante la registrazione', 'error')
+    
+    return render_template('auth/register.html')
+
+@app.route('/gestione-gerarchia')
+@login_required
+def gestione_gerarchia():
+    # Controlla il ruolo dell'utente
+    role = session.get('user_role')
+    user_id = session.get('user_id')
+    
+    if role == 'franchisor':
+        area_managers = db.get_area_managers_by_franchisor(user_id)
+        return render_template('auth/gerarchia.html', 
+                             role=role, 
+                             area_managers=area_managers)
+    elif role == 'area_manager':
+        societa = db.get_societa_by_area_manager(user_id)
+        return render_template('auth/gerarchia.html', 
+                             role=role, 
+                             societa=societa)
+    elif role == 'societa':
+        sedi = db.get_sedi_by_societa(user_id)
+        return render_template('auth/gerarchia.html', 
+                             role=role, 
+                             sedi=sedi)
+    else:
+        flash('Non hai i permessi per accedere a questa pagina', 'error')
+        return redirect(url_for('index'))
+
+@app.route('/add-area-manager', methods=['GET', 'POST'])
+@login_required
+def add_area_manager():
+    if session.get('user_role') != 'franchisor':
+        flash('Non hai i permessi per aggiungere area manager', 'error')
+        return redirect(url_for('index'))
+    
+    if request.method == 'POST':
+        nome = request.form['nome']
+        cognome = request.form['cognome']
+        email = request.form['email']
+        password = request.form['password']
+        franchisor_id = session.get('user_id')
+        
+        # Register the area manager
+        area_manager_id = db.register_area_manager(franchisor_id, nome, cognome, email, password)
+        
+        if area_manager_id:
+            # Create the user in the utenti table
+            user_created = db.create_user(nome, cognome, email, password, 'area_manager')
+            if user_created:
+                flash('Area Manager aggiunto con successo!', 'success')
+                return redirect(url_for('gestione_gerarchia'))
+            else:
+                flash('Errore durante la creazione dell\'utente Area Manager', 'error')
+        else:
+            flash('Errore durante l\'aggiunta dell\'Area Manager', 'error')
+    
+    return render_template('auth/add_area_manager.html')
+
+@app.route('/add-societa', methods=['GET', 'POST'])
+@login_required
+def add_societa():
+    if session.get('user_role') != 'area_manager':
+        flash('Non hai i permessi per aggiungere società', 'error')
+        return redirect(url_for('index'))
+    
+    if request.method == 'POST':
+        nome = request.form['nome']
+        email = request.form['email']
+        password = request.form['password']
+        area_manager_id = session.get('user_id')
+        
+        societa_id = db.register_societa(area_manager_id, nome, email, password)
+        
+        if societa_id:
+            flash('Società aggiunta con successo!', 'success')
+            return redirect(url_for('gestione_gerarchia'))
+        else:
+            flash('Errore durante l\'aggiunta della Società', 'error')
+    
+    return render_template('auth/add_societa.html')
+
+@app.route('/add-sede', methods=['GET', 'POST'])
+@login_required
+def add_sede():
+    if session.get('user_role') != 'societa':
+        flash('Non hai i permessi per aggiungere sedi', 'error')
+        return redirect(url_for('index'))
+    
+    if request.method == 'POST':
+        nome = request.form['nome']
+        indirizzo = request.form['indirizzo']
+        citta = request.form['citta']
+        cap = request.form['cap']
+        email = request.form['email']
+        password = request.form['password']
+        societa_id = session.get('user_id')
+        
+        sede_id = db.register_sede(societa_id, nome, indirizzo, citta, cap, email, password)
+        
+        if sede_id:
+            flash('Sede aggiunta con successo!', 'success')
+            return redirect(url_for('gestione_gerarchia'))
+        else:
+            flash('Errore durante l\'aggiunta della Sede', 'error')
+    
+    return render_template('auth/add_sede.html')
 
 # Custom Jinja2 filters
 @app.template_filter('format_date')
@@ -61,6 +231,7 @@ def month_name_filter(month_number):
 
 # Route principale e dashboard
 @app.route('/')
+@login_required
 def index():
     #rate_in_scadenza = db.get_rate_scadenza(7)
     stats = db.get_statistiche_dashboard()
@@ -97,9 +268,10 @@ def nuovo_cliente():
         cap = request.form['cap']
         note = request.form['note']
         tipo = request.form['tipo']
+        codice_fiscale = request.form['codice_fiscale']
         
         cliente_id = db.add_cliente(nome, cognome, email, telefono, data_nascita, 
-                                     indirizzo, citta, cap, note, tipo)
+                                     indirizzo, citta, cap, note, tipo, codice_fiscale)
         
         flash(f'Cliente {nome} {cognome} aggiunto con successo!', 'success')
         return redirect(url_for('dettaglio_cliente', cliente_id=cliente_id))
@@ -140,9 +312,10 @@ def modifica_cliente(cliente_id):
         cap = request.form['cap']
         note = request.form['note']
         tipo = request.form['tipo']
+        codice_fiscale = request.form['codice_fiscale']
         
         db.update_cliente(cliente_id, nome, cognome, email, telefono, data_nascita, 
-                          indirizzo, citta, cap, note, tipo)
+                          indirizzo, citta, cap, note, tipo, codice_fiscale)
         
         flash(f'Cliente {nome} {cognome} aggiornato con successo!', 'success')
         return redirect(url_for('dettaglio_cliente', cliente_id=cliente_id))
@@ -471,7 +644,85 @@ def page_not_found(e):
 def server_error(e):
     return render_template('errori/500.html'), 500
 
+@app.route('/hierarchy')
+def hierarchy():
+    user_hierarchy = db.build_hierarchy()
+    return render_template('hierarchy.html', hierarchy=user_hierarchy)
+
+@app.route('/update-franchisor/<int:franchisor_id>', methods=['POST'])
+@login_required
+def update_franchisor_route(franchisor_id):
+    nome = request.form['nome']
+    email = request.form['email']
+    password = request.form['password']
+    db.update_franchisor(franchisor_id, nome, email, password)
+    flash('Franchisor updated successfully!', 'success')
+    return redirect(url_for('hierarchy'))
+
+@app.route('/delete-franchisor/<int:franchisor_id>', methods=['POST'])
+@login_required
+def delete_franchisor_route(franchisor_id):
+    db.delete_franchisor(franchisor_id)
+    flash('Franchisor deleted successfully!', 'success')
+    return redirect(url_for('hierarchy'))
+
+@app.route('/update-area-manager/<int:area_manager_id>', methods=['POST'])
+@login_required
+def update_area_manager_route(area_manager_id):
+    nome = request.form['nome']
+    cognome = request.form['cognome']
+    email = request.form['email']
+    password = request.form['password']
+    db.update_area_manager(area_manager_id, nome, cognome, email, password)
+    flash('Area Manager updated successfully!', 'success')
+    return redirect(url_for('hierarchy'))
+
+@app.route('/delete-area-manager/<int:area_manager_id>', methods=['POST'])
+@login_required
+def delete_area_manager_route(area_manager_id):
+    db.delete_area_manager(area_manager_id)
+    flash('Area Manager deleted successfully!', 'success')
+    return redirect(url_for('hierarchy'))
+
+@app.route('/update-company/<int:company_id>', methods=['POST'])
+@login_required
+def update_company_route(company_id):
+    nome = request.form['nome']
+    email = request.form['email']
+    password = request.form['password']
+    db.update_company(company_id, nome, email, password)
+    flash('Company updated successfully!', 'success')
+    return redirect(url_for('hierarchy'))
+
+@app.route('/delete-company/<int:company_id>', methods=['POST'])
+@login_required
+def delete_company_route(company_id):
+    db.delete_company(company_id)
+    flash('Company deleted successfully!', 'success')
+    return redirect(url_for('hierarchy'))
+
+@app.route('/update-sede/<int:sede_id>', methods=['POST'])
+@login_required
+def update_sede_route(sede_id):
+    nome = request.form['nome']
+    indirizzo = request.form['indirizzo']
+    citta = request.form['citta']
+    cap = request.form['cap']
+    email = request.form['email']
+    password = request.form['password']
+    db.update_sede(sede_id, nome, indirizzo, citta, cap, email, password)
+    flash('Sede updated successfully!', 'success')
+    return redirect(url_for('hierarchy'))
+
+@app.route('/delete-sede/<int:sede_id>', methods=['POST'])
+@login_required
+def delete_sede_route(sede_id):
+    db.delete_sede(sede_id)
+    flash('Sede deleted successfully!', 'success')
+    return redirect(url_for('hierarchy'))
+
 if __name__ == '__main__':
-    db.init_db()
     #db.migrate_database()
+    #db.create_user_tables
+    db.init_db()
     app.run(debug=True)

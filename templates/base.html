@@ -52,7 +52,20 @@
                             <i class="fas fa-clock me-1"></i>Scadenziario
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path == url_for('gestione_gerarchia') %}active{% endif %}" href="{{ url_for('hierarchy') }}">
+                            <i class="fas fa-sitemap me-1"></i>Gerarchia
+                        </a>
+                    </li>
                 </ul>
+                <div class="ms-auto">
+                    {% if session.user_name %}
+                        <span class="navbar-text text-white me-3">
+                            {{ session.user_name }} ({{ session.user_role }})
+                        </span>
+                        <a href="{{ url_for('logout') }}" class="btn btn-outline-light">Logout</a>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </nav>
@@ -74,7 +87,7 @@
 
     <footer class="footer mt-auto py-3 bg-light fixed-bottom">
         <div class="container text-center">
-            <span class="text-muted">© 2025 GymTrack - DGB, V: 0.0.5</span>
+            <span class="text-muted">© 2025 GymTrack - DGB, V: 0.0.6</span>
         </div>
     </footer>
 

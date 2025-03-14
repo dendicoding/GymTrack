@@ -97,6 +97,15 @@
                         </div>
                     </div>
 
+                    <!-- Settima riga -->
+                    <div class="col-md-6">
+                        <div class="form-floating mb-3">
+                            <input type="text" class="form-control" id="codice_fiscale" name="codice_fiscale" 
+                                   value="{{ cliente['codice_fiscale'] }}" required>
+                            <label for="codice_fiscale">Codice Fiscale *</label>
+                        </div>
+                    </div>
+
                     <!-- Pulsanti -->
                     <div class="col-12 text-end">
                         <a href="{{ url_for('dettaglio_cliente', cliente_id=cliente['id']) }}" 

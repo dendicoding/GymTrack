@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+
+{% block title %}Gerarchia Utenti{% endblock %}
+
+{% block content %}
+    <h1 class="mt-5">Gerarchia Utenti</h1>
+    <div class="tree">
+        {% include 'hierarchy_partial.html' %}
+    </div>
+{% endblock %}

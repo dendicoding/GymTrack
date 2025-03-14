@@ -34,6 +34,7 @@ def init_db():
         cap TEXT,
         note TEXT,
         tipo TEXT NOT NULL,  -- 'lead' o 'effettivo'
+        codice_fiscale TEXT, -- Nuovo campo per il codice fiscale
         data_registrazione TEXT NOT NULL
     )
     ''')
@@ -157,29 +158,29 @@ def get_clienti_effettivi():
     conn.close()
     return clienti
 
-def add_cliente(nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo):
+def add_cliente(nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo, codice_fiscale):
     conn = get_db_connection()
     cursor = conn.cursor()
     data_registrazione = datetime.now().strftime("%Y-%m-%d")
     
-    cursor.execute('''
-    INSERT INTO clienti (nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo, data_registrazione)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ''', (nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo, data_registrazione))
+    cursor.execute(''' 
+    INSERT INTO clienti (nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo, codice_fiscale, data_registrazione)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo, codice_fiscale, data_registrazione))
     
     conn.commit()
     cliente_id = cursor.lastrowid
     conn.close()
     return cliente_id
 
-def update_cliente(cliente_id, nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo):
+def update_cliente(cliente_id, nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo, codice_fiscale):
     conn = get_db_connection()
-    conn.execute('''
+    conn.execute(''' 
     UPDATE clienti 
     SET nome = ?, cognome = ?, email = ?, telefono = ?, data_nascita = ?, 
-        indirizzo = ?, citta = ?, cap = ?, note = ?, tipo = ?
+        indirizzo = ?, citta = ?, cap = ?, note = ?, tipo = ?, codice_fiscale = ?
     WHERE id = ?
-    ''', (nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo, cliente_id))
+    ''', (nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo, codice_fiscale, cliente_id))
     
     conn.commit()
     conn.close()
@@ -853,76 +854,164 @@ def migrate_abbonamenti():
 def migrate_database():
     conn = get_db_connection()
     try:
-        # Verifica e aggiunge la colonna numero_rate in abbonamenti
-        columns_abbonamenti = conn.execute("PRAGMA table_info(abbonamenti)").fetchall()
-        if not any(col[1] == 'numero_rate' for col in columns_abbonamenti):
-            conn.execute('ALTER TABLE abbonamenti ADD COLUMN numero_rate INTEGER DEFAULT 1')
-            print("Aggiunta colonna numero_rate alla tabella abbonamenti")
-
-        # Verifica e aggiunge la colonna numero_rata in rate
-        columns_rate = conn.execute("PRAGMA table_info(rate)").fetchall()
-        if not any(col[1] == 'numero_rata' for col in columns_rate):
-            # In SQLite non possiamo aggiungere una colonna NOT NULL con un valore di default
-            # quindi dobbiamo ricreare la tabella
-            conn.execute('''
-                CREATE TABLE rate_new (
+        # Check if the column 'codice_fiscale' exists in 'clienti'
+        columns_clienti = conn.execute("PRAGMA table_info(clienti)").fetchall()
+        if not any(col[1] == 'codice_fiscale' for col in columns_clienti):
+            # Create a new table with the additional column for 'clienti'
+            conn.execute(''' 
+                CREATE TABLE clienti_new (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    abbonamento_id INTEGER NOT NULL,
-                    importo DECIMAL(10,2) NOT NULL,
-                    data_scadenza DATE NOT NULL,
-                    data_pagamento DATE,
-                    pagato BOOLEAN DEFAULT 0,
-                    numero_rata INTEGER NOT NULL DEFAULT 1,
-                    FOREIGN KEY (abbonamento_id) REFERENCES abbonamenti (id)
+                    nome TEXT NOT NULL,
+                    cognome TEXT NOT NULL,
+                    email TEXT,
+                    telefono TEXT,
+                    data_nascita TEXT,
+                    indirizzo TEXT,
+                    citta TEXT,
+                    cap TEXT,
+                    note TEXT,
+                    tipo TEXT NOT NULL,  -- 'lead' o 'effettivo'
+                    codice_fiscale TEXT, -- New field for tax code
+                    data_registrazione TEXT NOT NULL
                 )
             ''')
-            
-            # Copia i dati esistenti
-            conn.execute('''
-                INSERT INTO rate_new (id, abbonamento_id, importo, data_scadenza, 
-                                    data_pagamento, pagato, numero_rata)
-                SELECT id, abbonamento_id, importo, data_scadenza, 
-                       data_pagamento, pagato, 1
-                FROM rate
-            ''')
-            
-            # Elimina la vecchia tabella e rinomina la nuova
-            conn.execute('DROP TABLE rate')
-            conn.execute('ALTER TABLE rate_new RENAME TO rate')
-            print("Aggiunta colonna numero_rata alla tabella rate")
 
-        # Verifica se la tabella utenti esiste
-        tables = conn.execute(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name='utenti'"
-        ).fetchall()
-        
-        if not any(table['name'] == 'utenti' for table in tables):
-            # Crea la tabella utenti
-            conn.execute('''
-            CREATE TABLE utenti (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                nome TEXT NOT NULL,
-                cognome TEXT NOT NULL,
-                email TEXT UNIQUE NOT NULL,
-                password TEXT NOT NULL,
-                ruolo TEXT NOT NULL DEFAULT 'staff',
-                attivo BOOLEAN NOT NULL DEFAULT 1,
-                data_creazione TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
+            # Copy data from the old table to the new table
+            conn.execute(''' 
+                INSERT INTO clienti_new (id, nome, cognome, email, telefono, data_nascita, indirizzo, cap, note, tipo, data_registrazione)
+                SELECT id, nome, cognome, email, telefono, data_nascita, indirizzo, cap, note, tipo, data_registrazione
+                FROM clienti
             ''')
 
-            # Inserisci un utente admin di default
-            conn.execute('''
-            INSERT INTO utenti (nome, cognome, email, password, ruolo)
-            VALUES ('Admin', 'System', 'admin@gym.com', 'admin123', 'admin')
+            # Drop the old table
+            conn.execute('DROP TABLE clienti')
+
+            # Rename the new table to the original name
+            conn.execute('ALTER TABLE clienti_new RENAME TO clienti')
+
+            print("Migration completed successfully: Added codice_fiscale column to clienti.")
+
+        # Check if the column 'cognome' exists in 'area_manager'
+        columns_area_manager = conn.execute("PRAGMA table_info(area_manager)").fetchall()
+        if not any(col[1] == 'cognome' for col in columns_area_manager):
+            # Check if the new table already exists and drop it if it does
+            try:
+                conn.execute('DROP TABLE area_manager_new')
+            except sqlite3.Error:
+                pass  # Ignore if the table does not exist
+
+            # Create a new table with the additional column for 'area_manager'
+            conn.execute(''' 
+                CREATE TABLE area_manager_new (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    franchisor_id INTEGER NOT NULL,
+                    nome TEXT NOT NULL,
+                    cognome TEXT NOT NULL,  -- New field for cognome
+                    email TEXT UNIQUE NOT NULL,
+                    password TEXT NOT NULL,
+                    attivo BOOLEAN DEFAULT 1,
+                    data_creazione TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (franchisor_id) REFERENCES franchisor(id) ON DELETE CASCADE
+                )
             ''')
 
-            print("Tabella utenti creata con successo")
+            # Copy data from the old table to the new table
+            conn.execute(''' 
+                INSERT INTO area_manager_new (id, franchisor_id, nome, cognome, email, password, attivo, data_creazione)
+                SELECT id, franchisor_id, nome, cognome, email, password, attivo, data_creazione
+                FROM area_manager
+            ''')
+
+            # Drop the old table
+            conn.execute('DROP TABLE area_manager')
+
+            # Rename the new table to the original name
+            conn.execute('ALTER TABLE area_manager_new RENAME TO area_manager')
+
+            print("Migration completed successfully: Added cognome column to area_manager.")
+
+        # Check if the column 'societa' exists in 'societa'
+        columns_societa = conn.execute("PRAGMA table_info(societa)").fetchall()
+        if not any(col[1] == 'societa' for col in columns_societa):
+            # Check if the new table already exists and drop it if it does
+            try:
+                conn.execute('DROP TABLE societa_new')
+            except sqlite3.Error:
+                pass  # Ignore if the table does not exist
+
+            # Create a new table with the additional column for 'societa'
+            conn.execute(''' 
+                CREATE TABLE societa_new (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    area_manager_id INTEGER NOT NULL,
+                    nome TEXT NOT NULL,
+                    email TEXT UNIQUE NOT NULL,
+                    password TEXT NOT NULL,
+                    attivo BOOLEAN DEFAULT 1,
+                    data_creazione TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (area_manager_id) REFERENCES area_manager(id) ON DELETE CASCADE
+                )
+            ''')
+
+            # Copy data from the old table to the new table
+            conn.execute(''' 
+                INSERT INTO societa_new (id, area_manager_id, nome, email, password, attivo, data_creazione)
+                SELECT id, area_manager_id, nome, email, password, attivo, data_creazione
+                FROM societa
+            ''')
+
+            # Drop the old table
+            conn.execute('DROP TABLE societa')
+
+            # Rename the new table to the original name
+            conn.execute('ALTER TABLE societa_new RENAME TO societa')
+
+            print("Migration completed successfully: Added area_manager_id column to societa.")
+
+        # Check if the column 'sede' exists in 'sede'
+        columns_sede = conn.execute("PRAGMA table_info(sede)").fetchall()
+        if not any(col[1] == 'sede' for col in columns_sede):
+            # Check if the new table already exists and drop it if it does
+            try:
+                conn.execute('DROP TABLE sede_new')
+            except sqlite3.Error:
+                pass  # Ignore if the table does not exist
+
+            # Create a new table with the additional column for 'sede'
+            conn.execute(''' 
+                CREATE TABLE sede_new (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    societa_id INTEGER NOT NULL,
+                    nome TEXT NOT NULL,
+                    indirizzo TEXT,
+                    citta TEXT,
+                    cap TEXT,
+                    email TEXT UNIQUE NOT NULL,
+                    password TEXT NOT NULL,
+                    attivo BOOLEAN DEFAULT 1,
+                    data_creazione TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (societa_id) REFERENCES societa(id) ON DELETE CASCADE
+                )
+            ''')
+
+            # Copy data from the old table to the new table
+            conn.execute(''' 
+                INSERT INTO sede_new (id, societa_id, nome, indirizzo, citta, cap, email, password, attivo, data_creazione)
+                SELECT id, societa_id, nome, indirizzo, citta, cap, email, password, attivo, data_creazione
+                FROM sede
+            ''')
+
+            # Drop the old table
+            conn.execute('DROP TABLE sede')
+
+            # Rename the new table to the original name
+            conn.execute('ALTER TABLE sede_new RENAME TO sede')
+
+            print("Migration completed successfully: Added societa_id column to sede.")
 
         conn.commit()
-        print("Migrazione completata con successo")
     except Exception as e:
-        print(f"Errore durante la migrazione: {e}")
+        print(f"Error during migration: {e}")
         conn.rollback()
     finally:
         conn.close()
@@ -967,5 +1056,399 @@ def promuovi_cliente(cliente_id):
     except Exception as e:
         conn.rollback()
         return False, f"Errore durante la promozione: {str(e)}"
+    finally:
+        conn.close()
+
+#----------------------------------------------------------------------------
+def create_user_tables():
+    """Crea le tabelle per la gestione degli utenti e della gerarchia"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Tabella per i franchisor
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS franchisor (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nome TEXT NOT NULL,
+        email TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        attivo BOOLEAN DEFAULT 1,
+        data_creazione TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    ''')
+    
+    # Tabella per gli area manager
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS area_manager (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        franchisor_id INTEGER NOT NULL,
+        nome TEXT NOT NULL,
+        cognome TEXT NOT NULL,
+        email TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        attivo BOOLEAN DEFAULT 1,
+        data_creazione TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (franchisor_id) REFERENCES franchisor(id)
+    )
+    ''')
+    
+    # Tabella per le società
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS societa (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        area_manager_id INTEGER NOT NULL,
+        nome TEXT NOT NULL,
+        email TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        attivo BOOLEAN DEFAULT 1,
+        data_creazione TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (area_manager_id) REFERENCES area_manager(id)
+    )
+    ''')
+    
+    # Tabella per le sedi
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS sede (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        societa_id INTEGER NOT NULL,
+        nome TEXT NOT NULL,
+        indirizzo TEXT,
+        citta TEXT,
+        cap TEXT,
+        email TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        attivo BOOLEAN DEFAULT 1,
+        data_creazione TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (societa_id) REFERENCES societa(id)
+    )
+    ''')
+    
+    # Aggiungi una colonna sede_id a tutte le tabelle esistenti
+    tables = ['clienti', 'pacchetti', 'abbonamenti', 'lezioni', 'rate']
+    for table in tables:
+        try:
+            cursor.execute(f'ALTER TABLE {table} ADD COLUMN sede_id INTEGER DEFAULT 1')
+        except:
+            pass  # La colonna potrebbe già esistere
+    
+    # Crea una sede fittizia per i dati esistenti
+    cursor.execute('''
+    INSERT OR IGNORE INTO franchisor (id, nome, email, password) 
+    VALUES (1, 'Franchisor Default', 'franchisor@example.com', 'password')
+    ''')
+    
+    cursor.execute('''
+    INSERT OR IGNORE INTO area_manager (id, franchisor_id, nome, email, password) 
+    VALUES (1, 1, 'Area Manager Default', 'area@example.com', 'password')
+    ''')
+    
+    cursor.execute('''
+    INSERT OR IGNORE INTO societa (id, area_manager_id, nome, email, password) 
+    VALUES (1, 1, 'Società Default', 'societa@example.com', 'password')
+    ''')
+    
+    cursor.execute('''
+    INSERT OR IGNORE INTO sede (id, societa_id, nome, email, password) 
+    VALUES (1, 1, 'Sede Default', 'sede@example.com', 'password')
+    ''')
+    
+    conn.commit()
+    conn.close()
+
+def authenticate_user(email, password, role):
+    """Autentica un utente in base al ruolo specificato"""
+    conn = get_db_connection()
+    query = f"SELECT id, nome, email FROM {role} WHERE email = ? AND password = ? AND attivo = 1"
+    user = conn.execute(query, (email, password)).fetchone()
+    conn.close()
+    return user
+
+def get_franchisor(franchisor_id):
+    conn = get_db_connection()
+    franchisor = conn.execute('SELECT * FROM franchisor WHERE id = ?', (franchisor_id,)).fetchone()
+    conn.close()
+    return franchisor
+
+def get_area_managers_by_franchisor(franchisor_id):
+    conn = get_db_connection()
+    managers = conn.execute('SELECT * FROM area_manager WHERE franchisor_id = ?', (franchisor_id,)).fetchall()
+    conn.close()
+    return managers
+
+def get_societa_by_area_manager(area_manager_id):
+    conn = get_db_connection()
+    societa = conn.execute('SELECT * FROM societa WHERE area_manager_id = ?', (area_manager_id,)).fetchall()
+    conn.close()
+    return societa
+
+def get_sedi_by_societa(societa_id):
+    conn = get_db_connection()
+    sedi = conn.execute('SELECT * FROM sede WHERE societa_id = ?', (societa_id,)).fetchall()
+    conn.close()
+    return sedi
+
+def get_franchisors():
+    conn = get_db_connection()
+    try:
+        return conn.execute('SELECT * FROM franchisor').fetchall()
+    finally:
+        conn.close()
+
+def build_hierarchy():
+    franchisors = get_franchisors()
+    hierarchy = []
+
+    for franchisor in franchisors:
+        # Create a new dictionary for the franchisor
+        franchisor_dict = {
+            'id': franchisor['id'],
+            'nome': franchisor['nome'],
+            'email': franchisor['email'],
+            'password': franchisor['password'],
+            'attivo': franchisor['attivo'],
+            'data_creazione': franchisor['data_creazione'],
+            'area_managers': []  # Initialize an empty list for area managers
+        }
+
+        area_managers = get_area_managers_by_franchisor(franchisor['id'])
+        area_manager_list = []
+
+        for area_manager in area_managers:
+            # Create a new dictionary for the area manager
+            area_manager_dict = {
+                'id': area_manager['id'],
+                'franchisor_id': area_manager['franchisor_id'],
+                'nome': area_manager['nome'],
+                'cognome': area_manager['cognome'],
+                'email': area_manager['email'],
+                'password': area_manager['password'],
+                'attivo': area_manager['attivo'],
+                'data_creazione': area_manager['data_creazione'],
+                'societa': []  # Initialize an empty list for societa
+            }
+
+            societa = get_societa_by_area_manager(area_manager['id'])
+            societa_list = []
+
+            for company in societa:
+                # Create a new dictionary for the company
+                company_dict = {
+                    'id': company['id'],
+                    'area_manager_id': company['area_manager_id'],
+                    'nome': company['nome'],
+                    'email': company['email'],
+                    'password': company['password'],
+                    'attivo': company['attivo'],
+                    'data_creazione': company['data_creazione'],
+                    'sedi': []  # Initialize an empty list for sedi
+                }
+
+                # Fetch the sedi for the current company
+                sedi = get_sedi_by_societa(company['id'])
+                company_dict['sedi'] = sedi  # Add sedi to the company dictionary
+                societa_list.append(company_dict)  # Append the company dictionary to the list
+
+            area_manager_dict['societa'] = societa_list  # Add societa to the area manager dictionary
+            area_manager_list.append(area_manager_dict)  # Append the area manager dictionary to the list
+
+        franchisor_dict['area_managers'] = area_manager_list  # Add area managers to the franchisor dictionary
+        hierarchy.append(franchisor_dict)  # Append the franchisor dictionary to the hierarchy
+
+    return hierarchy
+
+# In database.py
+
+def update_franchisor(franchisor_id, nome, email, password):
+    conn = get_db_connection()
+    try:
+        conn.execute('''
+            UPDATE franchisor 
+            SET nome = ?, email = ?, password = ?
+            WHERE id = ?
+        ''', (nome, email, password, franchisor_id))
+        conn.commit()
+    except Exception as e:
+        print(f"Error updating franchisor: {e}")
+        conn.rollback()
+    finally:
+        conn.close()
+
+def delete_franchisor(franchisor_id):
+    conn = get_db_connection()
+    try:
+        # First, delete all associated area managers
+        conn.execute('DELETE FROM area_manager WHERE franchisor_id = ?', (franchisor_id,))
+        # Then, delete the franchisor
+        conn.execute('DELETE FROM franchisor WHERE id = ?', (franchisor_id,))
+        conn.commit()
+    except Exception as e:
+        print(f"Error deleting franchisor: {e}")
+        conn.rollback()
+    finally:
+        conn.close()
+
+def update_area_manager(area_manager_id, nome, cognome, email, password):
+    conn = get_db_connection()
+    try:
+        conn.execute('''
+            UPDATE area_manager 
+            SET nome = ?, cognome = ?, email = ?, password = ?
+            WHERE id = ?
+        ''', (nome, cognome, email, password, area_manager_id))
+        conn.commit()
+    except Exception as e:
+        print(f"Error updating area manager: {e}")
+        conn.rollback()
+    finally:
+        conn.close()
+
+def delete_area_manager(area_manager_id):
+    conn = get_db_connection()
+    try:
+        # First, delete all associated companies
+        conn.execute('DELETE FROM societa WHERE area_manager_id = ?', (area_manager_id,))
+        # Then, delete the area manager
+        conn.execute('DELETE FROM area_manager WHERE id = ?', (area_manager_id,))
+        conn.commit()
+    except Exception as e:
+        print(f"Error deleting area manager: {e}")
+        conn.rollback()
+    finally:
+        conn.close()
+
+def update_company(company_id, nome, email, password):
+    conn = get_db_connection()
+    try:
+        conn.execute('''
+            UPDATE societa 
+            SET nome = ?, email = ?, password = ?
+            WHERE id = ?
+        ''', (nome, email, password, company_id))
+        conn.commit()
+    except Exception as e:
+        print(f"Error updating company: {e}")
+        conn.rollback()
+    finally:
+        conn.close()
+
+def delete_company(company_id):
+    conn = get_db_connection()
+    try:
+        # First, delete all associated locations
+        conn.execute('DELETE FROM sede WHERE societa_id = ?', (company_id,))
+        # Then, delete the company
+        conn.execute('DELETE FROM societa WHERE id = ?', (company_id,))
+        conn.commit()
+    except Exception as e:
+        print(f"Error deleting company: {e}")
+        conn.rollback()
+    finally:
+        conn.close()
+
+def update_sede(sede_id, nome, indirizzo, citta, cap, email, password):
+    conn = get_db_connection()
+    try:
+        conn.execute('''
+            UPDATE sede 
+            SET nome = ?, indirizzo = ?, citta = ?, cap = ?, email = ?, password = ?
+            WHERE id = ?
+        ''', (nome, indirizzo, citta, cap, email, password, sede_id))
+        conn.commit()
+    except Exception as e:
+        print(f"Error updating sede: {e}")
+        conn.rollback()
+    finally:
+        conn.close()
+
+def delete_sede(sede_id):
+    conn = get_db_connection()
+    try:
+        conn.execute('DELETE FROM sede WHERE id = ?', (sede_id,))
+        conn.commit()
+    except Exception as e:
+        print(f"Error deleting sede: {e}")
+        conn.rollback()
+    finally:
+        conn.close()
+
+
+def register_franchisor(nome, email, password):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute('INSERT INTO franchisor (nome, email, password) VALUES (?, ?, ?)', 
+                      (nome, email, password))
+        franchisor_id = cursor.lastrowid
+        conn.commit()
+        return franchisor_id
+    except Exception as e:
+        conn.rollback()
+        return None
+    finally:
+        conn.close()
+
+def register_area_manager(franchisor_id, nome, cognome, email, password):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute('INSERT INTO area_manager (franchisor_id, nome, cognome, email, password) VALUES (?, ?, ?, ?, ?)', 
+                      (franchisor_id, nome, cognome, email, password))
+        area_manager_id = cursor.lastrowid
+        conn.commit()
+        return area_manager_id
+    except Exception as e:
+        print(f"Errore durante la registrazione dell'area manager: {e}")
+        conn.rollback()
+        return None
+    finally:
+        conn.close()
+
+def register_societa(area_manager_id, nome, email, password):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute('INSERT INTO societa (area_manager_id, nome, email, password) VALUES (?, ?, ?, ?)', 
+                      (area_manager_id, nome, email, password))
+        societa_id = cursor.lastrowid
+        conn.commit()
+        return societa_id
+    except Exception as e:
+        conn.rollback()
+        return None
+    finally:
+        conn.close()
+
+def register_sede(societa_id, nome, indirizzo, citta, cap, email, password):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute('''
+        INSERT INTO sede (societa_id, nome, indirizzo, citta, cap, email, password) 
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (societa_id, nome, indirizzo, citta, cap, email, password))
+        sede_id = cursor.lastrowid
+        conn.commit()
+        return sede_id
+    except Exception as e:
+        conn.rollback()
+        return None
+    finally:
+        conn.close()
+
+def create_user(nome, cognome, email, password, role):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute('''
+            INSERT INTO utenti (nome, cognome, email, password, ruolo)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (nome, cognome, email, password, role))  # Assuming nome and cognome are optional or can be set to None
+        
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Errore durante la creazione dell'utente: {e}")
+        conn.rollback()
+        return False
     finally:
         conn.close()
