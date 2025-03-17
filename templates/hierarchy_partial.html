@@ -100,10 +100,13 @@
         border-left: 4px solid #6610f2;
     }
     .level-3 .card {
-        border-left: 4px solid #6f42c1;
+        border-left: 4px solid #eeff00;
     }
     .level-4 .card {
         border-left: 4px solid #20c997;
+    }
+    .level-5 .card {
+        border-left: 4px solid #c92020;
     }
     .modal-content {
         border-radius: 10px;
@@ -200,7 +203,7 @@
                                                                                 <div class="card">
                                                                                     <div class="card-header d-flex align-items-center justify-content-between">
                                                                                         <a class="btn btn-link" data-bs-toggle="collapse" href="#company{{ company.id }}" role="button" aria-expanded="false" aria-controls="company{{ company.id }}">
-                                                                                            <i class="fas fa-building node-icon"></i> Company: {{ company.nome }}
+                                                                                            <i class="fas fa-building node-icon"></i> Società: {{ company.nome }}
                                                                                         </a>
                                                                                         <div>
                                                                                             <button class="btn btn-danger btn-sm me-2" data-bs-toggle="modal" data-bs-target="#deleteCompanyModal{{ company.id }}">
@@ -217,67 +220,104 @@
                                                                                     <div class="collapse" id="company{{ company.id }}">
                                                                                         <div class="card-body">
                                                                                             <ul class="list-unstyled">
-                                                                                                {% for sede in company.sedi %}
-                                                                                                    <li class="mb-1 level-4 nested-level">
-                                                                                                        <div class="card">
-                                                                                                            <div class="card-header d-flex align-items-center justify-content-between">
-                                                                                                                <a class="btn btn-link">
-                                                                                                                    <i class="fas fa-map-marker-alt node-icon"></i> Sede: {{ sede.nome }} - {{ sede.indirizzo }}, {{ sede.citta }}
-                                                                                                                </a>
-                                                                                                                <div>
-                                                                                                                    <button class="btn btn-warning btn-sm float-end me-2" data-bs-toggle="modal" data-bs-target="#modifySedeModal{{ sede.id }}">
-                                                                                                                        <i class="fas fa-edit"></i> Modifica
-                                                                                                                    </button>
-                                                                                                                    <button class="btn btn-danger btn-sm float-end me-2" data-bs-toggle="modal" data-bs-target="#deleteSedeModal{{ sede.id }}">
-                                                                                                                        <i class="fas fa-trash"></i> Elimina
-                                                                                                                    </button>
+                                                                                                {% if company.sedi %}
+                                                                                                    {% for sede in company.sedi %}
+                                                                                                        <li class="mb-1 level-4 nested-level">
+                                                                                                            <div class="card">
+                                                                                                                <div class="card-header d-flex align-items-center justify-content-between">
+                                                                                                                    <a class="btn btn-link" data-bs-toggle="collapse" href="#sede{{ sede.id }}" role="button" aria-expanded="false" aria-controls="sede{{ sede.id }}">
+                                                                                                                        <i class="fas fa-map-marker-alt node-icon"></i> Sede: {{ sede.nome }} - {{ sede.indirizzo }}, {{ sede.citta }}
+                                                                                                                    </a>
+                                                                                                                    <div>
+                                                                                                                        <button class="btn btn-danger btn-sm float-end me-2" data-bs-toggle="modal" data-bs-target="#deleteSedeModal{{ sede.id }}">
+                                                                                                                            <i class="fas fa-trash"></i> Elimina
+                                                                                                                        </button>
+                                                                                                                        <button class="btn btn-warning btn-sm float-end me-2" data-bs-toggle="modal" data-bs-target="#modifySedeModal{{ sede.id }}">
+                                                                                                                            <i class="fas fa-edit"></i> Modifica
+                                                                                                                        </button>
+                                                                                                                        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addTrainerModal{{ sede.id }}">
+                                                                                                                            <i class="fas fa-plus"></i> Aggiungi Trainer
+                                                                                                                        </button>
+                                                                                                                    </div>
+                                                                                                                </div>
+                                                                                                                <div class="collapse" id="sede{{ sede.id }}">
+                                                                                                                    <div class="card-body">
+                                                                                                                        <ul class="list-unstyled">
+                                                                                                                            {% if sede.trainers %}
+                                                                                                                                {% for trainer in sede.trainers %}
+                                                                                                                                    <li class="mb-1 level-5 nested-level">
+                                                                                                                                        <div class="card">
+                                                                                                                                            <div class="card-header d-flex align-items-center justify-content-between">
+                                                                                                                    <div>
+                                                                                                                        <i class="fas fa-clipboard-user node-icon"></i>
+                                                                                                                        <strong>{{ trainer.nome }} {{ trainer.cognome }}</strong> - {{ trainer.email }}
+                                                                                                                    </div>
+                                                                                                                    <div>
+                                                                                                                        <button class="btn btn-warning btn-sm me-2" data-bs-toggle="modal" data-bs-target="#modifyTrainerModal{{ trainer.id }}">
+                                                                                                                            <i class="fas fa-edit"></i> Modifica
+                                                                                                                        </button>
+                                                                                                                        <button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteTrainerModal{{ trainer.id }}">
+                                                                                                                            <i class="fas fa-trash"></i> Elimina
+                                                                                                                        </button>
+                                                                                                                    </div>
                                                                                                                 </div>
                                                                                                             </div>
-                                                                                                        </div>
-                                                                                                    </li>
-                                                                                                {% endfor %}
+                                                                                                        </li>
+                                                                                                                                {% endfor %}
+                                                                                                                            {% else %}
+                                                                                                                                <li class="text-muted p-3">Non sono presenti trainer per questa sede.</li>
+                                                                                                                            {% endif %}
+                                                                                                                        </ul>
+                                                                                                                    </div>
+                                                                                                                </div>
+                                                                                                            </div>
+                                                                                                        </li>
+                                                                                                    {% endfor %}
+                                                                                                {% else %}
+                                                                                                    <li class="text-muted p-3">Non sono presenti sedi di questa società.</li>
+                                                                                                {% endif %}
                                                                                             </ul>
                                                                                         </div>
                                                                                     </div>
                                                                                 </div>
                                                                             </li>
+                                                                            <div class="modal fade" id="addCompanyModal_{{ area_manager.id }}" tabindex="-1" aria-labelledby="addCompanyModalLabel_{{ area_manager.id }}" aria-hidden="true">
+                                                                                <div class="modal-dialog">
+                                                                                    <div class="modal-content">
+                                                                                        <div class="modal-header">
+                                                                                            <h5 class="modal-title" id="addCompanyModalLabel_{{ area_manager.id }}">Aggiungi Società</h5>
+                                                                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                                                        </div>
+                                                                                        <div class="modal-body">
+                                                                                            <form action="{{ url_for('add_societa') }}" method="POST">
+                                                                                                <input type="hidden" name="area_manager_id" value="{{ area_manager.id }}">
+                                                                                                <div class="mb-3">
+                                                                                                    <label for="addCompany_companyName_{{ area_manager.id }}" class="form-label">Nome Società</label>
+                                                                                                    <input type="text" class="form-control" id="addCompany_companyName_{{ area_manager.id }}" name="nome" required>
+                                                                                                </div>
+                                                                                                <div class="mb-3">
+                                                                                                    <label for="addCompany_companyEmail_{{ area_manager.id }}" class="form-label">Email</label>
+                                                                                                    <input type="email" class="form-control" id="addCompany_companyEmail_{{ area_manager.id }}" name="email" required>
+                                                                                                </div>
+                                                                                                <div class="mb-3">
+                                                                                                    <label for="addCompany_companyPassword_{{ area_manager.id }}" class="form-label">Password</label>
+                                                                                                    <input type="password" class="form-control" id="addCompany_companyPassword_{{ area_manager.id }}" name="password" required>
+                                                                                                </div>
+                                                                                                <button type="submit" class="btn btn-primary">Aggiungi Società</button>
+                                                                                            </form>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>                                                
                                                                         {% endfor %}
                                                                     {% else %}
-                                                                        <li class="text-muted p-3">Non sono presenti società per questo area manager.</li>
+                                                                        <li>Non sono presenti area managers per questo franchisor.</li>
                                                                     {% endif %}
                                                                 </ul>
                                                             </div>
                                                         </div>
                                                     </div>
                                                 </li>
-                                                <div class="modal fade" id="addCompanyModal_{{ area_manager.id }}" tabindex="-1" aria-labelledby="addCompanyModalLabel_{{ area_manager.id }}" aria-hidden="true">
-                                                    <div class="modal-dialog">
-                                                        <div class="modal-content">
-                                                            <div class="modal-header">
-                                                                <h5 class="modal-title" id="addCompanyModalLabel_{{ area_manager.id }}">Aggiungi Società</h5>
-                                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                                            </div>
-                                                            <div class="modal-body">
-                                                                <form action="{{ url_for('add_societa') }}" method="POST">
-                                                                    <input type="hidden" name="area_manager_id" value="{{ area_manager.id }}">
-                                                                    <div class="mb-3">
-                                                                        <label for="addCompany_companyName_{{ area_manager.id }}" class="form-label">Nome Società</label>
-                                                                        <input type="text" class="form-control" id="addCompany_companyName_{{ area_manager.id }}" name="nome" required>
-                                                                    </div>
-                                                                    <div class="mb-3">
-                                                                        <label for="addCompany_companyEmail_{{ area_manager.id }}" class="form-label">Email</label>
-                                                                        <input type="email" class="form-control" id="addCompany_companyEmail_{{ area_manager.id }}" name="email" required>
-                                                                    </div>
-                                                                    <div class="mb-3">
-                                                                        <label for="addCompany_companyPassword_{{ area_manager.id }}" class="form-label">Password</label>
-                                                                        <input type="password" class="form-control" id="addCompany_companyPassword_{{ area_manager.id }}" name="password" required>
-                                                                    </div>
-                                                                    <button type="submit" class="btn btn-primary">Aggiungi Società</button>
-                                                                </form>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>                                                
                                             {% endfor %}
                                         {% else %}
                                             <li>Non sono presenti area managers per questo franchisor.</li>
@@ -579,7 +619,93 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
+
+                        <div class="modal fade" id="addTrainerModal{{ sede.id }}" tabindex="-1" aria-labelledby="addTrainerModalLabel{{ sede.id }}" aria-hidden="true">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="addTrainerModalLabel{{ sede.id }}">Aggiungi Trainer</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <form action="{{ url_for('add_trainer') }}" method="POST">
+                                            <input type="hidden" name="sede_id" value="{{ sede.id }}">
+                                            <div class="mb-3">
+                                                <label for="trainerName{{ sede.id }}" class="form-label">Nome</label>
+                                                <input type="text" class="form-control" id="trainerName{{ sede.id }}" name="nome" required>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="trainerSurname{{ sede.id }}" class="form-label">Cognome</label>
+                                                <input type="text" class="form-control" id="trainerSurname{{ sede.id }}" name="cognome" required>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="trainerEmail{{ sede.id }}" class="form-label">Email</label>
+                                                <input type="email" class="form-control" id="trainerEmail{{ sede.id }}" name="email" required>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="trainerPassword{{ sede.id }}" class="form-label">Password</label>
+                                                <input type="password" class="form-control" id="trainerPassword{{ sede.id }}" name="password" required>
+                                            </div>
+                                            <button type="submit" class="btn btn-primary">Aggiungi Trainer</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {% for trainer in sede.trainers %}
+                            <div class="modal fade" id="modifyTrainerModal{{ trainer.id }}" tabindex="-1" aria-labelledby="modifyTrainerModalLabel{{ trainer.id }}" aria-hidden="true">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="modifyTrainerModalLabel{{ trainer.id }}">Modifica Trainer</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <form action="{{ url_for('update_trainer_route', trainer_id=trainer.id) }}" method="POST">
+                                                <div class="mb-3">
+                                                    <label for="trainerName{{ trainer.id }}" class="form-label">Nome</label>
+                                                    <input type="text" class="form-control" id="trainerName{{ trainer.id }}" name="nome" value="{{ trainer.nome }}" required>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="trainerSurname{{ trainer.id }}" class="form-label">Cognome</label>
+                                                    <input type="text" class="form-control" id="trainerSurname{{ trainer.id }}" name="cognome" value="{{ trainer.cognome }}" required>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="trainerEmail{{ trainer.id }}" class="form-label">Email</label>
+                                                    <input type="email" class="form-control" id="trainerEmail{{ trainer.id }}" name="email" value="{{ trainer.email }}" required>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="trainerPassword{{ trainer.id }}" class="form-label">Password</label>
+                                                    <input type="password" class="form-control" id="trainerPassword{{ trainer.id }}" name="password" required>
+                                                </div>
+                                                <button type="submit" class="btn btn-primary">Aggiorna Trainer</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="modal fade" id="deleteTrainerModal{{ trainer.id }}" tabindex="-1" aria-labelledby="deleteTrainerModalLabel{{ trainer.id }}" aria-hidden="true">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="deleteTrainerModalLabel{{ trainer.id }}">Elimina Trainer</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p>Sei sicuro di voler eliminare questo trainer?</p>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <form action="{{ url_for('delete_trainer_route', trainer_id=trainer.id) }}" method="POST">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                                                <button type="submit" class="btn btn-danger">Elimina</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
                     {% endfor %}
                 {% endfor %}
             {% endfor %}

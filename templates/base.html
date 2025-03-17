@@ -53,8 +53,13 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if request.path == url_for('gestione_gerarchia') %}active{% endif %}" href="{{ url_for('hierarchy') }}">
+                        <a class="nav-link {% if request.path == url_for('hierarchy') %}active{% endif %}" href="{{ url_for('hierarchy') }}">
                             <i class="fas fa-sitemap me-1"></i>Gerarchia
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path == url_for('all_utenti') %}active{% endif %}" href="{{ url_for('all_utenti') }}">
+                            <i class="fas fa-sitemap me-1"></i>Utenti
                         </a>
                     </li>
                 </ul>
@@ -87,7 +92,7 @@
 
     <footer class="footer mt-auto py-3 bg-light fixed-bottom">
         <div class="container text-center">
-            <span class="text-muted">© 2025 GymTrack - DGB, V: 0.0.7</span>
+            <span class="text-muted">© 2025 GymTrack - DGB, V: 0.0.8</span>
         </div>
     </footer>
 

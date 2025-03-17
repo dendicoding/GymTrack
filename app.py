@@ -123,19 +123,16 @@ def add_area_manager():
         password = request.form['password']
         franchisor_id = request.form['franchisor_id']
         
-        # Register the area manager
-        area_manager_id = db.register_area_manager(franchisor_id, nome, cognome, email, password)
-        
-        if area_manager_id:
+
             # Create the user in the utenti table
-            user_created = db.create_user(nome, cognome, email, password, 'area_manager')
-            if user_created:
-                flash('Area Manager aggiunto con successo!', 'success')
-                return redirect(url_for('gestione_gerarchia'))
-            else:
-                flash('Errore durante la creazione dell\'utente Area Manager', 'error')
+
+        area_manager_id = db.register_area_manager(franchisor_id, nome, cognome, email, password)
+        if area_manager_id:
+            flash('Utente ed Area Manager aggiunti con successo!', 'success')
+            return redirect(url_for('gestione_gerarchia'))
         else:
-            flash('Errore durante l\'aggiunta dell\'Area Manager', 'error')
+            flash('Errore durante la creazione dell\'utente Area Manager', 'error')
+  
     
     return render_template('auth/add_area_manager.html')
 
@@ -153,7 +150,6 @@ def add_societa():
         area_manager_id = request.form['area_manager_id']
         
         societa_id = db.register_societa(area_manager_id, nome, email, password)
-        
         if societa_id:
             flash('Società aggiunta con successo!', 'success')
             return redirect(url_for('gestione_gerarchia'))
@@ -180,7 +176,7 @@ def add_sede():
         societa_id = request.form['societa_id']
         
         sede_id = db.register_sede(societa_id, nome, indirizzo, citta, cap, email, password)
-        
+
         if sede_id:
             flash('Sede aggiunta con successo!', 'success')
             return redirect(url_for('gestione_gerarchia'))
@@ -722,6 +718,62 @@ def delete_sede_route(sede_id):
     flash('Sede deleted successfully!', 'success')
     return redirect(url_for('hierarchy'))
 
+@app.route('/all-utenti')
+@login_required
+def all_utenti():
+    utenti = db.get_all_utenti()
+    return render_template('all_data.html', utenti=utenti)
+
+@app.route('/delete-user/<int:user_id>', methods=['POST'])
+@login_required
+def delete_user_route(user_id):
+    db.delete_user(user_id)  # You need to implement this function in database.py
+    flash('User deleted successfully!', 'success')
+    return redirect(url_for('all_utenti'))
+
+@app.route('/add-trainer', methods=['GET', 'POST'])
+@login_required
+def add_trainer():
+    # Check if the user has the correct role to add a trainer
+    #if session.get('user_role') != 'societa':
+        #flash('Non hai i permessi per aggiungere un trainer', 'error')
+        #return redirect(url_for('index'))
+    
+    if request.method == 'POST':
+        nome = request.form['nome']
+        cognome = request.form['cognome']
+        email = request.form['email']
+        password = request.form['password']
+        sede_id = request.form['sede_id']  # Assuming you have a way to get the sede_id
+        
+        trainer_id = db.register_trainer(sede_id, nome, cognome, email, password)
+        if trainer_id:
+            flash('Trainer aggiunto con successo!', 'success')
+            return redirect(url_for('gestione_gerarchia'))  # Redirect to the hierarchy management page
+        else:
+            flash('Errore durante l\'aggiunta del trainer', 'error')
+    
+    # Render the form for adding a trainer
+    return render_template('auth/add_trainer.html')  # Create this template for the form
+
+
+@app.route('/update-trainer/<int:trainer_id>', methods=['POST'])
+@login_required
+def update_trainer_route(trainer_id):
+    nome = request.form['nome']
+    cognome = request.form['cognome']
+    email = request.form['email']
+    password = request.form['password']
+    db.update_trainer(trainer_id, nome, cognome, email, password)
+    flash('Trainer updated successfully!', 'success')
+    return redirect(url_for('gestione_gerarchia'))  # Redirect to the hierarchy management page
+
+@app.route('/delete-trainer/<int:trainer_id>', methods=['POST'])
+@login_required
+def delete_trainer_route(trainer_id):
+    db.delete_trainer(trainer_id)
+    flash('Trainer deleted successfully!', 'success')
+    return redirect(url_for('gestione_gerarchia'))  # Redirect to the hierarchy management page
 if __name__ == '__main__':
     #db.migrate_database()
     #db.create_user_tables
