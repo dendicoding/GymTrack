@@ -112,16 +112,16 @@ def gestione_gerarchia():
 @app.route('/add-area-manager', methods=['GET', 'POST'])
 @login_required
 def add_area_manager():
-    if session.get('user_role') != 'franchisor':
-        flash('Non hai i permessi per aggiungere area manager', 'error')
-        return redirect(url_for('index'))
+    #if session.get('user_role') != 'franchisor':
+        #flash('Non hai i permessi per aggiungere area manager', 'error')
+        #return redirect(url_for('index'))
     
     if request.method == 'POST':
         nome = request.form['nome']
         cognome = request.form['cognome']
         email = request.form['email']
         password = request.form['password']
-        franchisor_id = session.get('user_id')
+        franchisor_id = request.form['franchisor_id']
         
         # Register the area manager
         area_manager_id = db.register_area_manager(franchisor_id, nome, cognome, email, password)
@@ -142,15 +142,15 @@ def add_area_manager():
 @app.route('/add-societa', methods=['GET', 'POST'])
 @login_required
 def add_societa():
-    if session.get('user_role') != 'area_manager':
-        flash('Non hai i permessi per aggiungere società', 'error')
-        return redirect(url_for('index'))
+    #if session.get('user_role') != 'area_manager':
+        #flash('Non hai i permessi per aggiungere società', 'error')
+        #return redirect(url_for('index'))
     
     if request.method == 'POST':
         nome = request.form['nome']
         email = request.form['email']
         password = request.form['password']
-        area_manager_id = session.get('user_id')
+        area_manager_id = request.form['area_manager_id']
         
         societa_id = db.register_societa(area_manager_id, nome, email, password)
         
@@ -165,18 +165,19 @@ def add_societa():
 @app.route('/add-sede', methods=['GET', 'POST'])
 @login_required
 def add_sede():
-    if session.get('user_role') != 'societa':
-        flash('Non hai i permessi per aggiungere sedi', 'error')
-        return redirect(url_for('index'))
+    #if session.get('user_role') != 'societa':
+        #flash('Non hai i permessi per aggiungere sedi', 'error')
+        #return redirect(url_for('index'))
     
     if request.method == 'POST':
+        print(request.form)  # Debugging line
         nome = request.form['nome']
         indirizzo = request.form['indirizzo']
         citta = request.form['citta']
-        cap = request.form['cap']
+        cap = request.form['cap']  # This line raises the error if 'cap' is missing
         email = request.form['email']
         password = request.form['password']
-        societa_id = session.get('user_id')
+        societa_id = request.form['societa_id']
         
         sede_id = db.register_sede(societa_id, nome, indirizzo, citta, cap, email, password)
         
