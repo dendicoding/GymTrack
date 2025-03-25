@@ -18,14 +18,14 @@
                         <div class="form-floating mb-3">
                             <input type="text" class="form-control" id="nome" name="nome" 
                                    value="{{ cliente['nome'] }}" required>
-                            <label for="nome">Nome</label>
+                            <label for="nome">Nome *</label>
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="form-floating mb-3">
                             <input type="text" class="form-control" id="cognome" name="cognome" 
                                    value="{{ cliente['cognome'] }}" required>
-                            <label for="cognome">Cognome</label>
+                            <label for="cognome">Cognome *</label>
                         </div>
                     </div>
 
@@ -40,8 +40,8 @@
                     <div class="col-md-6">
                         <div class="form-floating mb-3">
                             <input type="tel" class="form-control" id="telefono" name="telefono" 
-                                   value="{{ cliente['telefono'] }}">
-                            <label for="telefono">Telefono</label>
+                                   value="{{ cliente['telefono'] }}" required>
+                            <label for="telefono">Telefono *</label>
                         </div>
                     </div>
 
@@ -103,6 +103,56 @@
                             <input type="text" class="form-control" id="codice_fiscale" name="codice_fiscale" 
                                    value="{{ cliente['codice_fiscale'] }}" required>
                             <label for="codice_fiscale">Codice Fiscale *</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-floating mb-3">
+                            <select class="form-select" id="tipologia" name="tipologia" required>
+                                <option value="EMS" {% if cliente['tipologia'] == 'EMS' %}selected{% endif %}>EMS</option>
+                                <option value="VacuumLab" {% if cliente['tipologia'] == 'VacuumLab' %}selected{% endif %}>VacuumLab</option>
+                            </select>
+                            <label for="tipologia">Tipo Cliente</label>
+                        </div>
+                    </div>
+
+                    <!-- Ottava riga -->
+                    <div class="col-md-6">
+                        <div class="form-floating mb-3">
+                            <input type="text" class="form-control" id="taglia_giubotto" name="taglia_giubotto" 
+                                   value="{{ cliente['taglia_giubotto'] }}">
+                            <label for="taglia_giubotto">Taglia Giubotto</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-floating mb-3">
+                            <input type="text" class="form-control" id="taglia_cintura" name="taglia_cintura" 
+                                   value="{{ cliente['taglia_cintura'] }}">
+                            <label for="taglia_cintura">Taglia Cintura</label>
+                        </div>
+                    </div>
+
+                    <!-- Nona riga -->
+                    <div class="col-md-6">
+                        <div class="form-floating mb-3">
+                            <input type="text" class="form-control" id="taglia_braccia" name="taglia_braccia" 
+                                   value="{{ cliente['taglia_braccia'] }}">
+                            <label for="taglia_braccia">Taglia Braccia</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-floating mb-3">
+                            <input type="text" class="form-control" id="taglia_gambe" name="taglia_gambe" 
+                                   value="{{ cliente['taglia_gambe'] }}">
+                            <label for="taglia_gambe">Taglia Gambe</label>
+                        </div>
+                    </div>
+
+                    <!-- Decima riga -->
+                    <div class="col-12">
+                        <div class="form-floating mb-3">
+                            <textarea class="form-control" id="obiettivo_cliente" name="obiettivo_cliente" 
+                                      style="height: 100px">{{ cliente['obiettivo_cliente'] }}</textarea>
+                            <label for="obiettivo_cliente">Obiettivo Cliente</label>
                         </div>
                     </div>
 

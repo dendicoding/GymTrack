@@ -6,7 +6,7 @@
     <title>{% block title %}GymTrack{% endblock %}</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!--<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">-->
     {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -92,12 +92,12 @@
 
     <footer class="footer mt-auto py-3 bg-light fixed-bottom">
         <div class="container text-center">
-            <span class="text-muted">© 2025 GymTrack - DGB, V: 0.0.8</span>
+            <span class="text-muted">© 2025 GymTrack - DGB, V: 0.0.9</span>
         </div>
     </footer>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
-    <script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
+    <!--<script src="{{ url_for('static', filename='js/scripts.js') }}"></script>-->
     {% block extra_js %}{% endblock %}
 </body>
 </html>

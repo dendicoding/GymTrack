@@ -35,7 +35,12 @@ def init_db():
         note TEXT,
         tipo TEXT NOT NULL,  -- 'lead' o 'effettivo'
         codice_fiscale TEXT, -- Nuovo campo per il codice fiscale
-        data_registrazione TEXT NOT NULL
+        data_registrazione TEXT NOT NULL,
+        taglia_giubotto TEXT,  -- Nuovo campo per la taglia giubotto
+        taglia_cintura TEXT,   -- Nuovo campo per la taglia cintura
+        taglia_braccia TEXT,   -- Nuovo campo per la taglia braccia
+        taglia_gambe TEXT,     -- Nuovo campo per la taglia gambe
+        obiettivo_cliente TEXT -- Nuovo campo per l'obiettivo cliente
     )
     ''')
     
@@ -48,7 +53,8 @@ def init_db():
         prezzo REAL NOT NULL,
         numero_lezioni INTEGER NOT NULL,
         durata_giorni INTEGER NOT NULL,
-        attivo BOOLEAN NOT NULL DEFAULT 1
+        attivo BOOLEAN NOT NULL DEFAULT 1,
+        pagamento_unico BOOLEAN NOT NULL DEFAULT 0
     )
     ''')
     
@@ -79,6 +85,7 @@ def init_db():
         data_pagamento DATE,
         pagato BOOLEAN DEFAULT 0,
         numero_rata INTEGER NOT NULL,
+        metodo_pagamento TEXT,  -- Nuovo campo per il metodo di pagamento
         FOREIGN KEY (abbonamento_id) REFERENCES abbonamenti (id)
     )
     ''')
@@ -179,29 +186,29 @@ def get_clienti_effettivi():
     conn.close()
     return clienti
 
-def add_cliente(nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo, codice_fiscale):
+def add_cliente(nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo, codice_fiscale, tipologia, taglia_giubotto, taglia_cintura, taglia_braccia, taglia_gambe, obiettivo_cliente):
     conn = get_db_connection()
     cursor = conn.cursor()
     data_registrazione = datetime.now().strftime("%Y-%m-%d")
     
     cursor.execute(''' 
-    INSERT INTO clienti (nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo, codice_fiscale, data_registrazione)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ''', (nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo, codice_fiscale, data_registrazione))
+    INSERT INTO clienti (nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo, codice_fiscale, data_registrazione, tipologia, taglia_giubotto, taglia_cintura, taglia_braccia, taglia_gambe, obiettivo_cliente)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo, codice_fiscale, data_registrazione, tipologia, taglia_giubotto, taglia_cintura, taglia_braccia, taglia_gambe, obiettivo_cliente))
     
     conn.commit()
     cliente_id = cursor.lastrowid
     conn.close()
     return cliente_id
 
-def update_cliente(cliente_id, nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo, codice_fiscale):
+def update_cliente(cliente_id, nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo, codice_fiscale, tipologia, taglia_giubotto, taglia_cintura, taglia_braccia, taglia_gambe, obiettivo_cliente):
     conn = get_db_connection()
     conn.execute(''' 
     UPDATE clienti 
     SET nome = ?, cognome = ?, email = ?, telefono = ?, data_nascita = ?, 
-        indirizzo = ?, citta = ?, cap = ?, note = ?, tipo = ?, codice_fiscale = ?
+        indirizzo = ?, citta = ?, cap = ?, note = ?, tipo = ?, codice_fiscale = ?, tipologia = ?, taglia_giubotto = ?, taglia_cintura = ?, taglia_braccia = ?, taglia_gambe = ?, obiettivo_cliente = ?
     WHERE id = ?
-    ''', (nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo, codice_fiscale, cliente_id))
+    ''', (nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo, codice_fiscale, tipologia, taglia_giubotto, taglia_cintura, taglia_braccia, taglia_gambe, obiettivo_cliente, cliente_id))
     
     conn.commit()
     conn.close()
@@ -225,27 +232,27 @@ def get_pacchetto(pacchetto_id):
     conn.close()
     return pacchetto
 
-def add_pacchetto(nome, descrizione, prezzo, numero_lezioni, durata_giorni, attivo):
+def add_pacchetto(nome, descrizione, prezzo, numero_lezioni, durata_giorni, attivo, pagamento_unico):
     conn = get_db_connection()
     cursor = conn.cursor()
     
     cursor.execute('''
-    INSERT INTO pacchetti (nome, descrizione, prezzo, numero_lezioni, durata_giorni, attivo)
-    VALUES (?, ?, ?, ?, ?, ?)
-    ''', (nome, descrizione, prezzo, numero_lezioni, durata_giorni, attivo))
+    INSERT INTO pacchetti (nome, descrizione, prezzo, numero_lezioni, durata_giorni, attivo, pagamento_unico)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+    ''', (nome, descrizione, prezzo, numero_lezioni, durata_giorni, attivo, pagamento_unico))
     
     conn.commit()
     pacchetto_id = cursor.lastrowid
     conn.close()
     return pacchetto_id
 
-def update_pacchetto(pacchetto_id, nome, descrizione, prezzo, numero_lezioni, durata_giorni, attivo):
+def update_pacchetto(pacchetto_id, nome, descrizione, prezzo, numero_lezioni, durata_giorni, attivo, pagamento_unico):
     conn = get_db_connection()
     conn.execute('''
     UPDATE pacchetti 
-    SET nome = ?, descrizione = ?, prezzo = ?, numero_lezioni = ?, durata_giorni = ?, attivo = ?
+    SET nome = ?, descrizione = ?, prezzo = ?, numero_lezioni = ?, durata_giorni = ?, attivo = ?, pagamento_unico = ?
     WHERE id = ?
-    ''', (nome, descrizione, prezzo, numero_lezioni, durata_giorni, attivo, pacchetto_id))
+    ''', (nome, descrizione, prezzo, numero_lezioni, durata_giorni, attivo, pagamento_unico, pacchetto_id))
     
     conn.commit()
     conn.close()
@@ -395,16 +402,22 @@ def get_rate_calendario(mese=None, anno=None):
     finally:
         conn.close()
 
-def paga_rata(rata_id):
+def paga_rata(rata_id, metodo_pagamento, importo_pagato):
     conn = get_db_connection()
     data_pagamento = datetime.now().strftime("%Y-%m-%d")
     
-    conn.execute('''
-    UPDATE rate SET pagato = 1, data_pagamento = ? WHERE id = ?
-    ''', (data_pagamento, rata_id))
-    
-    conn.commit()
-    conn.close()
+    try:
+        conn.execute('''
+        UPDATE rate SET pagato = 1, data_pagamento = ?, metodo_pagamento = ?, importo = ? WHERE id = ?
+        ''', (data_pagamento, metodo_pagamento, importo_pagato, rata_id))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Errore durante la registrazione del pagamento: {e}")
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
 
 def get_abbonamenti_by_cliente(cliente_id):
     conn = get_db_connection()
@@ -650,7 +663,7 @@ def registra_lezione(abbonamento_id, data, note):
         if not abbonamento:
             return False
         
-        if abbonamento['lezioni_utilizzate'] >= abbonamento['numero_lezioni']:
+        if (abbonamento['lezioni_utilizzate'] >= abbonamento['numero_lezioni']):
             return False
         
         # Inserisci la nuova lezione con il campo registrata_da
@@ -875,21 +888,10 @@ def migrate_abbonamenti():
 def migrate_database():
     conn = get_db_connection()
     try:
-        # Create the trainer table with a foreign key reference to sede
-        conn.execute(''' 
-            CREATE TABLE IF NOT EXISTS trainer (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                nome TEXT NOT NULL,
-                cognome TEXT NOT NULL,
-                email TEXT UNIQUE NOT NULL,
-                password TEXT NOT NULL,
-                sede_id INTEGER NOT NULL,
-                attivo BOOLEAN DEFAULT 1,
-                data_creazione TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (sede_id) REFERENCES sede(id)
-            )
+        conn.execute('''
+            ALTER TABLE pacchetti ADD COLUMN pagamento_unico BOOLEAN NOT NULL DEFAULT 0
         ''')
-        
+
         conn.commit()
     except Exception as e:
         print(f"Error during migration: {e}")
@@ -983,6 +985,9 @@ def create_user_tables():
         password TEXT NOT NULL,
         attivo BOOLEAN DEFAULT 1,
         data_creazione TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        indirizzo TEXT,  -- Nuovo campo per l'indirizzo
+        comune TEXT,     -- Nuovo campo per il comune
+        provincia TEXT,  -- Nuovo campo per la provincia
         FOREIGN KEY (area_manager_id) REFERENCES area_manager(id)
     )
     ''')
@@ -1138,6 +1143,9 @@ def build_hierarchy():
                     'area_manager_id': company['area_manager_id'],
                     'nome': company['nome'],
                     'email': company['email'],
+                    'indirizzo': company['indirizzo'],
+                    'provincia': company['provincia'],
+                    'comune': company['comune'],
                     'password': company['password'],
                     'attivo': company['attivo'],
                     'data_creazione': company['data_creazione'],
@@ -1264,14 +1272,14 @@ def delete_area_manager(area_manager_id):
     finally:
         conn.close()
 
-def update_company(company_id, nome, email, password):
+def update_company(company_id, nome, email, password, indirizzo, provincia, comune):
     conn = get_db_connection()
     try:
         conn.execute('''
             UPDATE societa 
-            SET nome = ?, email = ?, password = ?
+            SET nome = ?, email = ?, password = ?, indirizzo = ?, provincia = ?, comune = ?
             WHERE id = ?
-        ''', (nome, email, password, company_id))
+        ''', (nome, email, password, indirizzo, provincia, comune, company_id))
         conn.commit()
     except Exception as e:
         print(f"Error updating company: {e}")
@@ -1470,5 +1478,19 @@ def get_trainers_by_sede(sede_id):
     try:
         trainers = conn.execute('SELECT * FROM trainer WHERE sede_id = ?', (sede_id,)).fetchall()
         return trainers
+    finally:
+        conn.close()
+
+def crea_nuova_rata(abbonamento_id, importo, data_scadenza):
+    conn = get_db_connection()
+    try:
+        conn.execute('''
+            INSERT INTO rate (abbonamento_id, importo, data_scadenza, pagato, numero_rata)
+            VALUES (?, ?, ?, 0, (SELECT COALESCE(MAX(numero_rata), 0) + 1 FROM rate WHERE abbonamento_id = ?))
+        ''', (abbonamento_id, importo, data_scadenza, abbonamento_id))
+        conn.commit()
+    except Exception as e:
+        print(f"Errore durante la creazione della nuova rata: {e}")
+        conn.rollback()
     finally:
         conn.close()

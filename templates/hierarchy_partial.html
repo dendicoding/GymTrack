@@ -229,10 +229,10 @@
                                                                                                                         <i class="fas fa-map-marker-alt node-icon"></i> Sede: {{ sede.nome }} - {{ sede.indirizzo }}, {{ sede.citta }}
                                                                                                                     </a>
                                                                                                                     <div>
-                                                                                                                        <button class="btn btn-danger btn-sm float-end me-2" data-bs-toggle="modal" data-bs-target="#deleteSedeModal{{ sede.id }}">
+                                                                                                                        <button class="btn btn-danger btn-sm me-2" data-bs-toggle="modal" data-bs-target="#deleteSedeModal{{ sede.id }}">
                                                                                                                             <i class="fas fa-trash"></i> Elimina
                                                                                                                         </button>
-                                                                                                                        <button class="btn btn-warning btn-sm float-end me-2" data-bs-toggle="modal" data-bs-target="#modifySedeModal{{ sede.id }}">
+                                                                                                                        <button class="btn btn-warning btn-sm me-2" data-bs-toggle="modal" data-bs-target="#modifySedeModal{{ sede.id }}">
                                                                                                                             <i class="fas fa-edit"></i> Modifica
                                                                                                                         </button>
                                                                                                                         <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addTrainerModal{{ sede.id }}">
@@ -302,6 +302,18 @@
                                                                                                 <div class="mb-3">
                                                                                                     <label for="addCompany_companyPassword_{{ area_manager.id }}" class="form-label">Password</label>
                                                                                                     <input type="password" class="form-control" id="addCompany_companyPassword_{{ area_manager.id }}" name="password" required>
+                                                                                                </div>
+                                                                                                <div class="mb-3">
+                                                                                                    <label for="addCompany_companyIndirizzo_{{ area_manager.id }}" class="form-label">Indirizzo</label>
+                                                                                                    <input type="text" class="form-control" id="addCompany_companyIndirizzo_{{ area_manager.id }}" name="indirizzo" required>
+                                                                                                </div>
+                                                                                                <div class="mb-3">
+                                                                                                    <label for="addCompany_companyComune_{{ area_manager.id }}" class="form-label">Comune</label>
+                                                                                                    <input type="text" class="form-control" id="addCompany_companyComune_{{ area_manager.id }}" name="comune" required>
+                                                                                                </div>
+                                                                                                <div class="mb-3">
+                                                                                                    <label for="addCompany_companyProvincia_{{ area_manager.id }}" class="form-label">Provincia</label>
+                                                                                                    <input type="text" class="form-control" id="addCompany_companyProvincia_{{ area_manager.id }}" name="provincia" required>
                                                                                                 </div>
                                                                                                 <button type="submit" class="btn btn-primary">Aggiungi Società</button>
                                                                                             </form>
@@ -516,6 +528,18 @@
                                         <div class="mb-3">
                                             <label for="companyPassword{{ company.id }}" class="form-label">Password</label>
                                             <input type="password" class="form-control" id="companyPassword{{ company.id }}" name="password" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="companyIndirizzo{{ company.id }}" class="form-label">Indirizzo</label>
+                                            <input type="text" class="form-control" id="companyIndirizzo{{ company.id }}" name="indirizzo" value="{{ company.indirizzo }}" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="companyComune{{ company.id }}" class="form-label">Comune</label>
+                                            <input type="text" class="form-control" id="companyComune{{ company.id }}" name="comune" value="{{ company.comune }}" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="companyProvincia{{ company.id }}" class="form-label">Provincia</label>
+                                            <input type="text" class="form-control" id="companyProvincia{{ company.id }}" name="provincia" value="{{ company.provincia }}" required>
                                         </div>
                                         <button type="submit" class="btn btn-primary">Aggiorna Società</button>
                                     </form>

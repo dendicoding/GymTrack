@@ -52,13 +52,22 @@
                     </div>
                     
                     <div class="mb-3">
-                        <label for="telefono" class="form-label">Telefono</label>
-                        <input type="tel" class="form-control" id="telefono" name="telefono">
+                        <label for="telefono" class="form-label">Telefono *</label>
+                        <input type="tel" class="form-control" id="telefono" name="telefono" required>
                     </div>
                     
                     <div class="mb-3">
                         <label for="codice_fiscale" class="form-label">Codice Fiscale</label>
                         <input type="text" class="form-control" id="codice_fiscale" name="codice_fiscale" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="tipologia" class="form-label">Tipologia</label>
+                        <select class="form-select" id="tipologia" name="tipologia">
+                            <option value="">Seleziona Tipologia</option>
+                            <option value="ems">EMS</option>
+                            <option value="vacuumlab">VacuumLab</option>
+                        </select>
                     </div>
                 </div>
                 
@@ -80,10 +89,35 @@
                         <input type="text" class="form-control" id="cap" name="cap">
                     </div>
                     
+                    <div class="mb-3">
+                        <label for="taglia_giubotto" class="form-label">Taglia Giubotto</label>
+                        <input type="text" class="form-control" id="taglia_giubotto" name="taglia_giubotto">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="taglia_cintura" class="form-label">Taglia Cintura</label>
+                        <input type="text" class="form-control" id="taglia_cintura" name="taglia_cintura">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="taglia_braccia" class="form-label">Taglia Braccia</label>
+                        <input type="text" class="form-control" id="taglia_braccia" name="taglia_braccia">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="taglia_gambe" class="form-label">Taglia Gambe</label>
+                        <input type="text" class="form-control" id="taglia_gambe" name="taglia_gambe">
+                    </div>
+                    
                     <h5 class="mt-4">Note</h5>
                     <div class="mb-3">
                         <label for="note" class="form-label">Note Aggiuntive</label>
                         <textarea class="form-control" id="note" name="note" rows="4"></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="obiettivo_cliente" class="form-label">Obiettivo Cliente</label>
+                        <textarea class="form-control" id="obiettivo_cliente" name="obiettivo_cliente" rows="4"></textarea>
                     </div>
                 </div>
             </div>

@@ -50,6 +50,7 @@
                         <th>Email</th>
                         <th>Telefono</th>
                         <th>Tipo</th>
+                        <th>Tipologia</th>
                         <th>Data Registrazione</th>
                         <th>Azioni</th>
                     </tr>
@@ -69,6 +70,7 @@
                                         <span class="badge bg-primary">Effettivo</span>
                                     {% endif %}
                                 </td>
+                                <td>{{ cliente.tipologia }}</td>
                                 <td>{{ cliente.data_registrazione }}</td>
                                 <td>
                                     <a href="{{ url_for('dettaglio_cliente', cliente_id=cliente.id) }}" class="btn btn-sm btn-primary">

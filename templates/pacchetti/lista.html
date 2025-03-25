@@ -41,6 +41,7 @@
                             <th>Prezzo</th>
                             <th>Lezioni</th>
                             <th>Durata</th>
+                            <th>Pagamento Unico</th>
                             <th>Stato</th>
                             <th>Azioni</th>
                         </tr>
@@ -59,6 +60,12 @@
                                 <td>{{ pacchetto.prezzo|format_currency }}</td>
                                 <td>{{ pacchetto.numero_lezioni }}</td>
                                 <td>{{ pacchetto.durata_giorni }} giorni</td>
+                                <td>
+                                    {% if pacchetto.pagamento_unico %}
+                                        <span class="badge bg-success">Sì</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">No</span>
+                                    {% endif %}
                                 <td>
                                     {% if pacchetto.attivo %}
                                         <span class="badge bg-success">Attivo</span>

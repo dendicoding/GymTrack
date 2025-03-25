@@ -266,9 +266,15 @@ def nuovo_cliente():
         note = request.form['note']
         tipo = request.form['tipo']
         codice_fiscale = request.form['codice_fiscale']
+        tipologia = request.form.get('tipologia')  # New field
+        taglia_giubotto = request.form['taglia_giubotto']
+        taglia_cintura = request.form['taglia_cintura']
+        taglia_braccia = request.form['taglia_braccia']
+        taglia_gambe = request.form['taglia_gambe']
+        obiettivo_cliente = request.form['obiettivo_cliente']
         
         cliente_id = db.add_cliente(nome, cognome, email, telefono, data_nascita, 
-                                     indirizzo, citta, cap, note, tipo, codice_fiscale)
+                                     indirizzo, citta, cap, note, tipo, codice_fiscale, tipologia, taglia_giubotto, taglia_cintura, taglia_braccia, taglia_gambe, obiettivo_cliente)
         
         flash(f'Cliente {nome} {cognome} aggiunto con successo!', 'success')
         return redirect(url_for('dettaglio_cliente', cliente_id=cliente_id))
@@ -309,10 +315,16 @@ def modifica_cliente(cliente_id):
         cap = request.form['cap']
         note = request.form['note']
         tipo = request.form['tipo']
+        tipologia = request.form['tipologia']
         codice_fiscale = request.form['codice_fiscale']
+        taglia_giubotto = request.form['taglia_giubotto']
+        taglia_cintura = request.form['taglia_cintura']
+        taglia_braccia = request.form['taglia_braccia']
+        taglia_gambe = request.form['taglia_gambe']
+        obiettivo_cliente = request.form['obiettivo_cliente']
         
         db.update_cliente(cliente_id, nome, cognome, email, telefono, data_nascita, 
-                          indirizzo, citta, cap, note, tipo, codice_fiscale)
+                          indirizzo, citta, cap, note, tipo, codice_fiscale, tipologia, taglia_giubotto, taglia_cintura, taglia_braccia, taglia_gambe, obiettivo_cliente)
         
         flash(f'Cliente {nome} {cognome} aggiornato con successo!', 'success')
         return redirect(url_for('dettaglio_cliente', cliente_id=cliente_id))
@@ -373,8 +385,9 @@ def nuovo_pacchetto():
         numero_lezioni = int(request.form.get('numero_lezioni'))
         durata_giorni = int(request.form.get('durata_giorni'))
         attivo = 'attivo' in request.form
+        pagamento_unico = 'pagamento_unico' in request.form
         
-        if db.add_pacchetto(nome, descrizione, prezzo, numero_lezioni, durata_giorni, attivo):
+        if db.add_pacchetto(nome, descrizione, prezzo, numero_lezioni, durata_giorni, attivo, pagamento_unico):
             flash('Pacchetto creato con successo', 'success')
             return redirect(url_for('lista_pacchetti'))
         else:
@@ -396,8 +409,9 @@ def modifica_pacchetto(pacchetto_id):
         numero_lezioni = int(request.form.get('numero_lezioni'))
         durata_giorni = int(request.form.get('durata_giorni'))
         attivo = 'attivo' in request.form
+        pagamento_unico = 'pagamento_unico' in request.form
         
-        if db.update_pacchetto(pacchetto_id, nome, descrizione, prezzo, numero_lezioni, durata_giorni, attivo):
+        if db.update_pacchetto(pacchetto_id, nome, descrizione, prezzo, numero_lezioni, durata_giorni, attivo, pagamento_unico):
             flash('Pacchetto aggiornato con successo', 'success')
             return redirect(url_for('dettaglio_pacchetto', pacchetto_id=pacchetto_id))
         else:
@@ -536,12 +550,26 @@ def paga_rata(rata_id):
     
     if request.method == 'POST':
         data_pagamento = request.form.get('data_pagamento', datetime.now().strftime('%Y-%m-%d'))
+        metodo_pagamento = request.form.get('metodo_pagamento')
+        importo_pagato = float(request.form.get('importo_pagato'))
+        pagamento_parziale = 'pagamento_parziale' in request.form
         
-        if db.registra_pagamento_rata(rata_id, data_pagamento):
-            flash('Pagamento registrato con successo', 'success')
-            return redirect(url_for('dettaglio_abbonamento', abbonamento_id=rata['abbonamento_id']))
+        if importo_pagato < rata['importo'] and pagamento_parziale:
+            importo_rimanente = rata['importo'] - importo_pagato
+            nuova_data_scadenza = (datetime.strptime(rata['data_scadenza'], '%Y-%m-%d') + timedelta(days=7)).strftime('%Y-%m-%d')
+            
+            if db.paga_rata(rata_id, metodo_pagamento, importo_pagato):
+                db.crea_nuova_rata(rata['abbonamento_id'], importo_rimanente, nuova_data_scadenza)
+                flash('Pagamento parziale registrato con successo e nuova rata generata', 'success')
+            else:
+                flash('Errore durante la registrazione del pagamento parziale', 'error')
         else:
-            flash('Errore durante la registrazione del pagamento', 'error')
+            if db.paga_rata(rata_id, metodo_pagamento, importo_pagato):
+                flash('Pagamento registrato con successo', 'success')
+            else:
+                flash('Errore durante la registrazione del pagamento', 'error')
+        
+        return redirect(url_for('dettaglio_abbonamento', abbonamento_id=rata['abbonamento_id']))
     
     return render_template('rate/paga.html', rata=rata)
 
@@ -687,7 +715,10 @@ def update_company_route(company_id):
     nome = request.form['nome']
     email = request.form['email']
     password = request.form['password']
-    db.update_company(company_id, nome, email, password)
+    indirizzo = request.form['indirizzo']
+    provincia = request.form['provincia']
+    comune = request.form['comune']
+    db.update_company(company_id, nome, email, password, indirizzo, provincia, comune)
     flash('Company updated successfully!', 'success')
     return redirect(url_for('hierarchy'))
 
@@ -777,5 +808,5 @@ def delete_trainer_route(trainer_id):
 if __name__ == '__main__':
     #db.migrate_database()
     #db.create_user_tables
-    db.init_db()
+    #db.init_db()
     app.run(debug=True)

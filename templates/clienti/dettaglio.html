@@ -43,29 +43,47 @@
                         <h6 class="text-muted mb-3">Informazioni Personali</h6>
                         <dl class="row">
                             <dt class="col-sm-4">Email</dt>
-                            <dd class="col-sm-8">{{ cliente.email or '—' }}</dd>
+                            <dd class="col-sm-8">{{ cliente.email or 'Non Specificato' }}</dd>
 
                             <dt class="col-sm-4">Telefono</dt>
-                            <dd class="col-sm-8">{{ cliente.telefono or '—' }}</dd>
+                            <dd class="col-sm-8">{{ cliente.telefono or 'Non Specificato' }}</dd>
 
                             <dt class="col-sm-4">Data Nascita</dt>
-                            <dd class="col-sm-8">{{ cliente.data_nascita|format_date or '—' }}</dd>
+                            <dd class="col-sm-8">{{ cliente.data_nascita|format_date or 'Non Specificato' }}</dd>
 
                             <dt class="col-sm-4">Codice Fiscale</dt>
-                            <dd class="col-sm-8">{{ cliente.codice_fiscale or '—' }}</dd>
+                            <dd class="col-sm-8">{{ cliente.codice_fiscale or 'Non Specificato' }}</dd>
+
+                            <dt class="col-sm-4">Taglia Giubotto</dt>
+                            <dd class="col-sm-8">{{ cliente.taglia_giubotto or 'Non Specificato' }}</dd>
+
+                            <dt class="col-sm-4">Taglia Cintura</dt>
+                            <dd class="col-sm-8">{{ cliente.taglia_cintura or 'Non Specificato' }}</dd>
+
+                            <dt class="col-sm-4">Taglia Braccia</dt>
+                            <dd class="col-sm-8">{{ cliente.taglia_braccia or 'Non Specificato' }}</dd>
                         </dl>
                     </div>
                     <div class="col-md-6">
                         <h6 class="text-muted mb-3">Indirizzo</h6>
                         <dl class="row">
                             <dt class="col-sm-4">Via</dt>
-                            <dd class="col-sm-8">{{ cliente.indirizzo or '—' }}</dd>
+                            <dd class="col-sm-8">{{ cliente.indirizzo or 'Non Specificato' }}</dd>
 
                             <dt class="col-sm-4">Città</dt>
-                            <dd class="col-sm-8">{{ cliente.citta or '—' }}</dd>
+                            <dd class="col-sm-8">{{ cliente.citta or 'Non Specificato' }}</dd>
 
                             <dt class="col-sm-4">CAP</dt>
-                            <dd class="col-sm-8">{{ cliente.cap or '—' }}</dd>
+                            <dd class="col-sm-8">{{ cliente.cap or 'Non Specificato' }}</dd>
+
+                            <dt class="col-sm-4">Tipologia</dt>
+                            <dd class="col-sm-8">{{ cliente.tipologia or 'Non Specificato'}}</dd>
+
+                            <dt class="col-sm-4">Taglia Gambe</dt>
+                            <dd class="col-sm-8">{{ cliente.taglia_gambe or 'Non Specificato' }}</dd>
+
+                            <dt class="col-sm-4">Obiettivo Cliente</dt>
+                            <dd class="col-sm-8">{{ cliente.obiettivo_cliente or 'Non Specificato' }}</dd>
                         </dl>
                     </div>
                 </div>

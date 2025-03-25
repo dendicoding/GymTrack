@@ -27,7 +27,7 @@
                         <select class="form-select" id="pacchetto" name="pacchetto_id" required onchange="updatePrezzo()">
                             <option value="">Seleziona un pacchetto...</option>
                             {% for pacchetto in pacchetti %}
-                                <option value="{{ pacchetto.id }}" data-prezzo="{{ pacchetto.prezzo }}">
+                                <option value="{{ pacchetto.id }}" data-prezzo="{{ pacchetto.prezzo }}" data-pagamento-unico="{{ pacchetto.pagamento_unico }}">
                                     {{ pacchetto.nome }} - €{{ pacchetto.prezzo }}
                                 </option>
                             {% endfor %}
@@ -56,7 +56,7 @@
                                 <label for="numero_rate" class="form-label">Numero Rate</label>
                                 <input type="number" class="form-control" id="numero_rate" 
                                        name="numero_rate" min="1" value="1" required 
-                                       onchange="calcolaRate()">
+                                       onchange="calcolaRate()" disabled>
                             </div>
                         </div>
                     </div>
@@ -115,7 +115,17 @@ function updatePrezzo() {
     const select = document.getElementById('pacchetto');
     const option = select.options[select.selectedIndex];
     const prezzo = option.dataset.prezzo || 0;
+    const pagamentoUnico = option.dataset.pagamentoUnico === 'True';
+    
     document.getElementById('prezzo_totale').value = prezzo;
+    
+    if (pagamentoUnico) {
+        document.getElementById('numero_rate').value = 1;
+        document.getElementById('numero_rate').disabled = true;
+    } else {
+        document.getElementById('numero_rate').disabled = false;
+    }
+    
     calcolaRate();
 }
 

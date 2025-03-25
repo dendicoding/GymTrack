@@ -73,6 +73,7 @@
                                 <th>Scadenza</th>
                                 <th>Importo</th>
                                 <th>Stato</th>
+                                <th>Metodo di Pagamento</th>
                                 <th>Data Pagamento</th>
                                 <th>Azioni</th>
                             </tr>
@@ -94,6 +95,7 @@
                                         {% endif %}
                                     {% endif %}
                                 </td>
+                                <td>{{ rata.metodo_pagamento }}</td>
                                 <td>
                                     {% if rata.data_pagamento %}
                                         {{ rata.data_pagamento|format_date }}
