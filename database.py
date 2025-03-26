@@ -40,7 +40,9 @@ def init_db():
         taglia_cintura TEXT,   -- Nuovo campo per la taglia cintura
         taglia_braccia TEXT,   -- Nuovo campo per la taglia braccia
         taglia_gambe TEXT,     -- Nuovo campo per la taglia gambe
-        obiettivo_cliente TEXT -- Nuovo campo per l'obiettivo cliente
+        obiettivo_cliente TEXT, -- Nuovo campo per l'obiettivo cliente
+        sede_id INTEGER NOT NULL, -- Nuovo campo per la sede
+        FOREIGN KEY (sede_id) REFERENCES sede (id)
     )
     ''')
     
@@ -141,9 +143,14 @@ def init_db():
     print("Database inizializzato con successo!")
 
 # Funzioni di utilità per i clienti
-def get_all_clienti():
+def get_all_clienti(sede_ids=None):
     conn = get_db_connection()
-    clienti = conn.execute('SELECT * FROM clienti ORDER BY cognome, nome').fetchall()
+    if sede_ids:
+        placeholders = ','.join('?' for _ in sede_ids)
+        query = f'SELECT * FROM clienti WHERE sede_id IN ({placeholders}) ORDER BY cognome, nome'
+        clienti = conn.execute(query, sede_ids).fetchall()
+    else:
+        clienti = conn.execute('SELECT * FROM clienti ORDER BY cognome, nome').fetchall()
     conn.close()
     return clienti
 
@@ -174,41 +181,51 @@ def get_cliente(cliente_id):
     conn.close()
     return cliente
 
-def get_leads():
+def get_leads(sede_ids=None):
     conn = get_db_connection()
-    leads = conn.execute("SELECT * FROM clienti WHERE tipo = 'lead' ORDER BY cognome, nome").fetchall()
+    if sede_ids:
+        placeholders = ','.join('?' for _ in sede_ids)
+        query = f"SELECT * FROM clienti WHERE tipo = 'lead' AND sede_id IN ({placeholders}) ORDER BY cognome, nome"
+        leads = conn.execute(query, sede_ids).fetchall()
+    else:
+        leads = conn.execute("SELECT * FROM clienti WHERE tipo = 'lead' ORDER BY cognome, nome").fetchall()
     conn.close()
     return leads
 
-def get_clienti_effettivi():
+def get_clienti_effettivi(sede_ids=None):
     conn = get_db_connection()
-    clienti = conn.execute("SELECT * FROM clienti WHERE tipo = 'effettivo' ORDER BY cognome, nome").fetchall()
+    if sede_ids:
+        placeholders = ','.join('?' for _ in sede_ids)
+        query = f"SELECT * FROM clienti WHERE tipo = 'effettivo' AND sede_id IN ({placeholders}) ORDER BY cognome, nome"
+        clienti = conn.execute(query, sede_ids).fetchall()
+    else:
+        clienti = conn.execute("SELECT * FROM clienti WHERE tipo = 'effettivo' ORDER BY cognome, nome").fetchall()
     conn.close()
     return clienti
 
-def add_cliente(nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo, codice_fiscale, tipologia, taglia_giubotto, taglia_cintura, taglia_braccia, taglia_gambe, obiettivo_cliente):
+def add_cliente(nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo, codice_fiscale, tipologia, taglia_giubotto, taglia_cintura, taglia_braccia, taglia_gambe, obiettivo_cliente, sede_id):
     conn = get_db_connection()
     cursor = conn.cursor()
     data_registrazione = datetime.now().strftime("%Y-%m-%d")
     
     cursor.execute(''' 
-    INSERT INTO clienti (nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo, codice_fiscale, data_registrazione, tipologia, taglia_giubotto, taglia_cintura, taglia_braccia, taglia_gambe, obiettivo_cliente)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ''', (nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo, codice_fiscale, data_registrazione, tipologia, taglia_giubotto, taglia_cintura, taglia_braccia, taglia_gambe, obiettivo_cliente))
+    INSERT INTO clienti (nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo, codice_fiscale, data_registrazione, tipologia, taglia_giubotto, taglia_cintura, taglia_braccia, taglia_gambe, obiettivo_cliente, sede_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo, codice_fiscale, data_registrazione, tipologia, taglia_giubotto, taglia_cintura, taglia_braccia, taglia_gambe, obiettivo_cliente, sede_id))
     
     conn.commit()
     cliente_id = cursor.lastrowid
     conn.close()
     return cliente_id
 
-def update_cliente(cliente_id, nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo, codice_fiscale, tipologia, taglia_giubotto, taglia_cintura, taglia_braccia, taglia_gambe, obiettivo_cliente):
+def update_cliente(cliente_id, nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo, codice_fiscale, tipologia, taglia_giubotto, taglia_cintura, taglia_braccia, taglia_gambe, obiettivo_cliente, sede_id):
     conn = get_db_connection()
     conn.execute(''' 
     UPDATE clienti 
     SET nome = ?, cognome = ?, email = ?, telefono = ?, data_nascita = ?, 
-        indirizzo = ?, citta = ?, cap = ?, note = ?, tipo = ?, codice_fiscale = ?, tipologia = ?, taglia_giubotto = ?, taglia_cintura = ?, taglia_braccia = ?, taglia_gambe = ?, obiettivo_cliente = ?
+        indirizzo = ?, citta = ?, cap = ?, note = ?, tipo = ?, codice_fiscale = ?, tipologia = ?, taglia_giubotto = ?, taglia_cintura = ?, taglia_braccia = ?, taglia_gambe = ?, obiettivo_cliente = ?, sede_id = ?
     WHERE id = ?
-    ''', (nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo, codice_fiscale, tipologia, taglia_giubotto, taglia_cintura, taglia_braccia, taglia_gambe, obiettivo_cliente, cliente_id))
+    ''', (nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo, codice_fiscale, tipologia, taglia_giubotto, taglia_cintura, taglia_braccia, taglia_gambe, obiettivo_cliente, sede_id, cliente_id))
     
     conn.commit()
     conn.close()
@@ -348,7 +365,6 @@ def get_rate_incassate_mese():
     mese_inizio = datetime.now().replace(day=1).strftime("%Y-%m-%d")
     mese_fine = (datetime.now().replace(day=1) + timedelta(days=32)).replace(day=1) - timedelta(days=1)
     mese_fine = mese_fine.strftime("%Y-%m-%d")
-    
     conn = get_db_connection()
     try:
         rate = conn.execute('''
@@ -889,7 +905,7 @@ def migrate_database():
     conn = get_db_connection()
     try:
         conn.execute('''
-            ALTER TABLE pacchetti ADD COLUMN pagamento_unico BOOLEAN NOT NULL DEFAULT 0
+            ALTER TABLE clienti ADD COLUMN sede_id INTEGER NOT NULL REFERENCES sede (id)
         ''')
 
         conn.commit()
@@ -1100,92 +1116,88 @@ def get_all_data():
     finally:
         conn.close()
 
-def build_hierarchy():
-    franchisors = get_franchisors()
+def build_hierarchy(user_role=None, user_id=None):
+    """Build a filtered hierarchy based on the user's role and ID."""
     hierarchy = []
 
-    for franchisor in franchisors:
-        # Create a new dictionary for the franchisor
-        franchisor_dict = {
-            'id': franchisor['id'],
-            'nome': franchisor['nome'],
-            'email': franchisor['email'],
-            'password': franchisor['password'],
-            'attivo': franchisor['attivo'],
-            'data_creazione': franchisor['data_creazione'],
-            'area_managers': []  # Initialize an empty list for area managers
-        }
+    if user_role == 'franchisor':
+        franchisors = get_franchisors()
+        for franchisor in franchisors:
+            if franchisor['id'] == user_id:
+                franchisor_dict = {
+                    'id': franchisor['id'],
+                    'nome': franchisor['nome'],
+                    'email': franchisor['email'],
+                    'area_managers': []
+                }
+                area_managers = get_area_managers_by_franchisor(franchisor['id'])
+                for area_manager in area_managers:
+                    area_manager_dict = {
+                        'id': area_manager['id'],
+                        'nome': area_manager['nome'],
+                        'cognome': area_manager['cognome'],
+                        'email': area_manager['email'],
+                        'societa': []
+                    }
+                    societa = get_societa_by_area_manager(area_manager['id'])
+                    for company in societa:
+                        company_dict = {
+                            'id': company['id'],
+                            'nome': company['nome'],
+                            'sedi': []
+                        }
+                        sedi = get_sedi_by_societa(company['id'])
+                        for sede in sedi:
+                            sede_dict = {
+                                'id': sede['id'],
+                                'nome': sede['nome'],
+                                'indirizzo': sede['indirizzo'],
+                                'citta': sede['citta'],
+                                'cap': sede['cap'],
+                                'trainers': get_trainers_by_sede(sede['id'])  # Include trainers under each sede
+                            }
+                            company_dict['sedi'].append(sede_dict)
+                        area_manager_dict['societa'].append(company_dict)
+                    franchisor_dict['area_managers'].append(area_manager_dict)
+                hierarchy.append(franchisor_dict)
 
-        area_managers = get_area_managers_by_franchisor(franchisor['id'])
-        area_manager_list = []
-
+    elif user_role == 'area_manager':
+        area_managers = get_area_managers_by_franchisor(user_id)
         for area_manager in area_managers:
-            # Create a new dictionary for the area manager
             area_manager_dict = {
                 'id': area_manager['id'],
-                'franchisor_id': area_manager['franchisor_id'],
                 'nome': area_manager['nome'],
-                'cognome': area_manager['cognome'],
-                'email': area_manager['email'],
-                'password': area_manager['password'],
-                'attivo': area_manager['attivo'],
-                'data_creazione': area_manager['data_creazione'],
-                'societa': []  # Initialize an empty list for societa
+                'societa': []
             }
-
             societa = get_societa_by_area_manager(area_manager['id'])
-            societa_list = []
-
             for company in societa:
-                # Create a new dictionary for the company
                 company_dict = {
                     'id': company['id'],
-                    'area_manager_id': company['area_manager_id'],
                     'nome': company['nome'],
-                    'email': company['email'],
-                    'indirizzo': company['indirizzo'],
-                    'provincia': company['provincia'],
-                    'comune': company['comune'],
-                    'password': company['password'],
-                    'attivo': company['attivo'],
-                    'data_creazione': company['data_creazione'],
-                    'sedi': []  # Initialize an empty list for sedi
+                    'sedi': get_sedi_by_societa(company['id'])
                 }
+                area_manager_dict['societa'].append(company_dict)
+            hierarchy.append(area_manager_dict)
 
-                # Fetch the sedi for the current company
-                sedi = get_sedi_by_societa(company['id'])
-                sede_list = []
+    elif user_role == 'societa':
+        societa = get_societa_by_area_manager(user_id)
+        for company in societa:
+            company_dict = {
+                'id': company['id'],
+                'nome': company['nome'],
+                'sedi': get_sedi_by_societa(company['id'])
+            }
+            hierarchy.append(company_dict)
 
-                for sede in sedi:
-                    # Create a new dictionary for the sede
-                    sede_dict = {
-                        'id': sede['id'],
-                        'societa_id': sede['societa_id'],
-                        'nome': sede['nome'],
-                        'indirizzo': sede['indirizzo'],
-                        'citta': sede['citta'],
-                        'cap': sede['cap'],
-                        'email': sede['email'],
-                        'password': sede['password'],
-                        'attivo': sede['attivo'],
-                        'data_creazione': sede['data_creazione'],
-                        'trainers': []  # Initialize an empty list for trainers
-                    }
-
-                    # Fetch the trainers for the current sede
-                    trainers = get_trainers_by_sede(sede['id'])  # You need to implement this function
-                    sede_dict['trainers'] = trainers  # Add trainers to the sede dictionary
-
-                    sede_list.append(sede_dict)  # Append the sede dictionary to the list
-
-                company_dict['sedi'] = sede_list  # Add sedi to the company dictionary
-                societa_list.append(company_dict)  # Append the company dictionary to the list
-
-            area_manager_dict['societa'] = societa_list  # Add societa to the area manager dictionary
-            area_manager_list.append(area_manager_dict)  # Append the area manager dictionary to the list
-
-        franchisor_dict['area_managers'] = area_manager_list  # Add area managers to the franchisor dictionary
-        hierarchy.append(franchisor_dict)  # Append the franchisor dictionary to the hierarchy
+    elif user_role == 'sede':
+        sedi = get_sedi_by_societa(user_id)
+        for sede in sedi:
+            sede_dict = {
+                'id': sede['id'],
+                'nome': sede['nome'],
+                'trainers': get_trainers_by_sede(sede['id'])  # Add trainers under each sede
+            }
+            hierarchy.append(sede_dict)
 
     return hierarchy
 
@@ -1494,3 +1506,9 @@ def crea_nuova_rata(abbonamento_id, importo, data_scadenza):
         conn.rollback()
     finally:
         conn.close()
+
+def get_franchisor_by_email(email):
+    conn = get_db_connection()
+    franchisor = conn.execute('SELECT * FROM franchisor WHERE email = ?', (email,)).fetchone()
+    conn.close()
+    return franchisor

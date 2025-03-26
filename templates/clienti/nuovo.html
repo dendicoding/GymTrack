@@ -108,6 +108,16 @@
                         <label for="taglia_gambe" class="form-label">Taglia Gambe</label>
                         <input type="text" class="form-control" id="taglia_gambe" name="taglia_gambe">
                     </div>
+
+                    <div class="mb-3">
+                        <label for="sede_id" class="form-label">Sede *</label>
+                        <select class="form-select" id="sede_id" name="sede_id" required>
+                            <option value="" disabled selected>Seleziona una sede</option>
+                            {% for sede in sedi %}
+                                <option value="{{ sede.id }}">{{ sede.nome }} - {{ sede.citta }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
                     
                     <h5 class="mt-4">Note</h5>
                     <div class="mb-3">

@@ -1,7 +1,7 @@
 import database as db
 
 class Cliente:
-    def __init__(self, nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo, codice_fiscale, tipologia, taglia_giubotto, taglia_cintura, taglia_braccia, taglia_gambe, obiettivo_cliente):
+    def __init__(self, nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo, codice_fiscale, tipologia, taglia_giubotto, taglia_cintura, taglia_braccia, taglia_gambe, obiettivo_cliente, sede_id):
         self.nome = nome
         self.cognome = cognome
         self.email = email
@@ -19,17 +19,18 @@ class Cliente:
         self.taglia_braccia = taglia_braccia  # Nuovo campo
         self.taglia_gambe = taglia_gambe  # Nuovo campo
         self.obiettivo_cliente = obiettivo_cliente  # Nuovo campo
+        self.sede_id = sede_id  # Nuovo campo
 
     def salva(self):
         return db.add_cliente(self.nome, self.cognome, self.email, self.telefono, self.data_nascita, 
-                              self.indirizzo, self.citta, self.cap, self.note, self.tipo, self.codice_fiscale, self.tipologia, self.taglia_giubotto, self.taglia_cintura, self.taglia_braccia, self.taglia_gambe, self.obiettivo_cliente)
+                              self.indirizzo, self.citta, self.cap, self.note, self.tipo, self.codice_fiscale, self.tipologia, self.taglia_giubotto, self.taglia_cintura, self.taglia_braccia, self.taglia_gambe, self.obiettivo_cliente, self.sede_id)
 
     @staticmethod
     def get_cliente(cliente_id):
         return db.get_cliente(cliente_id)
 
     @staticmethod
-    def get_all_clienti():
-        return db.get_all_clienti()
+    def get_all_clienti(sede_id=None):
+        return db.get_all_clienti(sede_id)
 
 # ... altre funzioni relative ai clienti se necessario ...

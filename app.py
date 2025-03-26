@@ -52,6 +52,7 @@ def login():
             session['user_id'] = user['id']
             session['user_name'] = user['nome']
             session['user_role'] = role
+            session['user_email'] = email
             
             flash(f'Benvenuto, {user["nome"]}!', 'success')
             return redirect(url_for('index'))
@@ -237,22 +238,47 @@ def index():
 
 # --- GESTIONE CLIENTI ---
 @app.route('/clienti')
+@login_required
 def lista_clienti():
     tipo = request.args.get('tipo', 'tutti')
-    
+    user_role = session.get('user_role')
+    user_id = session.get('user_id')
+
+    # Get the hierarchy for the logged-in user
+    hierarchy = db.build_hierarchy(user_role=user_role, user_id=user_id)
+
+    # Extract sede IDs from the hierarchy
+    sede_ids = []
+    if user_role == 'franchisor':
+        for area_manager in hierarchy[0]['area_managers']:
+            for societa in area_manager['societa']:
+                for sede in societa['sedi']:
+                    sede_ids.append(sede['id'])
+    elif user_role == 'area_manager':
+        for societa in hierarchy[0]['societa']:
+            for sede in societa['sedi']:
+                sede_ids.append(sede['id'])
+    elif user_role == 'societa':
+        for sede in hierarchy[0]['sedi']:
+            sede_ids.append(sede['id'])
+    elif user_role == 'sede':
+        sede_ids.append(hierarchy[0]['id'])
+
+    # Fetch clients based on the filtered sede IDs
     if tipo == 'lead':
-        clienti = db.get_leads()
+        clienti = db.get_leads(sede_ids)
         titolo = "Clienti Lead"
     elif tipo == 'effettivo':
-        clienti = db.get_clienti_effettivi()
+        clienti = db.get_clienti_effettivi(sede_ids)
         titolo = "Clienti Effettivi"
     else:
-        clienti = db.get_all_clienti()
+        clienti = db.get_all_clienti(sede_ids)
         titolo = "Tutti i Clienti"
-    
+
     return render_template('clienti/lista.html', clienti=clienti, titolo=titolo, tipo_attivo=tipo)
 
 @app.route('/clienti/nuovo', methods=['GET', 'POST'])
+@login_required
 def nuovo_cliente():
     if request.method == 'POST':
         nome = request.form['nome']
@@ -272,14 +298,31 @@ def nuovo_cliente():
         taglia_braccia = request.form['taglia_braccia']
         taglia_gambe = request.form['taglia_gambe']
         obiettivo_cliente = request.form['obiettivo_cliente']
+        sede_id = request.form['sede_id']
         
         cliente_id = db.add_cliente(nome, cognome, email, telefono, data_nascita, 
-                                     indirizzo, citta, cap, note, tipo, codice_fiscale, tipologia, taglia_giubotto, taglia_cintura, taglia_braccia, taglia_gambe, obiettivo_cliente)
+                                     indirizzo, citta, cap, note, tipo, codice_fiscale, tipologia, taglia_giubotto, taglia_cintura, taglia_braccia, taglia_gambe, obiettivo_cliente, sede_id)
         
         flash(f'Cliente {nome} {cognome} aggiunto con successo!', 'success')
         return redirect(url_for('dettaglio_cliente', cliente_id=cliente_id))
     
-    return render_template('clienti/nuovo.html')
+    # Fetch sedi under the logged-in user's hierarchy
+    user_role = session.get('user_role')
+    user_id = session.get('user_id')
+    hierarchy = db.build_hierarchy(user_role=user_role, user_id=user_id)
+
+    sedi = []
+    if user_role == 'franchisor':
+        for area_manager in hierarchy[0]['area_managers']:
+            for societa in area_manager['societa']:
+                sedi.extend(societa['sedi'])
+    elif user_role == 'area_manager':
+        for societa in hierarchy[0]['societa']:
+            sedi.extend(societa['sedi'])
+    elif user_role == 'societa':
+        sedi = hierarchy[0]['sedi']
+
+    return render_template('clienti/nuovo.html', sedi=sedi)
 
 @app.route('/clienti/<int:cliente_id>')
 def dettaglio_cliente(cliente_id):
@@ -299,6 +342,7 @@ def dettaglio_cliente(cliente_id):
                          oggi=oggi)
 
 @app.route('/clienti/<int:cliente_id>/modifica', methods=['GET', 'POST'])
+@login_required
 def modifica_cliente(cliente_id):
     cliente = db.get_cliente(cliente_id)
     if not cliente:
@@ -322,9 +366,10 @@ def modifica_cliente(cliente_id):
         taglia_braccia = request.form['taglia_braccia']
         taglia_gambe = request.form['taglia_gambe']
         obiettivo_cliente = request.form['obiettivo_cliente']
+        sede_id = session.get('sede_id')
         
         db.update_cliente(cliente_id, nome, cognome, email, telefono, data_nascita, 
-                          indirizzo, citta, cap, note, tipo, codice_fiscale, tipologia, taglia_giubotto, taglia_cintura, taglia_braccia, taglia_gambe, obiettivo_cliente)
+                          indirizzo, citta, cap, note, tipo, codice_fiscale, tipologia, taglia_giubotto, taglia_cintura, taglia_braccia, taglia_gambe, obiettivo_cliente, sede_id)
         
         flash(f'Cliente {nome} {cognome} aggiornato con successo!', 'success')
         return redirect(url_for('dettaglio_cliente', cliente_id=cliente_id))
@@ -390,12 +435,6 @@ def nuovo_pacchetto():
         if db.add_pacchetto(nome, descrizione, prezzo, numero_lezioni, durata_giorni, attivo, pagamento_unico):
             flash('Pacchetto creato con successo', 'success')
             return redirect(url_for('lista_pacchetti'))
-        else:
-            flash('Errore durante la creazione del pacchetto', 'error')
-    
-    return render_template('pacchetti/nuovo.html')
-
-@app.route('/pacchetti/<int:pacchetto_id>/modifica', methods=['GET', 'POST'])
 def modifica_pacchetto(pacchetto_id):
     pacchetto = db.get_pacchetto(pacchetto_id)
     if not pacchetto:
@@ -670,8 +709,11 @@ def server_error(e):
     return render_template('errori/500.html'), 500
 
 @app.route('/hierarchy')
+@login_required
 def hierarchy():
-    user_hierarchy = db.build_hierarchy()
+    user_role = session.get('user_role')
+    user_id = session.get('user_id')
+    user_hierarchy = db.build_hierarchy(user_role=user_role, user_id=user_id)
     return render_template('hierarchy.html', hierarchy=user_hierarchy)
 
 @app.route('/update-franchisor/<int:franchisor_id>', methods=['POST'])
@@ -806,7 +848,7 @@ def delete_trainer_route(trainer_id):
     flash('Trainer deleted successfully!', 'success')
     return redirect(url_for('gestione_gerarchia'))  # Redirect to the hierarchy management page
 if __name__ == '__main__':
-    #db.migrate_database()
+    db.migrate_database()
     #db.create_user_tables
     #db.init_db()
     app.run(debug=True)
