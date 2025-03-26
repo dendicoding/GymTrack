@@ -242,38 +242,57 @@ def index():
 def lista_clienti():
     tipo = request.args.get('tipo', 'tutti')
     user_role = session.get('user_role')
-    user_id = session.get('user_id')
+    user_email = session.get('user_email')
 
-    # Get the hierarchy for the logged-in user
-    hierarchy = db.build_hierarchy(user_role=user_role, user_id=user_id)
-
-    # Extract sede IDs from the hierarchy
+    # Directly fetch the sede_id for the logged-in user if the role is 'sede'
     sede_ids = []
-    if user_role == 'franchisor':
-        for area_manager in hierarchy[0]['area_managers']:
-            for societa in area_manager['societa']:
-                for sede in societa['sedi']:
-                    sede_ids.append(sede['id'])
-    elif user_role == 'area_manager':
-        for societa in hierarchy[0]['societa']:
-            for sede in societa['sedi']:
-                sede_ids.append(sede['id'])
-    elif user_role == 'societa':
-        for sede in hierarchy[0]['sedi']:
+    if user_role == 'sede':
+        sede = db.get_sede_by_email(user_email)
+        if sede:
             sede_ids.append(sede['id'])
-    elif user_role == 'sede':
-        sede_ids.append(hierarchy[0]['id'])
+    elif user_role == 'trainer':
+        # Fetch the sede associated with the trainer
+        sede = db.get_sede_by_trainer_email(user_email)
+        if sede:
+            sede_ids.append(sede['id'])
+    elif user_role == 'societa':
+        # Fetch all sedi under the company
+        societa = db.get_societa_by_email(user_email)
+        if societa:
+            sedi = db.get_sedi_by_societa(societa['id'])
+            sede_ids.extend([sede['id'] for sede in sedi])
+    elif user_role == 'area_manager':
+        societa = db.get_societa_by_area_manager_email(user_email)
+        for company in societa:
+            sedi = db.get_sedi_by_societa(company['id'])
+            sede_ids.extend([sede['id'] for sede in sedi])
+    elif user_role == 'franchisor':
+        area_managers = db.get_area_managers_by_franchisor_email(user_email)
+        for manager in area_managers:
+            societa = db.get_societa_by_area_manager(manager['id'])
+            for company in societa:
+                sedi = db.get_sedi_by_societa(company['id'])
+                sede_ids.extend([sede['id'] for sede in sedi])
 
-    # Fetch clients based on the filtered sede IDs
-    if tipo == 'lead':
-        clienti = db.get_leads(sede_ids)
-        titolo = "Clienti Lead"
-    elif tipo == 'effettivo':
-        clienti = db.get_clienti_effettivi(sede_ids)
-        titolo = "Clienti Effettivi"
+    # Ensure only valid sede_ids are used
+    sede_ids = [sede_id for sede_id in sede_ids if sede_id is not None]
+    print(f"Filtered sede_ids: {sede_ids}")
+
+    # If no sedi are found, return an empty list of clients
+    if not sede_ids:
+        clienti = []
+        titolo = "Nessun Cliente Disponibile"
     else:
-        clienti = db.get_all_clienti(sede_ids)
-        titolo = "Tutti i Clienti"
+        # Fetch clients based on the filtered sede IDs
+        if tipo == 'lead':
+            clienti = db.get_leads(sede_ids)
+            titolo = "Clienti Lead"
+        elif tipo == 'effettivo':
+            clienti = db.get_clienti_effettivi(sede_ids)
+            titolo = "Clienti Effettivi"
+        else:
+            clienti = db.get_all_clienti(sede_ids)
+            titolo = "Tutti i Clienti"
 
     return render_template('clienti/lista.html', clienti=clienti, titolo=titolo, tipo_attivo=tipo)
 
@@ -308,19 +327,35 @@ def nuovo_cliente():
     
     # Fetch sedi under the logged-in user's hierarchy
     user_role = session.get('user_role')
-    user_id = session.get('user_id')
-    hierarchy = db.build_hierarchy(user_role=user_role, user_id=user_id)
+    user_email = session.get('user_email')
+    hierarchy = db.build_hierarchy(user_role=user_role, user_email=user_email)
 
     sedi = []
     if user_role == 'franchisor':
-        for area_manager in hierarchy[0]['area_managers']:
-            for societa in area_manager['societa']:
-                sedi.extend(societa['sedi'])
+        for area_manager in hierarchy[0].get('area_managers', []):
+            for societa in area_manager.get('societa', []):
+                sedi.extend(societa.get('sedi', []))
     elif user_role == 'area_manager':
-        for societa in hierarchy[0]['societa']:
-            sedi.extend(societa['sedi'])
+        for societa in hierarchy[0].get('area_managers', [])[0].get('societa', []):
+            sedi.extend(societa.get('sedi', []))
     elif user_role == 'societa':
-        sedi = hierarchy[0]['sedi']
+        # Fetch sedi directly under the company
+        societa = db.get_societa_by_email(user_email)
+        if societa:
+            sedi = db.get_sedi_by_societa(societa['id'])
+    elif user_role == 'sede':
+        sede = db.get_sede_by_email(user_email)
+        if sede:
+            sedi = [sede]
+    elif user_role == 'trainer':
+        # Fetch the sede associated with the trainer
+        sede = db.get_sede_by_trainer_email(user_email)
+        if sede:
+            sedi = [sede]
+
+    # Safeguard: Ensure `sedi` is a list
+    if not isinstance(sedi, list):
+        sedi = []
 
     return render_template('clienti/nuovo.html', sedi=sedi)
 
@@ -435,6 +470,8 @@ def nuovo_pacchetto():
         if db.add_pacchetto(nome, descrizione, prezzo, numero_lezioni, durata_giorni, attivo, pagamento_unico):
             flash('Pacchetto creato con successo', 'success')
             return redirect(url_for('lista_pacchetti'))
+
+@app.route('/pacchetti/<int:pacchetto_id>/modifica', methods=['GET', 'POST'])
 def modifica_pacchetto(pacchetto_id):
     pacchetto = db.get_pacchetto(pacchetto_id)
     if not pacchetto:
@@ -712,8 +749,10 @@ def server_error(e):
 @login_required
 def hierarchy():
     user_role = session.get('user_role')
-    user_id = session.get('user_id')
-    user_hierarchy = db.build_hierarchy(user_role=user_role, user_id=user_id)
+    user_email = session.get('user_email')
+    user_hierarchy = db.build_hierarchy(user_role=user_role, user_email=user_email)
+    if not user_hierarchy:
+        flash('Non ci sono dati disponibili per la tua gerarchia.', 'info')
     return render_template('hierarchy.html', hierarchy=user_hierarchy)
 
 @app.route('/update-franchisor/<int:franchisor_id>', methods=['POST'])

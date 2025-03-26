@@ -10,8 +10,6 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
-
-
 def init_db():
     """Inizializza il database con le tabelle necessarie"""
     if os.path.exists(DATABASE_PATH):
@@ -274,8 +272,6 @@ def update_pacchetto(pacchetto_id, nome, descrizione, prezzo, numero_lezioni, du
     conn.commit()
     conn.close()
     return pacchetto_id
-
-
 # Funzioni per gli abbonamenti
 def create_abbonamento(cliente_id, pacchetto_id, data_inizio, prezzo_totale, numero_rate=1):
     conn = get_db_connection()
@@ -1116,93 +1112,124 @@ def get_all_data():
     finally:
         conn.close()
 
-def build_hierarchy(user_role=None, user_id=None):
-    """Build a filtered hierarchy based on the user's role and ID."""
+def build_hierarchy(user_role=None, user_email=None):
+    """Build a filtered hierarchy based on the user's role and email."""
     hierarchy = []
 
+    # Determine the franchisor ID for the logged-in user
+    franchisor_id = None
     if user_role == 'franchisor':
-        franchisors = get_franchisors()
-        for franchisor in franchisors:
-            if franchisor['id'] == user_id:
-                franchisor_dict = {
-                    'id': franchisor['id'],
-                    'nome': franchisor['nome'],
-                    'email': franchisor['email'],
-                    'area_managers': []
-                }
-                area_managers = get_area_managers_by_franchisor(franchisor['id'])
-                for area_manager in area_managers:
-                    area_manager_dict = {
-                        'id': area_manager['id'],
-                        'nome': area_manager['nome'],
-                        'cognome': area_manager['cognome'],
-                        'email': area_manager['email'],
-                        'societa': []
-                    }
-                    societa = get_societa_by_area_manager(area_manager['id'])
-                    for company in societa:
-                        company_dict = {
-                            'id': company['id'],
-                            'nome': company['nome'],
-                            'sedi': []
-                        }
-                        sedi = get_sedi_by_societa(company['id'])
-                        for sede in sedi:
-                            sede_dict = {
-                                'id': sede['id'],
-                                'nome': sede['nome'],
-                                'indirizzo': sede['indirizzo'],
-                                'citta': sede['citta'],
-                                'cap': sede['cap'],
-                                'trainers': get_trainers_by_sede(sede['id'])  # Include trainers under each sede
-                            }
-                            company_dict['sedi'].append(sede_dict)
-                        area_manager_dict['societa'].append(company_dict)
-                    franchisor_dict['area_managers'].append(area_manager_dict)
-                hierarchy.append(franchisor_dict)
-
+        franchisor = get_franchisor_by_email(user_email)
+        if franchisor:
+            franchisor_id = franchisor['id']
     elif user_role == 'area_manager':
-        area_managers = get_area_managers_by_franchisor(user_id)
-        for area_manager in area_managers:
-            area_manager_dict = {
-                'id': area_manager['id'],
-                'nome': area_manager['nome'],
-                'societa': []
-            }
-            societa = get_societa_by_area_manager(area_manager['id'])
-            for company in societa:
-                company_dict = {
-                    'id': company['id'],
-                    'nome': company['nome'],
-                    'sedi': get_sedi_by_societa(company['id'])
-                }
-                area_manager_dict['societa'].append(company_dict)
-            hierarchy.append(area_manager_dict)
-
+        conn = get_db_connection()
+        try:
+            area_manager = conn.execute('SELECT * FROM area_manager WHERE email = ?', (user_email,)).fetchone()
+            if area_manager:
+                franchisor_id = area_manager['franchisor_id']
+        finally:
+            conn.close()
     elif user_role == 'societa':
-        societa = get_societa_by_area_manager(user_id)
-        for company in societa:
-            company_dict = {
-                'id': company['id'],
-                'nome': company['nome'],
-                'sedi': get_sedi_by_societa(company['id'])
-            }
-            hierarchy.append(company_dict)
-
+        conn = get_db_connection()
+        try:
+            societa = conn.execute('SELECT * FROM societa WHERE email = ?', (user_email,)).fetchone()
+            if societa:
+                area_manager = conn.execute('SELECT * FROM area_manager WHERE id = ?', (societa['area_manager_id'],)).fetchone()
+                if area_manager:
+                    franchisor_id = area_manager['franchisor_id']
+        finally:
+            conn.close()
     elif user_role == 'sede':
-        sedi = get_sedi_by_societa(user_id)
-        for sede in sedi:
-            sede_dict = {
-                'id': sede['id'],
-                'nome': sede['nome'],
-                'trainers': get_trainers_by_sede(sede['id'])  # Add trainers under each sede
+        conn = get_db_connection()
+        try:
+            sede = conn.execute('SELECT * FROM sede WHERE email = ?', (user_email,)).fetchone()
+            if sede:
+                societa = conn.execute('SELECT * FROM societa WHERE id = ?', (sede['societa_id'],)).fetchone()
+                if societa:
+                    area_manager = conn.execute('SELECT * FROM area_manager WHERE id = ?', (societa['area_manager_id'],)).fetchone()
+                    if area_manager:
+                        franchisor_id = area_manager['franchisor_id']
+        finally:
+            conn.close()
+    elif user_role == 'trainer':
+        conn = get_db_connection()
+        try:
+            trainer = conn.execute('SELECT * FROM trainer WHERE email = ?', (user_email,)).fetchone()
+            if trainer:
+                sede = conn.execute('SELECT * FROM sede WHERE id = ?', (trainer['sede_id'],)).fetchone()
+                if sede:
+                    societa = conn.execute('SELECT * FROM societa WHERE id = ?', (sede['societa_id'],)).fetchone()
+                    if societa:
+                        area_manager = conn.execute('SELECT * FROM area_manager WHERE id = ?', (societa['area_manager_id'],)).fetchone()
+                        if area_manager:
+                            franchisor_id = area_manager['franchisor_id']
+        finally:
+            conn.close()
+
+    # Build the hierarchy for the determined franchisor
+    if franchisor_id:
+        franchisor = get_franchisor(franchisor_id)
+        if franchisor:
+            franchisor_dict = {
+                'id': franchisor['id'],
+                'nome': franchisor['nome'],
+                'email': franchisor['email'],
+                'type': 'franchisor',
+                'area_managers': []
             }
-            hierarchy.append(sede_dict)
+            area_managers = get_area_managers_by_franchisor(franchisor['id'])
+            for area_manager in area_managers:
+                area_manager_dict = {
+                    'id': area_manager['id'],
+                    'nome': area_manager['nome'],
+                    'cognome': area_manager['cognome'],
+                    'email': area_manager['email'],
+                    'type': 'area_manager',
+                    'societa': []
+                }
+                societa = get_societa_by_area_manager(area_manager['id'])
+                for company in societa:
+                    company_dict = {
+                        'id': company['id'],
+                        'nome': company['nome'],
+                        'type': 'societa',
+                        'sedi': []
+                    }
+                    sedi = get_sedi_by_societa(company['id'])
+                    for sede in sedi:
+                        sede_dict = {
+                            'id': sede['id'],
+                            'nome': sede['nome'],
+                            'indirizzo': sede['indirizzo'],
+                            'citta': sede['citta'],
+                            'cap': sede['cap'],
+                            'type': 'sede',
+                            'trainers': get_trainers_by_sede(sede['id'])
+                        }
+                        company_dict['sedi'].append(sede_dict)
+                    area_manager_dict['societa'].append(company_dict)
+                franchisor_dict['area_managers'].append(area_manager_dict)
+            hierarchy.append(franchisor_dict)
+        else:
+            hierarchy.append({'area_managers': []})  # Ensure consistent structure for franchisor
 
     return hierarchy
 
 # In database.py
 
+def get_sedi(user_role, user_email):
+    if user_role == 'franchisor':
+        return get_sedi_by_franchisor_email(user_email)
+    elif user_role == 'area_manager':
+        return get_sedi_by_area_manager_email(user_email)
+    elif user_role == 'societa':
+        return get_sedi_by_societa_email(user_email)
+    elif user_role == 'trainer':
+        return get_sedi_by_trainer_email(user_email)
+        
+
+    
 def update_franchisor(franchisor_id, nome, email, password):
     conn = get_db_connection()
     try:
@@ -1512,3 +1539,88 @@ def get_franchisor_by_email(email):
     franchisor = conn.execute('SELECT * FROM franchisor WHERE email = ?', (email,)).fetchone()
     conn.close()
     return franchisor
+
+def get_sede_by_email(email):
+    """Fetch the sede details by email."""
+    conn = get_db_connection()
+    sede = conn.execute('SELECT * FROM sede WHERE email = ?', (email,)).fetchone()
+    conn.close()
+    return sede
+
+def get_sedi_by_societa_email(email):
+    """Fetch all sedi under a societa by the societa's email."""
+    conn = get_db_connection()
+    societa = conn.execute('SELECT * FROM societa WHERE email = ?', (email,)).fetchone()
+    if societa:
+        sedi = conn.execute('SELECT * FROM sede WHERE societa_id = ?', (societa['id'],)).fetchall()
+    else:
+        sedi = []
+    conn.close()
+    return sedi
+
+def get_societa_by_area_manager_email(email):
+    """Fetch all societa under an area manager by the area manager's email."""
+    conn = get_db_connection()
+    area_manager = conn.execute('SELECT * FROM area_manager WHERE email = ?', (email,)).fetchone()
+    if area_manager:
+        societa = conn.execute('SELECT * FROM societa WHERE area_manager_id = ?', (area_manager['id'],)).fetchall()
+    else:
+        societa = []
+    conn.close()
+    return societa
+
+def get_area_managers_by_franchisor_email(email):
+    """Fetch all area managers under a franchisor by the franchisor's email."""
+    conn = get_db_connection()
+    franchisor = conn.execute('SELECT * FROM franchisor WHERE email = ?', (email,)).fetchone()
+    if franchisor:
+        area_managers = conn.execute('SELECT * FROM area_manager WHERE franchisor_id = ?', (franchisor['id'],)).fetchall()
+    else:
+        area_managers = []
+    conn.close()
+    return area_managers
+
+def get_sedi_by_franchisor_email(email):
+    """Fetch all sedi under a franchisor by the franchisor's email."""
+    conn = get_db_connection()
+    try:
+        franchisor = conn.execute('SELECT id FROM franchisor WHERE email = ?', (email,)).fetchone()
+        if franchisor:
+            sedi = conn.execute('''
+                SELECT s.* 
+                FROM sede s
+                JOIN societa so ON s.societa_id = so.id
+                JOIN area_manager am ON so.area_manager_id = am.id
+                WHERE am.franchisor_id = ?
+            ''', (franchisor['id'],)).fetchall()
+            return sedi
+        return []
+    finally:
+        conn.close()
+
+def get_area_manager_by_email(email):
+    """Fetch the area manager details by email."""
+    conn = get_db_connection()
+    try:
+        area_manager = conn.execute('SELECT * FROM area_manager WHERE email = ?', (email,)).fetchone()
+        return area_manager
+    finally:
+        conn.close()
+
+def get_sede_by_trainer_email(email):
+    """Fetch the sede associated with a trainer by their email."""
+    conn = get_db_connection()
+    trainer = conn.execute('SELECT * FROM trainer WHERE email = ?', (email,)).fetchone()
+    if trainer:
+        sede = conn.execute('SELECT * FROM sede WHERE id = ?', (trainer['sede_id'],)).fetchone()
+    else:
+        sede = None
+    conn.close()
+    return sede
+
+def get_societa_by_email(email):
+    """Fetch the societa details by email."""
+    conn = get_db_connection()
+    societa = conn.execute('SELECT * FROM societa WHERE email = ?', (email,)).fetchone()
+    conn.close()
+    return societa
