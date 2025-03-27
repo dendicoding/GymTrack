@@ -1035,12 +1035,8 @@ def create_user_tables():
 def authenticate_user(email, password, role):
     """Autentica un utente in base al ruolo specificato"""
     conn = get_db_connection()
-    query = """
-        SELECT u.id, u.nome, u.email 
-        FROM utenti u
-        WHERE u.email = ? AND u.password = ? AND u.ruolo = ? AND u.attivo = 1
-    """
-    user = conn.execute(query, (email, password, role)).fetchone()
+    query = f"SELECT id, nome, email FROM {role} WHERE email = ? AND password = ? AND attivo = 1"
+    user = conn.execute(query, (email, password)).fetchone()
     conn.close()
     return dict(user) if user else None
 
@@ -1616,3 +1612,24 @@ def get_user_email_by_id(user_id):
     user_email = conn.execute('SELECT email FROM utenti WHERE id = ?', (user_id,)).fetchone()
     conn.close()
     return user_email['email'] if user_email else None
+
+def log_event(utente_id, email, azione, dettagli=None):
+    """Inserisce un evento nella tabella eventi."""
+    conn = get_db_connection()
+    try:
+        conn.execute('''
+        INSERT INTO eventi (utente_id, email, azione, dettagli)
+        VALUES (?, ?, ?, ?)
+        ''', (utente_id, email, azione, dettagli))
+        conn.commit()
+    finally:
+        conn.close()
+
+def get_all_eventi():
+    """Recupera tutti gli eventi dalla tabella eventi."""
+    conn = get_db_connection()
+    try:
+        eventi = conn.execute('SELECT * FROM eventi ORDER BY data_evento DESC').fetchall()
+        return eventi
+    finally:
+        conn.close()

@@ -357,6 +357,7 @@ def nuovo_cliente():
         cliente_id = db.add_cliente(nome, cognome, email, telefono, data_nascita, 
                                      indirizzo, citta, cap, note, tipo, codice_fiscale, tipologia, taglia_giubotto, taglia_cintura, taglia_braccia, taglia_gambe, obiettivo_cliente, sede_id)
         
+        db.log_event(session.get('user_id'), session.get('user_email'), 'Aggiunto nuovo cliente', f'Cliente: {nome} {cognome}')
         flash(f'Cliente {nome} {cognome} aggiunto con successo!', 'success')
         return redirect(url_for('dettaglio_cliente', cliente_id=cliente_id))
     
@@ -448,6 +449,7 @@ def modifica_cliente(cliente_id):
         db.update_cliente(cliente_id, nome, cognome, email, telefono, data_nascita, 
                           indirizzo, citta, cap, note, tipo, codice_fiscale, tipologia, taglia_giubotto, taglia_cintura, taglia_braccia, taglia_gambe, obiettivo_cliente, sede_id)
         
+        db.log_event(session.get('user_id'), session.get('user_email'), 'Modificato cliente', f'Cliente ID: {cliente_id}')
         flash(f'Cliente {nome} {cognome} aggiornato con successo!', 'success')
         return redirect(url_for('dettaglio_cliente', cliente_id=cliente_id))
     
@@ -460,6 +462,7 @@ def elimina_cliente(cliente_id):
         abort(404)
     
     db.delete_cliente(cliente_id)
+    db.log_event(session.get('user_id'), session.get('user_email'), 'Eliminato cliente', f'Cliente ID: {cliente_id}')
     flash(f'Cliente {cliente["nome"]} {cliente["cognome"]} eliminato con successo!', 'success')
     return redirect(url_for('lista_clienti'))
 
@@ -530,6 +533,7 @@ def modifica_pacchetto(pacchetto_id):
         pagamento_unico = 'pagamento_unico' in request.form
         
         if db.update_pacchetto(pacchetto_id, nome, descrizione, prezzo, numero_lezioni, durata_giorni, attivo, pagamento_unico):
+            db.log_event(session.get('user_id'), session.get('user_email'), 'Modificato pacchetto', f'Pacchetto ID: {pacchetto_id}')
             flash('Pacchetto aggiornato con successo', 'success')
             return redirect(url_for('dettaglio_pacchetto', pacchetto_id=pacchetto_id))
         else:
@@ -627,6 +631,7 @@ def registra_lezione(abbonamento_id):
         print(user_id)
         # Registra la lezione
         if db.add_lezione(abbonamento_id, data, note, user_id):
+            db.log_event(session.get('user_id'), session.get('user_email'), 'Registrata lezione', f'Abbonamento ID: {abbonamento_id}')
             flash('Lezione registrata con successo', 'success')
             return redirect(url_for('dettaglio_cliente', cliente_id=cliente['id']))
         else:
@@ -685,11 +690,13 @@ def paga_rata(rata_id):
             
             if db.paga_rata(rata_id, metodo_pagamento, importo_pagato):
                 db.crea_nuova_rata(rata['abbonamento_id'], importo_rimanente, nuova_data_scadenza)
+                db.log_event(session.get('user_id'), session.get('user_email'), 'Pagamento parziale rata', f'Rata ID: {rata_id}')
                 flash('Pagamento parziale registrato con successo e nuova rata generata', 'success')
             else:
                 flash('Errore durante la registrazione del pagamento parziale', 'error')
         else:
             if db.paga_rata(rata_id, metodo_pagamento, importo_pagato):
+                db.log_event(session.get('user_id'), session.get('user_email'), 'Pagamento rata', f'Rata ID: {rata_id}')
                 flash('Pagamento registrato con successo', 'success')
             else:
                 flash('Errore durante la registrazione del pagamento', 'error')
@@ -882,6 +889,7 @@ def elimina_abbonamento(abbonamento_id):
     cliente_id = abbonamento['cliente_id']
     
     if db.delete_abbonamento(abbonamento_id):
+        db.log_event(session.get('user_id'), session.get('user_email'), 'Eliminato abbonamento', f'Abbonamento ID: {abbonamento_id}')
         flash('Abbonamento eliminato con successo', 'success')
     else:
         flash('Errore durante l\'eliminazione dell\'abbonamento', 'error')
@@ -1038,6 +1046,13 @@ def delete_trainer_route(trainer_id):
     db.delete_trainer(trainer_id)
     flash('Trainer deleted successfully!', 'success')
     return redirect(url_for('gestione_gerarchia'))  # Redirect to the hierarchy management page
+
+@app.route('/eventi')
+@login_required
+def lista_eventi():
+    eventi = db.get_all_eventi()
+    return render_template('eventi/lista.html', eventi=eventi)
+
 if __name__ == '__main__':
     #db.migrate_database()
     #db.create_user_tables

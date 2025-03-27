@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}Eventi{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">Eventi</h1>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Utente</th>
+                <th>Email</th>
+                <th>Azione</th>
+                <th>Dettagli</th>
+                <th>Data Evento</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for evento in eventi %}
+            <tr>
+                <td>{{ evento.id }}</td>
+                <td>{{ evento.utente_id }}</td>
+                <td>{{ evento.email }}</td>
+                <td>{{ evento.azione }}</td>
+                <td>{{ evento.dettagli }}</td>
+                <td>{{ evento.data_evento }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
