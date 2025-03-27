@@ -160,7 +160,7 @@
                             <i class="fas fa-clock fa-2x me-3"></i>
                             <div>
                                 <div class="fw-bold">Rate scadute</div>
-                                <h4 class="mb-0">{{ stats.rate_scadute }} (Totale: €{{ "%.2f"|format(stats.rate_scadute_importo) }})</h4>
+                                <h4 class="mb-0">{{ stats.rate_scadute }} (Totale: €{{ "%.2f"|format(stats.rate_scadute_importo or 0) }})</h4>
                             </div>
                         </div>
                     </div>
@@ -200,36 +200,7 @@
         </div>
     </div>
     
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header bg-info text-white">
-                <i class="fas fa-calendar-alt me-1"></i>
-                Prossime 5 Scadenze
-            </div>
-            <div class="card-body">
-                {% if stats.prossime_scadenze %}
-                    <div class="list-group mb-3">
-                        {% for scadenza in stats.prossime_scadenze[:5] %}
-                            <a href="{{ url_for('dettaglio_cliente', cliente_id=scadenza.cliente_id) }}" 
-                               class="list-group-item list-group-item-action {{ 'list-group-item list-group-item-danger' if scadenza.data_scadenza|to_date < oggi }}">
-                                <div class="d-flex w-100 justify-content-between">
-                                    <h6 class="mb-1">{{ scadenza.cliente_nome }} {{ scadenza.cliente_cognome }}</h6>
-                                    <small class="text-danger">{{ scadenza.data_scadenza|format_date }}</small>
-                                </div>
-                                <p class="mb-1">€{{ "%.2f"|format(scadenza.importo) }} - {{ scadenza.descrizione }} - #{{scadenza.numero_rata}} su {{scadenza.numero_rate}}</p>
-                            </a>
-                        {% endfor %}
-                    </div>
-                {% else %}
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle me-2"></i>Nessuna scadenza imminente.
-                    </div>
-                {% endif %}
-                <a href="{{ url_for('calendario') }}" class="btn btn-info">
-                    <i class="fas fa-calendar-alt me-1"></i>Visualizza Calendario
-                </a>
-            </div>
-        </div>
+    
     </div>
 </div>
 {% endblock %}

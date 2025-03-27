@@ -95,7 +95,13 @@
                                         {% endif %}
                                     {% endif %}
                                 </td>
-                                <td>{{ rata.metodo_pagamento }}</td>
+                                <td>
+                                    {% if rata.metodo_pagamento %}
+                                        {{ rata.metodo_pagamento }}
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
                                 <td>
                                     {% if rata.data_pagamento %}
                                         {{ rata.data_pagamento|format_date }}
@@ -142,7 +148,7 @@
                                     <tr>
                                         <td>{{ lezione.data|format_date }}</td>
                                         <td>{{ lezione.note or '—' }}</td>
-                                        <td>{{ lezione.registrata_da_nome }}</td>
+                                        <td>{{ lezione.registrata_da or '—' }}</td>
                                     </tr>
                                 {% endfor %}
                             </tbody>

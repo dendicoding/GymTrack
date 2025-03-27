@@ -189,6 +189,7 @@
                                     <th>Data</th>
                                     <th>Pacchetto</th>
                                     <th>Note</th>
+                                    <th>Registrata da</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -197,6 +198,7 @@
                                         <td>{{ lezione.data|format_date }}</td>
                                         <td>{{ lezione.tipo }}</td>
                                         <td>{{ lezione.note or '—' }}</td>
+                                        <td>{{ lezione.registrata_da or '—' }}</td>
                                     </tr>
                                 {% endfor %}
                             </tbody>

@@ -336,55 +336,83 @@ def create_abbonamento(cliente_id, pacchetto_id, data_inizio, prezzo_totale, num
     finally:
         conn.close()
 
-def get_rate_scadenza():
+def get_rate_scadenza(sede_ids):
     conn = get_db_connection()
-    try:
-        rate = conn.execute('''
-            SELECT 
-                r.*,
-                c.nome || ' ' || c.cognome as nome_cliente,
-                c.id as cliente_id,
-                p.nome as tipo_pacchetto,
-                a.id as abbonamento_id
-            FROM rate r
-            JOIN abbonamenti a ON r.abbonamento_id = a.id
-            JOIN clienti c ON a.cliente_id = c.id
-            JOIN pacchetti p ON a.pacchetto_id = p.id
-            WHERE r.pagato = 0
-            ORDER BY r.data_scadenza ASC
-        ''').fetchall()
-        return rate
-    finally:
-        conn.close()
+    if not sede_ids:
+        return []
 
-def get_rate_incassate_mese():
+    placeholders = ','.join('?' for _ in sede_ids)
+    query = f'''
+        SELECT 
+            r.*,
+            c.nome || ' ' || c.cognome as nome_cliente,
+            c.id as cliente_id,
+            p.nome as tipo_pacchetto,
+            a.id as abbonamento_id
+        FROM rate r
+        JOIN abbonamenti a ON r.abbonamento_id = a.id
+        JOIN clienti c ON a.cliente_id = c.id
+        JOIN pacchetti p ON a.pacchetto_id = p.id
+        WHERE r.pagato = 0 AND c.sede_id IN ({placeholders})
+        ORDER BY r.data_scadenza ASC
+    '''
+    rate = conn.execute(query, sede_ids).fetchall()
+    conn.close()
+    return rate
+
+def get_rate_incassate_mese(sede_ids=None):
     mese_inizio = datetime.now().replace(day=1).strftime("%Y-%m-%d")
     mese_fine = (datetime.now().replace(day=1) + timedelta(days=32)).replace(day=1) - timedelta(days=1)
     mese_fine = mese_fine.strftime("%Y-%m-%d")
     conn = get_db_connection()
     try:
-        rate = conn.execute('''
-            SELECT 
-                r.*,
-                c.nome || ' ' || c.cognome AS nome_cliente,
-                c.id AS cliente_id,
-                p.nome AS tipo_pacchetto,
-                a.id AS abbonamento_id
-            FROM rate r
-            JOIN abbonamenti a ON r.abbonamento_id = a.id
-            JOIN clienti c ON a.cliente_id = c.id
-            JOIN pacchetti p ON a.pacchetto_id = p.id
-            WHERE data_pagamento BETWEEN ? AND ? AND pagato = 1
-            ORDER BY r.data_scadenza ASC;
-        ''',(mese_inizio, mese_fine)).fetchall()
+        if sede_ids:
+            placeholders = ','.join('?' for _ in sede_ids)
+            query = f'''
+                SELECT 
+                    r.*,
+                    c.nome || ' ' || c.cognome AS nome_cliente,
+                    c.id AS cliente_id,
+                    p.nome AS tipo_pacchetto,
+                    a.id AS abbonamento_id
+                FROM rate r
+                JOIN abbonamenti a ON r.abbonamento_id = a.id
+                JOIN clienti c ON a.cliente_id = c.id
+                JOIN pacchetti p ON a.pacchetto_id = p.id
+                WHERE r.data_pagamento BETWEEN ? AND ? 
+                AND r.pagato = 1 
+                AND c.sede_id IN ({placeholders})
+                ORDER BY r.data_pagamento ASC;
+            '''
+            rate = conn.execute(query, [mese_inizio, mese_fine] + sede_ids).fetchall()
+        else:
+            rate = conn.execute('''
+                SELECT 
+                    r.*,
+                    c.nome || ' ' || c.cognome AS nome_cliente,
+                    c.id AS cliente_id,
+                    p.nome AS tipo_pacchetto,
+                    a.id AS abbonamento_id
+                FROM rate r
+                JOIN abbonamenti a ON r.abbonamento_id = a.id
+                JOIN clienti c ON a.cliente_id = c.id
+                JOIN pacchetti p ON a.pacchetto_id = p.id
+                WHERE r.data_pagamento BETWEEN ? AND ? 
+                AND r.pagato = 1
+                ORDER BY r.data_pagamento ASC;
+            ''', (mese_inizio, mese_fine)).fetchall()
         return rate
     finally:
         conn.close()
 
-def get_rate_calendario(mese=None, anno=None):
+def get_rate_calendario(mese=None, anno=None, sede_ids=None):
     conn = get_db_connection()
     try:
-        query = '''
+        if not sede_ids:
+            return []
+
+        placeholders = ','.join('?' for _ in sede_ids)
+        query = f'''
             SELECT 
                 r.data_scadenza,
                 COUNT(r.id) as rate_da_pagare,
@@ -393,9 +421,9 @@ def get_rate_calendario(mese=None, anno=None):
             FROM rate r
             JOIN abbonamenti a ON r.abbonamento_id = a.id
             JOIN clienti c ON a.cliente_id = c.id
-            WHERE r.pagato = 0
+            WHERE r.pagato = 0 AND c.sede_id IN ({placeholders})
         '''
-        params = []
+        params = sede_ids
         
         if mese and anno:
             query += ''' 
@@ -409,7 +437,6 @@ def get_rate_calendario(mese=None, anno=None):
         '''
         
         scadenze = conn.execute(query, params).fetchall()
-        # Convertiamo i risultati in dizionari con le chiavi corrette
         return [dict(row) for row in scadenze]
     finally:
         conn.close()
@@ -478,14 +505,14 @@ def get_lezioni_abbonamento(abbonamento_id):
     conn.close()
     return lezioni
 
-def add_lezione(abbonamento_id, data, ora_inizio, ora_fine, note):
+def add_lezione(abbonamento_id, data, note, registrata_da):
     conn = get_db_connection()
     cursor = conn.cursor()
     
     cursor.execute('''
-    INSERT INTO lezioni (abbonamento_id, data, ora_inizio, ora_fine, note, completata)
-    VALUES (?, ?, ?, ?, ?, 0)
-    ''', (abbonamento_id, data, ora_inizio, ora_fine, note))
+    INSERT INTO lezioni (abbonamento_id, data, note, registrata_da)
+    VALUES (?, ?, ?, ?)
+    ''', (abbonamento_id, data, note, registrata_da))
     
     conn.commit()
     lezione_id = cursor.lastrowid
@@ -512,75 +539,46 @@ def completa_lezione(lezione_id):
     conn.close()
 
 # Funzioni per la dashboard
-def get_statistiche_dashboard():
+def get_statistiche_dashboard(sede_ids=None):
     conn = get_db_connection()
     oggi = datetime.now().strftime("%Y-%m-%d")
-
+    
+    
     stats = {}
-    
-    # Numero totale di clienti
-    stats['totale_clienti'] = conn.execute("SELECT COUNT(*) FROM clienti WHERE tipo = 'effettivo'").fetchone()[0]
-    
-    # Numero di leads
-    stats['totale_leads'] = conn.execute("SELECT COUNT(*) FROM clienti WHERE tipo = 'lead'").fetchone()[0]
-    
-    # Numero di abbonamenti attivi
-    oggi = datetime.now().strftime("%Y-%m-%d")
-    stats['abbonamenti_attivi'] = conn.execute(
-        "SELECT COUNT(*) FROM abbonamenti WHERE data_fine >= ?", (oggi,)).fetchone()[0]
-    
-    # Rate in scadenza oggi
-    stats['rate_oggi'] = conn.execute(
-        "SELECT COUNT(*) FROM rate WHERE data_scadenza = ? AND pagato = 0", (oggi,)).fetchone()[0]
-    
-    # Rate scadute non pagate
-    stats['rate_scadute'] = conn.execute(
-        "SELECT COUNT(*) FROM rate WHERE data_scadenza < ? AND pagato = 0", (oggi,)).fetchone()[0]
-    
-    stats['rate_scadute_importo'] = conn.execute(
-        "SELECT SUM(importo) FROM rate WHERE data_scadenza < ? AND pagato = 0", (oggi,)).fetchone()[0]
-    
-    # Incassi del mese corrente
-    mese_inizio = datetime.now().replace(day=1).strftime("%Y-%m-%d")
-    mese_fine = (datetime.now().replace(day=1) + timedelta(days=32)).replace(day=1) - timedelta(days=1)
-    mese_fine = mese_fine.strftime("%Y-%m-%d")
-    
-    stats['incassi_mese'] = conn.execute(
-        "SELECT SUM(importo) FROM rate WHERE data_pagamento BETWEEN ? AND ? AND pagato = 1",
-        (mese_inizio, mese_fine)).fetchone()[0] or 0
-    
-    stats['previsione_mese'] = conn.execute(
-        "SELECT SUM(importo) FROM rate WHERE data_scadenza BETWEEN ? AND ? AND pagato = 0",
-        (mese_inizio, mese_fine)).fetchone()[0] or 0
-    
-    # Get the first day of next month
-    prossimo_mese_inizio_dt = (datetime.now().replace(day=1) + timedelta(days=32)).replace(day=1)
-    prossimo_mese_inizio = prossimo_mese_inizio_dt.strftime("%Y-%m-%d")
-
-    # Get the last day of next month
-    prossimo_mese_fine_dt = (prossimo_mese_inizio_dt + timedelta(days=32)).replace(day=1) - timedelta(days=1)
-    prossimo_mese_fine = prossimo_mese_fine_dt.strftime("%Y-%m-%d")
-    
-    stats['previsione_mese_prossimo'] = conn.execute(
-        "SELECT SUM(importo) FROM rate WHERE data_scadenza BETWEEN ? AND ? AND pagato = 0",
-        (prossimo_mese_inizio, prossimo_mese_fine)).fetchone()[0] or 0
-    
-    # Prossime scadenze
-    prossime_scadenze = conn.execute("""
-        SELECT r.*, c.id as cliente_id, c.nome as cliente_nome, c.cognome as cliente_cognome,
-               p.nome as descrizione, a.numero_rate
-        FROM rate r
-        JOIN abbonamenti a ON r.abbonamento_id = a.id
-        JOIN clienti c ON a.cliente_id = c.id
-        JOIN pacchetti p ON a.pacchetto_id = p.id                         
-        WHERE r.pagato = 0
-        ORDER BY r.data_scadenza 
+    if sede_ids:
+        placeholders = ','.join('?' for _ in sede_ids)
+        stats['totale_clienti'] = len(get_clienti_effettivi(sede_ids))
+        stats['totale_leads'] = len(get_leads(sede_ids))
+        stats['abbonamenti_attivi'] = conn.execute(f"SELECT COUNT(*) FROM abbonamenti WHERE cliente_id IN (SELECT id FROM clienti WHERE sede_id IN ({placeholders})) AND data_fine >= ?", sede_ids + [oggi]).fetchone()[0]
+        stats['rate_oggi'] = conn.execute(f"SELECT COUNT(*) FROM rate WHERE abbonamento_id IN (SELECT id FROM abbonamenti WHERE cliente_id IN (SELECT id FROM clienti WHERE sede_id IN ({placeholders}))) AND data_scadenza = ? AND pagato = 0", sede_ids + [oggi]).fetchone()[0]
+        stats['rate_scadute'] = conn.execute(f"SELECT COUNT(*) FROM rate WHERE abbonamento_id IN (SELECT id FROM abbonamenti WHERE cliente_id IN (SELECT id FROM clienti WHERE sede_id IN ({placeholders}))) AND data_scadenza < ? AND pagato = 0", sede_ids + [oggi]).fetchone()[0]
+        stats['rate_scadute_importo'] = conn.execute(f"SELECT SUM(importo) FROM rate WHERE abbonamento_id IN (SELECT id FROM abbonamenti WHERE cliente_id IN (SELECT id FROM clienti WHERE sede_id IN ({placeholders}))) AND data_scadenza < ? AND pagato = 0", sede_ids + [oggi]).fetchone()[0]
         
-    """).fetchall()
+        # Corrected SQL query for previsione_mese
+        mese_inizio = datetime.now().replace(day=1).strftime("%Y-%m-%d")
+        mese_fine = (datetime.now().replace(day=1) + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+        mese_fine = mese_fine.strftime("%Y-%m-%d")
+        stats['incassi_mese'] = conn.execute(f"SELECT SUM(importo) FROM rate WHERE abbonamento_id IN (SELECT id FROM abbonamenti WHERE cliente_id IN (SELECT id FROM clienti WHERE sede_id IN ({placeholders}))) AND data_pagamento BETWEEN ? AND ? AND pagato = 1", sede_ids + [mese_inizio, mese_fine]).fetchone()[0] or 0
+        stats['previsione_mese'] = conn.execute(f"SELECT SUM(importo) FROM rate WHERE abbonamento_id IN (SELECT id FROM abbonamenti WHERE cliente_id IN (SELECT id FROM clienti WHERE sede_id IN ({placeholders}))) AND data_scadenza BETWEEN ? AND ? AND pagato = 0", sede_ids + [mese_inizio, mese_fine]).fetchone()[0] or 0
+        
+        # Corrected SQL query for previsione_mese_prossimo
+        prossimo_mese_inizio = (datetime.now().replace(day=1) + timedelta(days=32)).replace(day=1).strftime("%Y-%m-%d")
+        prossimo_mese_fine = (datetime.now().replace(day=1) + timedelta(days=64)).replace(day=1) - timedelta(days=1)
+        prossimo_mese_fine = prossimo_mese_fine.strftime("%Y-%m-%d")
+        stats['previsione_mese_prossimo'] = conn.execute(f"SELECT SUM(importo) FROM rate WHERE abbonamento_id IN (SELECT id FROM abbonamenti WHERE cliente_id IN (SELECT id FROM clienti WHERE sede_id IN ({placeholders}))) AND data_scadenza BETWEEN ? AND ? AND pagato = 0", sede_ids + [prossimo_mese_inizio, prossimo_mese_fine]).fetchone()[0] or 0
+    else:
+        stats = {
+            'totale_clienti': 0,
+            'totale_leads': 0,
+            'abbonamenti_attivi': 0,
+            'rate_oggi': 0,
+            'rate_scadute': 0,
+            'rate_scadute_importo': 0,
+            'incassi_mese': 0,
+            'previsione_mese': 0,
+            'previsione_mese_prossimo': 0
+        }
 
-    
-    stats['prossime_scadenze'] = prossime_scadenze
-    
     conn.close()
     return stats
 
@@ -719,37 +717,18 @@ def incrementa_lezioni_utilizzate(abbonamento_id):
 def migrate_lezioni_table():
     conn = get_db_connection()
     try:
-        # Crea una tabella temporanea con la nuova struttura
+        # Add the registrata_da column if it doesn't exist
         conn.execute('''
-            CREATE TABLE lezioni_new (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                abbonamento_id INTEGER NOT NULL,
-                data DATE NOT NULL,
-                note TEXT,
-                registrata_da INTEGER DEFAULT 1,
-                FOREIGN KEY (abbonamento_id) REFERENCES abbonamenti (id),
-                FOREIGN KEY (registrata_da) REFERENCES utenti (id)
-            )
+            ALTER TABLE lezioni ADD COLUMN registrata_da TEXT DEFAULT NULL
         ''')
-        
-        # Copia i dati esistenti
-        conn.execute('''
-            INSERT INTO lezioni_new (id, abbonamento_id, data, note)
-            SELECT id, abbonamento_id, data, note FROM lezioni
-        ''')
-        
-        # Elimina la vecchia tabella
-        conn.execute('DROP TABLE lezioni')
-        
-        # Rinomina la nuova tabella
-        conn.execute('ALTER TABLE lezioni_new RENAME TO lezioni')
-        
         conn.commit()
         print("Migrazione completata con successo")
-        
-    except Exception as e:
-        print(f"Errore durante la migrazione: {e}")
-        conn.rollback()
+    except sqlite3.OperationalError as e:
+        if "duplicate column name" in str(e).lower():
+            print("La colonna 'registrata_da' esiste già.")
+        else:
+            print(f"Errore durante la migrazione: {e}")
+            conn.rollback()
     finally:
         conn.close()
 
@@ -901,7 +880,7 @@ def migrate_database():
     conn = get_db_connection()
     try:
         conn.execute('''
-            ALTER TABLE clienti ADD COLUMN sede_id INTEGER NOT NULL REFERENCES sede (id)
+            ALTER TABLE lezioni ALTER COLUMN registrata_da TEXT REFERENCES utenti (email)
         ''')
 
         conn.commit()
@@ -1056,10 +1035,14 @@ def create_user_tables():
 def authenticate_user(email, password, role):
     """Autentica un utente in base al ruolo specificato"""
     conn = get_db_connection()
-    query = f"SELECT id, nome, email FROM {role} WHERE email = ? AND password = ? AND attivo = 1"
-    user = conn.execute(query, (email, password)).fetchone()
+    query = """
+        SELECT u.id, u.nome, u.email 
+        FROM utenti u
+        WHERE u.email = ? AND u.password = ? AND u.ruolo = ? AND u.attivo = 1
+    """
+    user = conn.execute(query, (email, password, role)).fetchone()
     conn.close()
-    return user
+    return dict(user) if user else None
 
 def get_franchisor(franchisor_id):
     conn = get_db_connection()
@@ -1624,3 +1607,12 @@ def get_societa_by_email(email):
     societa = conn.execute('SELECT * FROM societa WHERE email = ?', (email,)).fetchone()
     conn.close()
     return societa
+
+def get_user_email_by_id(user_id):
+    """
+    Fetch the email of a user based on their ID.
+    """
+    conn = get_db_connection()
+    user_email = conn.execute('SELECT email FROM utenti WHERE id = ?', (user_id,)).fetchone()
+    conn.close()
+    return user_email['email'] if user_email else None

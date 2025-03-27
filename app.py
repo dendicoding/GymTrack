@@ -27,7 +27,7 @@ def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'user_id' not in session:
-            flash('Devi effettuare il login per accedere a questa pagina', 'error')
+            flash('Devi effettuare il login per accedere a questa pagina', 'danger')
             return redirect(url_for('login'))
         return f(*args, **kwargs)
     return decorated_function
@@ -37,6 +37,7 @@ def login_required(f):
 def setup():
     db.init_db()
     db.create_user_tables()
+    g.hierarchy = db.build_hierarchy(session.get('user_role'), session.get('user_email'))
 
 # Aggiungi queste route per il login e la registrazione
 @app.route('/login', methods=['GET', 'POST'])
@@ -47,12 +48,13 @@ def login():
         role = request.form['role']
         
         user = db.authenticate_user(email, password, role)
+        print("Authenticated user:", user)  # Debugging line
         
         if user:
             session['user_id'] = user['id']
             session['user_name'] = user['nome']
             session['user_role'] = role
-            session['user_email'] = email
+            session['user_email'] = user['email']
             
             flash(f'Benvenuto, {user["nome"]}!', 'success')
             return redirect(url_for('index'))
@@ -231,8 +233,41 @@ def month_name_filter(month_number):
 @app.route('/')
 @login_required
 def index():
-    #rate_in_scadenza = db.get_rate_scadenza(7)
-    stats = db.get_statistiche_dashboard()
+    user_role = session.get('user_role')
+    user_email = session.get('user_email')
+    # Directly fetch the sede_id for the logged-in user if the role is 'sede'
+    sede_ids = []
+    if user_role == 'sede':
+        sede = db.get_sede_by_email(user_email)
+        if sede:
+            sede_ids.append(sede['id'])
+    elif user_role == 'trainer':
+        # Fetch the sede associated with the trainer
+        sede = db.get_sede_by_trainer_email(user_email)
+        if sede:
+            sede_ids.append(sede['id'])
+    elif user_role == 'societa':
+        # Fetch all sedi under the company
+        societa = db.get_societa_by_email(user_email)
+        if societa:
+            sedi = db.get_sedi_by_societa(societa['id'])
+            sede_ids.extend([sede['id'] for sede in sedi])
+    elif user_role == 'area_manager':
+        societa = db.get_societa_by_area_manager_email(user_email)
+        for company in societa:
+            sedi = db.get_sedi_by_societa(company['id'])
+            sede_ids.extend([sede['id'] for sede in sedi])
+    elif user_role == 'franchisor':
+        area_managers = db.get_area_managers_by_franchisor_email(user_email)
+        for manager in area_managers:
+            societa = db.get_societa_by_area_manager(manager['id'])
+            for company in societa:
+                sedi = db.get_sedi_by_societa(company['id'])
+                sede_ids.extend([sede['id'] for sede in sedi])
+
+    # Ensure only valid sede_ids are used
+    sede_ids = [sede_id for sede_id in sede_ids if sede_id is not None]
+    stats = db.get_statistiche_dashboard(sede_ids)
     oggi = date.today()
     return render_template('dashboard.html', stats=stats, oggi=oggi)
 
@@ -368,6 +403,13 @@ def dettaglio_cliente(cliente_id):
     
     abbonamenti = db.get_abbonamenti_by_cliente(cliente_id)
     lezioni = db.get_lezioni_by_cliente(cliente_id)
+    
+    # Convert rows to dictionaries and fetch the email of the user who registered each lesson
+    lezioni = [dict(lezione) for lezione in lezioni]
+    for lezione in lezioni:
+        print(lezione['registrata_da'])
+        lezione['registrata_da'] = db.get_user_email_by_id(lezione['registrata_da'])
+    
     oggi = datetime.now().strftime('%Y-%m-%d')
     
     return render_template('clienti/dettaglio.html',
@@ -534,6 +576,12 @@ def dettaglio_abbonamento(abbonamento_id):
     cliente = db.get_cliente(abbonamento['cliente_id'])
     rate = db.get_rate_by_abbonamento(abbonamento_id)
     lezioni = db.get_lezioni_by_abbonamento(abbonamento_id)
+
+        # Convert rows to dictionaries and fetch the email of the user who registered each lesson
+    lezioni = [dict(lezione) for lezione in lezioni]
+    for lezione in lezioni:
+        print(lezione['registrata_da'])
+        lezione['registrata_da'] = db.get_user_email_by_id(lezione['registrata_da'])
     oggi = date.today()
     
     return render_template('abbonamenti/dettaglio.html',
@@ -544,6 +592,7 @@ def dettaglio_abbonamento(abbonamento_id):
                          oggi=oggi)
 
 @app.route('/abbonamenti/<int:abbonamento_id>/registra-lezione', methods=['GET', 'POST'])
+@login_required
 def registra_lezione(abbonamento_id):
     # Ottieni l'abbonamento
     abbonamento = db.get_abbonamento(abbonamento_id)
@@ -574,9 +623,10 @@ def registra_lezione(abbonamento_id):
     if request.method == 'POST':
         data = request.form.get('data')
         note = request.form.get('note', '')
-        
+        user_id = session.get('user_id')
+        print(user_id)
         # Registra la lezione
-        if db.registra_lezione(abbonamento_id, data, note):
+        if db.add_lezione(abbonamento_id, data, note, user_id):
             flash('Lezione registrata con successo', 'success')
             return redirect(url_for('dettaglio_cliente', cliente_id=cliente['id']))
         else:
@@ -595,11 +645,10 @@ def nuova_lezione(abbonamento_id):
     
     if request.method == 'POST':
         data = request.form['data']
-        ora_inizio = request.form['ora_inizio']
-        ora_fine = request.form['ora_fine']
         note = request.form['note']
+        user_email = session.get('user_email')  # Get the current user's email
         
-        lezione_id = db.add_lezione(abbonamento_id, data, ora_inizio, ora_fine, note)
+        lezione_id = db.add_lezione(abbonamento_id, data, note, user_email)
         
         flash('Lezione aggiunta con successo!', 'success')
         return redirect(url_for('dettaglio_abbonamento', abbonamento_id=abbonamento_id))
@@ -651,6 +700,7 @@ def paga_rata(rata_id):
 
 # --- CALENDARIO E SCADENZIARIO ---
 @app.route('/calendario')
+@login_required
 def calendario():
     mese = request.args.get('mese', date.today().month, type=int)
     anno = request.args.get('anno', date.today().year, type=int)
@@ -669,8 +719,41 @@ def calendario():
     # Ottieni il calendario del mese
     cal = monthcalendar(anno, mese)
     
+    # Fetch sede_ids based on user role
+    user_role = session.get('user_role')
+    user_email = session.get('user_email')
+    sede_ids = []
+    if user_role == 'sede':
+        sede = db.get_sede_by_email(user_email)
+        if sede:
+            sede_ids.append(sede['id'])
+    elif user_role == 'trainer':
+        sede = db.get_sede_by_trainer_email(user_email)
+        if sede:
+            sede_ids.append(sede['id'])
+    elif user_role == 'societa':
+        societa = db.get_societa_by_email(user_email)
+        if societa:
+            sedi = db.get_sedi_by_societa(societa['id'])
+            sede_ids.extend([sede['id'] for sede in sedi])
+    elif user_role == 'area_manager':
+        societa = db.get_societa_by_area_manager_email(user_email)
+        for company in societa:
+            sedi = db.get_sedi_by_societa(company['id'])
+            sede_ids.extend([sede['id'] for sede in sedi])
+    elif user_role == 'franchisor':
+        area_managers = db.get_area_managers_by_franchisor_email(user_email)
+        for manager in area_managers:
+            societa = db.get_societa_by_area_manager(manager['id'])
+            for company in societa:
+                sedi = db.get_sedi_by_societa(company['id'])
+                sede_ids.extend([sede['id'] for sede in sedi])
+
+    # Ensure only valid sede_ids are used
+    sede_ids = [sede_id for sede_id in sede_ids if sede_id is not None]
+
     # Ottieni le scadenze dal database
-    scadenze = db.get_rate_calendario(mese, anno)
+    scadenze = db.get_rate_calendario(mese, anno, sede_ids)
     scadenze_dict = {}
     
     # Creiamo un dizionario con la data come chiave
@@ -709,14 +792,83 @@ def calendario():
                          mese_successivo=mese_successivo)
 
 @app.route('/scadenziario')
+@login_required
 def scadenziario():
-    rate = db.get_rate_scadenza()
+    user_role = session.get('user_role')
+    user_email = session.get('user_email')
+    # Directly fetch the sede_id for the logged-in user if the role is 'sede'
+    sede_ids = []
+    if user_role == 'sede':
+        sede = db.get_sede_by_email(user_email)
+        if sede:
+            sede_ids.append(sede['id'])
+    elif user_role == 'trainer':
+        # Fetch the sede associated with the trainer
+        sede = db.get_sede_by_trainer_email(user_email)
+        if sede:
+            sede_ids.append(sede['id'])
+    elif user_role == 'societa':
+        # Fetch all sedi under the company
+        societa = db.get_societa_by_email(user_email)
+        if societa:
+            sedi = db.get_sedi_by_societa(societa['id'])
+            sede_ids.extend([sede['id'] for sede in sedi])
+    elif user_role == 'area_manager':
+        societa = db.get_societa_by_area_manager_email(user_email)
+        for company in societa:
+            sedi = db.get_sedi_by_societa(company['id'])
+            sede_ids.extend([sede['id'] for sede in sedi])
+    elif user_role == 'franchisor':
+        area_managers = db.get_area_managers_by_franchisor_email(user_email)
+        for manager in area_managers:
+            societa = db.get_societa_by_area_manager(manager['id'])
+            for company in societa:
+                sedi = db.get_sedi_by_societa(company['id'])
+                sede_ids.extend([sede['id'] for sede in sedi])
+
+    # Ensure only valid sede_ids are used
+    sede_ids = [sede_id for sede_id in sede_ids if sede_id is not None]
+    rate = db.get_rate_scadenza(sede_ids)
     oggi = date.today()
     return render_template('scadenziario.html', rate=rate, oggi=oggi)
 
 @app.route('/incassi_mese')
+@login_required
 def incassi_mese():
-    rate = db.get_rate_incassate_mese()
+    user_role = session.get('user_role')
+    user_email = session.get('user_email')
+    # Fetch sede_ids based on user role
+    sede_ids = []
+    if user_role == 'sede':
+        sede = db.get_sede_by_email(user_email)
+        if sede:
+            sede_ids.append(sede['id'])
+    elif user_role == 'trainer':
+        sede = db.get_sede_by_trainer_email(user_email)
+        if sede:
+            sede_ids.append(sede['id'])
+    elif user_role == 'societa':
+        societa = db.get_societa_by_email(user_email)
+        if societa:
+            sedi = db.get_sedi_by_societa(societa['id'])
+            sede_ids.extend([sede['id'] for sede in sedi])
+    elif user_role == 'area_manager':
+        societa = db.get_societa_by_area_manager_email(user_email)
+        for company in societa:
+            sedi = db.get_sedi_by_societa(company['id'])
+            sede_ids.extend([sede['id'] for sede in sedi])
+    elif user_role == 'franchisor':
+        area_managers = db.get_area_managers_by_franchisor_email(user_email)
+        for manager in area_managers:
+            societa = db.get_societa_by_area_manager(manager['id'])
+            for company in societa:
+                sedi = db.get_sedi_by_societa(company['id'])
+                sede_ids.extend([sede['id'] for sede in sedi])
+
+    # Ensure only valid sede_ids are used
+    sede_ids = [sede_id for sede_id in sede_ids if sede_id is not None]
+
+    rate = db.get_rate_incassate_mese(sede_ids)
     oggi = date.today()
     return render_template('incassi_mese.html', rate=rate, oggi=oggi)
 
@@ -887,7 +1039,7 @@ def delete_trainer_route(trainer_id):
     flash('Trainer deleted successfully!', 'success')
     return redirect(url_for('gestione_gerarchia'))  # Redirect to the hierarchy management page
 if __name__ == '__main__':
-    db.migrate_database()
+    #db.migrate_database()
     #db.create_user_tables
     #db.init_db()
     app.run(debug=True)
