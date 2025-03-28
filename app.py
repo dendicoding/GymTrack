@@ -437,20 +437,27 @@ def modifica_cliente(cliente_id):
         cap = request.form['cap']
         note = request.form['note']
         tipo = request.form['tipo']
-        tipologia = request.form['tipologia']
+        tipologia = request.form['tipologia']  # Assicurati che venga letto correttamente
         codice_fiscale = request.form['codice_fiscale']
         taglia_giubotto = request.form['taglia_giubotto']
         taglia_cintura = request.form['taglia_cintura']
         taglia_braccia = request.form['taglia_braccia']
         taglia_gambe = request.form['taglia_gambe']
         obiettivo_cliente = request.form['obiettivo_cliente']
-        sede_id = session.get('sede_id')
+        #sede_id = request.form['sede_id']  # Fetch sede_id from the form
         
-        db.update_cliente(cliente_id, nome, cognome, email, telefono, data_nascita, 
-                          indirizzo, citta, cap, note, tipo, codice_fiscale, tipologia, taglia_giubotto, taglia_cintura, taglia_braccia, taglia_gambe, obiettivo_cliente, sede_id)
+        try:
+            db.update_cliente(cliente_id, nome, cognome, email, telefono, data_nascita, 
+                              indirizzo, citta, cap, note, tipo, codice_fiscale, tipologia, 
+                              taglia_giubotto, taglia_cintura, taglia_braccia, taglia_gambe, 
+                              obiettivo_cliente)
+            
+            db.log_event(session.get('user_id'), session.get('user_email'), 'Modificato cliente', f'Cliente ID: {cliente_id}')
+            flash(f'Cliente {nome} {cognome} aggiornato con successo!', 'success')
+        except Exception as e:
+            flash(f'Errore durante l\'aggiornamento del cliente: {str(e)}', 'error')
+            return redirect(url_for('modifica_cliente', cliente_id=cliente_id))
         
-        db.log_event(session.get('user_id'), session.get('user_email'), 'Modificato cliente', f'Cliente ID: {cliente_id}')
-        flash(f'Cliente {nome} {cognome} aggiornato con successo!', 'success')
         return redirect(url_for('dettaglio_cliente', cliente_id=cliente_id))
     
     return render_template('clienti/modifica.html', cliente=cliente)
@@ -1194,7 +1201,7 @@ def view_resoconto(resoconto_id):
     return render_template('trainer/view_resoconto.html', resoconto=resoconto)
 
 if __name__ == '__main__':
-    db.migrate_database()
+    #db.migrate_database()
     #db.create_user_tables
     #db.init_db()
     app.run(debug=True)

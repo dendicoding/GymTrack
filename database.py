@@ -216,17 +216,24 @@ def add_cliente(nome, cognome, email, telefono, data_nascita, indirizzo, citta, 
     conn.close()
     return cliente_id
 
-def update_cliente(cliente_id, nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo, codice_fiscale, tipologia, taglia_giubotto, taglia_cintura, taglia_braccia, taglia_gambe, obiettivo_cliente, sede_id):
+def update_cliente(cliente_id, nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo, codice_fiscale, tipologia, taglia_giubotto, taglia_cintura, taglia_braccia, taglia_gambe, obiettivo_cliente):
     conn = get_db_connection()
-    conn.execute(''' 
-    UPDATE clienti 
-    SET nome = ?, cognome = ?, email = ?, telefono = ?, data_nascita = ?, 
-        indirizzo = ?, citta = ?, cap = ?, note = ?, tipo = ?, codice_fiscale = ?, tipologia = ?, taglia_giubotto = ?, taglia_cintura = ?, taglia_braccia = ?, taglia_gambe = ?, obiettivo_cliente = ?, sede_id = ?
-    WHERE id = ?
-    ''', (nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo, codice_fiscale, tipologia, taglia_giubotto, taglia_cintura, taglia_braccia, taglia_gambe, obiettivo_cliente, sede_id, cliente_id))
-    
-    conn.commit()
-    conn.close()
+    try:
+        conn.execute(''' 
+        UPDATE clienti 
+        SET nome = ?, cognome = ?, email = ?, telefono = ?, data_nascita = ?, 
+            indirizzo = ?, citta = ?, cap = ?, note = ?, tipo = ?, codice_fiscale = ?, 
+            tipologia = ?, taglia_giubotto = ?, taglia_cintura = ?, taglia_braccia = ?, 
+            taglia_gambe = ?, obiettivo_cliente = ?
+        WHERE id = ?
+        ''', (nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo, codice_fiscale, tipologia, taglia_giubotto, taglia_cintura, taglia_braccia, taglia_gambe, obiettivo_cliente, cliente_id))
+        conn.commit()
+    except Exception as e:
+        print(f"Errore durante l'aggiornamento del cliente: {e}")
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
 def delete_cliente(cliente_id):
     conn = get_db_connection()
@@ -543,7 +550,6 @@ def get_statistiche_dashboard(sede_ids=None):
     conn = get_db_connection()
     oggi = datetime.now().strftime("%Y-%m-%d")
     
-    
     stats = {}
     if sede_ids:
         placeholders = ','.join('?' for _ in sede_ids)
@@ -554,16 +560,18 @@ def get_statistiche_dashboard(sede_ids=None):
         stats['rate_scadute'] = conn.execute(f"SELECT COUNT(*) FROM rate WHERE abbonamento_id IN (SELECT id FROM abbonamenti WHERE cliente_id IN (SELECT id FROM clienti WHERE sede_id IN ({placeholders}))) AND data_scadenza < ? AND pagato = 0", sede_ids + [oggi]).fetchone()[0]
         stats['rate_scadute_importo'] = conn.execute(f"SELECT SUM(importo) FROM rate WHERE abbonamento_id IN (SELECT id FROM abbonamenti WHERE cliente_id IN (SELECT id FROM clienti WHERE sede_id IN ({placeholders}))) AND data_scadenza < ? AND pagato = 0", sede_ids + [oggi]).fetchone()[0]
         
-        # Corrected SQL query for previsione_mese
+        # Previsione mese corrente
         mese_inizio = datetime.now().replace(day=1).strftime("%Y-%m-%d")
         mese_fine = (datetime.now().replace(day=1) + timedelta(days=32)).replace(day=1) - timedelta(days=1)
         mese_fine = mese_fine.strftime("%Y-%m-%d")
         stats['incassi_mese'] = conn.execute(f"SELECT SUM(importo) FROM rate WHERE abbonamento_id IN (SELECT id FROM abbonamenti WHERE cliente_id IN (SELECT id FROM clienti WHERE sede_id IN ({placeholders}))) AND data_pagamento BETWEEN ? AND ? AND pagato = 1", sede_ids + [mese_inizio, mese_fine]).fetchone()[0] or 0
         stats['previsione_mese'] = conn.execute(f"SELECT SUM(importo) FROM rate WHERE abbonamento_id IN (SELECT id FROM abbonamenti WHERE cliente_id IN (SELECT id FROM clienti WHERE sede_id IN ({placeholders}))) AND data_scadenza BETWEEN ? AND ? AND pagato = 0", sede_ids + [mese_inizio, mese_fine]).fetchone()[0] or 0
         
-        # Corrected SQL query for previsione_mese_prossimo
-        prossimo_mese_inizio = (datetime.now().replace(day=1) + timedelta(days=32)).replace(day=1).strftime("%Y-%m-%d")
-        prossimo_mese_fine = (datetime.now().replace(day=1) + timedelta(days=64)).replace(day=1) - timedelta(days=1)
+        # Previsione mese prossimo
+        current_date = datetime.now()
+        prossimo_mese_inizio = (current_date.replace(day=1) + timedelta(days=32)).replace(day=1).strftime("%Y-%m-%d")
+        prossimo_mese_fine = (current_date.replace(day=1) + timedelta(days=32)).replace(day=1) + timedelta(days=31)
+        prossimo_mese_fine = prossimo_mese_fine.replace(day=1) - timedelta(days=1)
         prossimo_mese_fine = prossimo_mese_fine.strftime("%Y-%m-%d")
         stats['previsione_mese_prossimo'] = conn.execute(f"SELECT SUM(importo) FROM rate WHERE abbonamento_id IN (SELECT id FROM abbonamenti WHERE cliente_id IN (SELECT id FROM clienti WHERE sede_id IN ({placeholders}))) AND data_scadenza BETWEEN ? AND ? AND pagato = 0", sede_ids + [prossimo_mese_inizio, prossimo_mese_fine]).fetchone()[0] or 0
     else:
