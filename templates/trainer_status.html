@@ -5,29 +5,25 @@
 {% block content %}
 <div class="container">
     <h1 class="mt-4">Stato Trainer</h1>
-    <table class="table table-striped mt-4">
-        <thead>
-            <tr>
-                <th>Nome e Cognome</th>
-                <th>Email</th>
-                <th>Stato</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for trainer in trainers %}
-            <tr>
-                <td>{{ trainer.nome }} {{ trainer.cognome }}</td>
-                <td>{{ trainer.email }}</td>
-                <td>
-                    {% if trainer.stato == 'entra' %}
-                        <span class="badge bg-success">Entrato</span>
-                    {% else %}
-                        <span class="badge bg-danger">Non Entrato</span>
-                    {% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class="row mt-4">
+        {% for trainer in trainers %}
+        <div class="col-md-4 mb-4">
+            <div class="card {% if trainer.stato == 'entra' %}bg-success text-white{% else %}bg-danger text-white{% endif %}">
+                <div class="card-body">
+                    <h5 class="card-title">{{ trainer.nome }} {{ trainer.cognome }}</h5>
+                    <p class="card-text">Email: {{ trainer.email }}</p>
+                    <p class="card-text">
+                        Stato: 
+                        {% if trainer.stato == 'entra' %}
+                            <span class="badge bg-light text-success">Entrato</span>
+                        {% else %}
+                            <span class="badge bg-light text-danger">Non Entrato</span>
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
 </div>
 {% endblock %}

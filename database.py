@@ -880,7 +880,16 @@ def migrate_database():
     conn = get_db_connection()
     try:
         conn.execute('''
-            ALTER TABLE lezioni ALTER COLUMN registrata_da TEXT REFERENCES utenti (email)
+            CREATE TABLE IF NOT EXISTS resoconti (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            trainer_id INTEGER NOT NULL,
+            data DATE NOT NULL,
+            ore_lavoro INTEGER NOT NULL,
+            ore_buca INTEGER NOT NULL,
+            attivita_buca TEXT NOT NULL,
+            FOREIGN KEY (trainer_id) REFERENCES trainer (id)
+        );
+
         ''')
 
         conn.commit()
@@ -1672,4 +1681,29 @@ def get_trainers_with_status(sede_ids):
         return [dict(trainer) for trainer in trainers]
     finally:
         conn.close()
+
+def add_resoconto(trainer_id, data, ore_lavoro, ore_buca, attivita_buca):
+    conn = get_db_connection()
+    conn.execute('''
+        INSERT INTO resoconti (trainer_id, data, ore_lavoro, ore_buca, attivita_buca)
+        VALUES (?, ?, ?, ?, ?)
+    ''', (trainer_id, data, ore_lavoro, ore_buca, attivita_buca))
+    conn.commit()
+    conn.close()
+
+def get_resoconti_by_trainer(trainer_id):
+    conn = get_db_connection()
+    resoconti = conn.execute('''
+        SELECT * FROM resoconti WHERE trainer_id = ? ORDER BY data DESC
+    ''', (trainer_id,)).fetchall()
+    conn.close()
+    return resoconti
+
+def get_resoconto(resoconto_id):
+    conn = get_db_connection()
+    resoconto = conn.execute('''
+        SELECT * FROM resoconti WHERE id = ?
+    ''', (resoconto_id,)).fetchone()
+    conn.close()
+    return resoconto
 

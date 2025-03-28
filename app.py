@@ -1124,8 +1124,77 @@ def trainer_status():
 
     return render_template('trainer_status.html', trainers=trainers)
 
+@app.route('/trainer/resoconto', methods=['GET', 'POST'])
+@login_required
+def trainer_resoconto():
+    if session.get('user_role') != 'trainer':
+        flash('Accesso negato. Solo i trainer possono accedere a questa pagina.', 'error')
+        return redirect(url_for('index'))
+    
+    if request.method == 'POST':
+        data = request.form['data']
+        ore_lavoro = request.form['ore_lavoro']
+        ore_buca = request.form['ore_buca']
+        attivita_buca = request.form['attivita_buca']
+        trainer_id = session.get('user_id')
+        
+        db.add_resoconto(trainer_id, data, ore_lavoro, ore_buca, attivita_buca)
+        flash('Resoconto dichiarato con successo!', 'success')
+        return redirect(url_for('trainer_resoconto'))
+    
+    return render_template('trainer/resoconto.html')
+
+@app.route('/trainers', methods=['GET'])
+@login_required
+def view_trainers():
+    user_role = session.get('user_role')
+    user_email = session.get('user_email')
+    
+    # Fetch sede_ids based on user role
+    sede_ids = []
+    if user_role == 'sede':
+        sede = db.get_sede_by_email(user_email)
+        if sede:
+            sede_ids.append(sede['id'])
+    elif user_role == 'societa':
+        societa = db.get_societa_by_email(user_email)
+        if societa:
+            sedi = db.get_sedi_by_societa(societa['id'])
+            sede_ids.extend([sede['id'] for sede in sedi])
+    elif user_role == 'area_manager':
+        societa = db.get_societa_by_area_manager_email(user_email)
+        for company in societa:
+            sedi = db.get_sedi_by_societa(company['id'])
+            sede_ids.extend([sede['id'] for sede in sedi])
+    elif user_role == 'franchisor':
+        area_managers = db.get_area_managers_by_franchisor_email(user_email)
+        for manager in area_managers:
+            societa = db.get_societa_by_area_manager(manager['id'])
+            for company in societa:
+                sedi = db.get_sedi_by_societa(company['id'])
+                sede_ids.extend([sede['id'] for sede in sedi])
+
+    sede_ids = [sede_id for sede_id in sede_ids if sede_id is not None]
+    trainers = db.get_trainers_with_status(sede_ids)
+    return render_template('trainer/view_trainers.html', trainers=trainers)
+
+@app.route('/trainer/<int:trainer_id>/resoconti', methods=['GET'])
+@login_required
+def trainer_resoconti(trainer_id):
+    resoconti = db.get_resoconti_by_trainer(trainer_id)
+    return render_template('trainer/resoconti.html', resoconti=resoconti)
+
+@app.route('/trainer/resoconto/<int:resoconto_id>', methods=['GET'])
+@login_required
+def view_resoconto(resoconto_id):
+    resoconto = db.get_resoconto(resoconto_id)
+    if not resoconto:
+        flash('Resoconto non trovato', 'error')
+        return redirect(url_for('view_trainers'))
+    return render_template('trainer/view_resoconto.html', resoconto=resoconto)
+
 if __name__ == '__main__':
-    #db.migrate_database()
+    db.migrate_database()
     #db.create_user_tables
     #db.init_db()
     app.run(debug=True)

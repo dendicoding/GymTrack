@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Dichiarazione Resoconto{% endblock %}
+
+{% block content %}
+<h1>Dichiarazione Resoconto</h1>
+<form method="POST">
+    <div class="mb-3">
+        <label for="data" class="form-label">Data</label>
+        <input type="date" class="form-control" id="data" name="data" required>
+    </div>
+    <div class="mb-3">
+        <label for="ore_lavoro" class="form-label">Ore di Lavoro</label>
+        <input type="number" class="form-control" id="ore_lavoro" name="ore_lavoro" required>
+    </div>
+    <div class="mb-3">
+        <label for="ore_buca" class="form-label">Ore Buca</label>
+        <input type="number" class="form-control" id="ore_buca" name="ore_buca" required>
+    </div>
+    <div class="mb-3">
+        <label for="attivita_buca" class="form-label">Attività Svolte Durante le Ore Buca</label>
+        <textarea class="form-control" id="attivita_buca" name="attivita_buca" rows="3" required></textarea>
+    </div>
+    <button type="submit" class="btn btn-primary">Dichiara</button>
+</form>
+{% endblock %}

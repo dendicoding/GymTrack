@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Resoconti Trainer{% endblock %}
+
+{% block content %}
+<h1>Resoconti</h1>
+{% if resoconti %}
+<ul class="list-group">
+    {% for resoconto in resoconti %}
+    <li class="list-group-item">
+        <a href="{{ url_for('view_resoconto', resoconto_id=resoconto.id) }}">
+            {{ resoconto.data }} - {{ resoconto.ore_lavoro }} ore lavoro
+        </a>
+    </li>
+    {% endfor %}
+</ul>
+{% else %}
+<div class="alert alert-info" role="alert">
+    Non ci sono resoconti dichiarati dal trainer scelto.
+</div>
+{% endif %}
+{% endblock %}

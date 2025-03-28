@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block title %}Dettaglio Resoconto{% endblock %}
+
+{% block content %}
+<h1>Dettaglio Resoconto</h1>
+<p><strong>Data:</strong> {{ resoconto.data }}</p>
+<p><strong>Ore di Lavoro:</strong> {{ resoconto.ore_lavoro }}</p>
+<p><strong>Ore Buca:</strong> {{ resoconto.ore_buca }}</p>
+<p><strong>Attività Durante le Ore Buca:</strong></p>
+<p>{{ resoconto.attivita_buca }}</p>
+{% endblock %}
