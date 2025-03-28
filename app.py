@@ -1053,6 +1053,77 @@ def lista_eventi():
     eventi = db.get_all_eventi()
     return render_template('eventi/lista.html', eventi=eventi)
 
+@app.route('/trainer/attendance', methods=['GET'])
+@login_required
+def trainer_attendance():
+    if session.get('user_role') != 'trainer':
+        abort(403)
+    trainer_id = session.get('user_id')
+    is_present = db.is_trainer_present(trainer_id)
+    return render_template('trainer_attendance.html', is_present=is_present)
+
+@app.route('/trainer/entrata', methods=['POST'])
+@login_required
+def trainer_entrata():
+    if session.get('user_role') != 'trainer':
+        abort(403)
+    trainer_id = session.get('user_id')
+    db.log_event(trainer_id, session.get('user_email'), 'entra', 'Trainer entrato')
+    flash('Entrata registrata con successo!', 'success')
+    return redirect(url_for('trainer_attendance'))
+
+@app.route('/trainer/uscita', methods=['POST'])
+@login_required
+def trainer_uscita():
+    if session.get('user_role') != 'trainer':
+        abort(403)
+    trainer_id = session.get('user_id')
+    db.log_event(trainer_id, session.get('user_email'), 'esci', 'Trainer uscito')
+    flash('Uscita registrata con successo!', 'success')
+    return redirect(url_for('trainer_attendance'))
+
+@app.route('/trainer-status')
+@login_required
+def trainer_status():
+    user_role = session.get('user_role')
+    user_email = session.get('user_email')
+
+    # Fetch sede_ids based on user role
+    sede_ids = []
+    if user_role == 'sede':
+        sede = db.get_sede_by_email(user_email)
+        if sede:
+            sede_ids.append(sede['id'])
+    elif user_role == 'trainer':
+        sede = db.get_sede_by_trainer_email(user_email)
+        if sede:
+            sede_ids.append(sede['id'])
+    elif user_role == 'societa':
+        societa = db.get_societa_by_email(user_email)
+        if societa:
+            sedi = db.get_sedi_by_societa(societa['id'])
+            sede_ids.extend([sede['id'] for sede in sedi])
+    elif user_role == 'area_manager':
+        societa = db.get_societa_by_area_manager_email(user_email)
+        for company in societa:
+            sedi = db.get_sedi_by_societa(company['id'])
+            sede_ids.extend([sede['id'] for sede in sedi])
+    elif user_role == 'franchisor':
+        area_managers = db.get_area_managers_by_franchisor_email(user_email)
+        for manager in area_managers:
+            societa = db.get_societa_by_area_manager(manager['id'])
+            for company in societa:
+                sedi = db.get_sedi_by_societa(company['id'])
+                sede_ids.extend([sede['id'] for sede in sedi])
+
+    # Ensure only valid sede_ids are used
+    sede_ids = [sede_id for sede_id in sede_ids if sede_id is not None]
+
+    # Fetch trainers and their status
+    trainers = db.get_trainers_with_status(sede_ids)
+
+    return render_template('trainer_status.html', trainers=trainers)
+
 if __name__ == '__main__':
     #db.migrate_database()
     #db.create_user_tables

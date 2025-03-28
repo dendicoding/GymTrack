@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}Trainer Attendance{% endblock %}
+
+{% block content %}
+<div class="container text-center">
+    <h1 class="mt-4">Gestione Presenze Trainer</h1>
+    <p class="lead">Benvenuto, {{ session.user_name }}</p>
+    <div class="mt-4">
+        {% if not is_present %}
+            <form method="POST" action="{{ url_for('trainer_entrata') }}">
+                <button type="submit" class="btn btn-success btn-lg">Entra</button>
+            </form>
+        {% else %}
+            <form method="POST" action="{{ url_for('trainer_uscita') }}">
+                <button type="submit" class="btn btn-danger btn-lg">Esci</button>
+            </form>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

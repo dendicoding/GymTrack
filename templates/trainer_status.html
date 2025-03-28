@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}Stato Trainer{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mt-4">Stato Trainer</h1>
+    <table class="table table-striped mt-4">
+        <thead>
+            <tr>
+                <th>Nome e Cognome</th>
+                <th>Email</th>
+                <th>Stato</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for trainer in trainers %}
+            <tr>
+                <td>{{ trainer.nome }} {{ trainer.cognome }}</td>
+                <td>{{ trainer.email }}</td>
+                <td>
+                    {% if trainer.stato == 'entra' %}
+                        <span class="badge bg-success">Entrato</span>
+                    {% else %}
+                        <span class="badge bg-danger">Non Entrato</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

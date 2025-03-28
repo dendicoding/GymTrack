@@ -1633,3 +1633,43 @@ def get_all_eventi():
         return eventi
     finally:
         conn.close()
+
+def is_trainer_present(trainer_id):
+    """Check if the trainer's last action was 'entra'."""
+    conn = get_db_connection()
+    try:
+        last_event = conn.execute('''
+        SELECT azione FROM eventi
+        WHERE utente_id = ? AND (azione = 'entra' OR azione = 'esci')
+        ORDER BY data_evento DESC LIMIT 1
+        ''', (trainer_id,)).fetchone()
+        return last_event and last_event['azione'] == 'entra'
+    finally:
+        conn.close()
+
+def get_trainers_with_status(sede_ids):
+    """Fetch trainers and their current status (entered or not) for the given sede_ids."""
+    conn = get_db_connection()
+    try:
+        placeholders = ','.join('?' for _ in sede_ids)
+        query = f'''
+            SELECT 
+                t.id, 
+                t.nome, 
+                t.cognome, 
+                t.email,
+                COALESCE((
+                    SELECT e.azione 
+                    FROM eventi e 
+                    WHERE e.utente_id = t.id AND (e.azione = 'entra' OR e.azione = 'esci') 
+                    ORDER BY e.data_evento DESC LIMIT 1
+                ), 'esci') AS stato
+            FROM trainer t
+            WHERE t.sede_id IN ({placeholders})
+            ORDER BY t.cognome, t.nome
+        '''
+        trainers = conn.execute(query, sede_ids).fetchall()
+        return [dict(trainer) for trainer in trainers]
+    finally:
+        conn.close()
+
