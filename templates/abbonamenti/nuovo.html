@@ -22,6 +22,7 @@
             </div>
             <div class="card-body">
                 <form method="POST" id="formAbbonamento">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="mb-3">
                         <label for="pacchetto" class="form-label">Pacchetto</label>
                         <select class="form-select" id="pacchetto" name="pacchetto_id" required onchange="updatePrezzo()">

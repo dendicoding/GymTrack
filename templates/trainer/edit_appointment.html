@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block title %}Modifica Appuntamento{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Modifica Appuntamento</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('edit_appointment', appointment_id=appointment.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <!-- Title -->
+                        <div class="mb-3">
+                            <label for="title" class="form-label">Titolo</label>
+                            <input type="text" class="form-control" id="title" name="title" 
+                                   value="{{ appointment.title }}" required>
+                        </div>
+
+                        <!-- Client -->
+                        <div class="mb-3">
+                            <label for="client_id" class="form-label">Cliente</label>
+                            <select class="form-select" id="client_id" name="client_id" required>
+                                <option value="">Seleziona un cliente</option>
+                                {% for client in clients %}
+                                <option value="{{ client.id }}" {% if client.id == appointment.client_id %}selected{% endif %}>
+                                    {{ client.nome }} {{ client.cognome }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Notes -->
+                        <div class="mb-3">
+                            <label for="notes" class="form-label">Note</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="3">{{ appointment.notes or '' }}</textarea>
+                        </div>
+
+                        <!-- Start Date and Time -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="date_time" class="form-label">Data e ora di inizio</label>
+                                <input type="datetime-local" class="form-control" id="date_time" name="date_time" 
+                                       value="{{ appointment.date_time.strftime('%Y-%m-%dT%H:%M') }}" required>
+                            </div>
+
+                            <!-- End Date and Time -->
+                            <div class="col-md-6">
+                                <label for="end_date_time" class="form-label">Data e ora di fine</label>
+                                <input type="datetime-local" class="form-control" id="end_date_time" name="end_date_time" 
+                                       value="{{ appointment.end_date_time.strftime('%Y-%m-%dT%H:%M') }}" required>
+                            </div>
+                        </div>
+
+                        <!-- Appointment Type -->
+                        <div class="mb-3">
+                            <label for="type" class="form-label">Tipo di appuntamento</label>
+                            <select class="form-select" id="type" name="type" required>
+                                <option value="Allenamento Funzionale" {% if appointment.appointment_type == 'Allenamento Funzionale' %}selected{% endif %}>Allenamento Funzionale</option>
+                                <option value="Chiamata" {% if appointment.appointment_type == 'Chiamata' %}selected{% endif %}>Chiamata</option>
+                                <option value="Blocco Agenda" {% if appointment.appointment_type == 'Blocco Agenda' %}selected{% endif %}>Blocco Agenda</option>
+                                <option value="Allenamento EMS" {% if appointment.appointment_type == 'Allenamento EMS' %}selected{% endif %}>Allenamento EMS</option>
+                            </select>
+                        </div>
+
+                        <!-- Status -->
+                        <div class="mb-3">
+                            <label for="status" class="form-label">Stato dell'appuntamento</label>
+                            <select class="form-select" id="status" name="status" required>
+                                <option value="Confermato" {% if appointment.status == 'Confermato' %}selected{% endif %}>Confermato</option>
+                                <option value="Spostato" {% if appointment.status == 'Spostato' %}selected{% endif %}>Spostato</option>
+                                <option value="Saltato" {% if appointment.status == 'Saltato' %}selected{% endif %}>Saltato</option>
+                                <option value="Prova Fissata" {% if appointment.status == 'Prova Fissata' %}selected{% endif %}>Prova Fissata</option>
+                                <option value="Prova in Chiamata" {% if appointment.status == 'Prova in Chiamata' %}selected{% endif %}>Prova in Chiamata</option>
+                                <option value="Appuntamento Non Svolto" {% if appointment.status == 'Appuntamento Non Svolto' %}selected{% endif %}>Appuntamento Non Svolto</option>
+                            </select>
+                        </div>
+
+                        <!-- Is Trial -->
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="is_trial" name="is_trial" 
+                                   {% if appointment.is_trial %}checked{% endif %}>
+                            <label class="form-check-label" for="is_trial">Prova</label>
+                        </div>
+
+                        <!-- Is Recovery -->
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="is_recovery" name="is_recovery" 
+                                   {% if appointment.is_recovery %}checked{% endif %}>
+                            <label class="form-check-label" for="is_recovery">Recupero</label>
+                        </div>
+
+                        <!-- Is Lesson Zero -->
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="is_lesson_zero" name="is_lesson_zero" 
+                                   {% if appointment.is_lesson_zero %}checked{% endif %}>
+                            <label class="form-check-label" for="is_lesson_zero">Lezione Zero</label>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{{ url_for('trainer_calendar') }}" class="btn btn-secondary">Annulla</a>
+                            <button type="submit" class="btn btn-primary">Salva modifiche</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Validazione per assicurarsi che la data di fine sia successiva alla data di inizio
+    const dateTimeInput = document.getElementById('date_time');
+    const endDateTimeInput = document.getElementById('end_date_time');
+    
+    function validateDateTimes() {
+        const startTime = new Date(dateTimeInput.value);
+        const endTime = new Date(endDateTimeInput.value);
+        
+        if (endTime <= startTime) {
+            endDateTimeInput.setCustomValidity('La data e ora di fine deve essere successiva alla data e ora di inizio');
+        } else {
+            endDateTimeInput.setCustomValidity('');
+        }
+    }
+    
+    dateTimeInput.addEventListener('change', validateDateTimes);
+    endDateTimeInput.addEventListener('change', validateDateTimes);
+    
+    // Validazione iniziale
+    validateDateTimes();
+    
+    // Gestione per il cambio di stato
+    const statusSelect = document.getElementById('status');
+    const typeSelect = document.getElementById('type');
+    
+    statusSelect.addEventListener('change', function() {
+        // Se lo stato è "completato", aggiorna l'UI per riflettere questo
+        if (this.value === 'completed') {
+            document.querySelector('.card-header').classList.remove('bg-primary');
+            document.querySelector('.card-header').classList.add('bg-success');
+        } else if (this.value === 'cancelled') {
+            document.querySelector('.card-header').classList.remove('bg-primary', 'bg-success');
+            document.querySelector('.card-header').classList.add('bg-danger');
+        } else {
+            document.querySelector('.card-header').classList.remove('bg-success', 'bg-danger');
+            document.querySelector('.card-header').classList.add('bg-primary');
+        }
+    });
+});
+</script>
+{% endblock %}

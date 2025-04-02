@@ -7,6 +7,8 @@ from datetime import datetime, timedelta
 from models.abbonamento import Abbonamento
 from calendar import monthcalendar
 from collections import defaultdict
+from flask_wtf.csrf import CSRFProtect
+
 
 from flask import session, g
 from functools import wraps
@@ -18,6 +20,7 @@ app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)
 # Inizializzazione del database
 db.init_db()
 
+csrf = CSRFProtect(app)
 
 # Set locale for currency formatting (use 'it_IT' for Italian format)
 locale.setlocale(locale.LC_ALL, 'it_IT.UTF-8')  # Adjust as needed
@@ -45,15 +48,16 @@ def login():
     if request.method == 'POST':
         email = request.form['email']
         password = request.form['password']
-        role = request.form['role']
         
-        user = db.authenticate_user(email, password, role)
-        print("Authenticated user:", user)  # Debugging line
+        # Autentica l'utente
+        user = db.authenticate_user(email, password)
+        print("Utente autenticato:", user)  # Debugging line
         
         if user:
+            # Salva i dati dell'utente nella sessione
             session['user_id'] = user['id']
-            session['user_name'] = user['nome']
-            session['user_role'] = role
+            session['user_name'] = f"{user['nome']} {user['cognome']}"
+            session['user_role'] = user['ruolo']
             session['user_email'] = user['email']
             
             flash(f'Benvenuto, {user["nome"]}!', 'success')
@@ -635,7 +639,7 @@ def registra_lezione(abbonamento_id):
         data = request.form.get('data')
         note = request.form.get('note', '')
         user_id = session.get('user_id')
-        print(user_id)
+        
         # Registra la lezione
         if db.add_lezione(abbonamento_id, data, note, user_id):
             db.log_event(session.get('user_id'), session.get('user_email'), 'Registrata lezione', f'Abbonamento ID: {abbonamento_id}')
@@ -1200,8 +1204,157 @@ def view_resoconto(resoconto_id):
         return redirect(url_for('view_trainers'))
     return render_template('trainer/view_resoconto.html', resoconto=resoconto)
 
+
+@app.route('/trainer/calendar', methods=['GET'])
+@login_required
+def trainer_calendar():
+    if session.get('user_role') != 'trainer':
+        abort(403)
+    
+    trainer_id = session.get('user_id')
+    start_date = request.args.get('start_date', date.today().strftime('%Y-%m-%d'))
+    appointments = db.get_appointments_by_trainer(trainer_id, start_date)
+
+    # Raggruppa gli appuntamenti per data
+    grouped_appointments = defaultdict(list)
+    for appointment in appointments:
+        appointment_date = appointment['date_time'].date()
+        grouped_appointments[appointment_date].append(appointment)
+
+    return render_template(
+        'trainer/calendar.html',
+        current_date=datetime.strptime(start_date, '%Y-%m-%d'),
+        timedelta=timedelta,
+        date=date,
+        grouped_appointments=grouped_appointments
+    )
+
+@app.route('/trainer/appointment/new', methods=['GET', 'POST'])
+@login_required
+def add_appointment():
+    if session.get('user_role') != 'trainer':
+        abort(403)
+    
+    trainer_id = session.get('user_id')
+    sede = db.get_sede_by_trainer_email(session.get('user_email'))
+    if not sede:
+        flash('Non sei associato a una sede valida.', 'error')
+        return redirect(url_for('trainer_calendar'))
+    
+    clienti = db.get_clienti_effettivi([sede['id']])
+    
+    if request.method == 'POST':
+        title = request.form['title']
+        notes = request.form['notes']
+        date_time = request.form['date_time']
+        end_date_time = request.form['end_date_time']  # Nuovo campo
+        appointment_type = request.form['appointment_type']
+        status = request.form['status']
+        is_trial = 'is_trial' in request.form
+        is_recovery = 'is_recovery' in request.form
+        is_lesson_zero = 'is_lesson_zero' in request.form
+        client_id = request.form['client_id']
+        
+        if db.add_appointment(trainer_id, client_id, title, notes, date_time, end_date_time, appointment_type, status, is_trial, is_recovery, is_lesson_zero):
+            flash('Appuntamento aggiunto con successo!', 'success')
+            return redirect(url_for('trainer_calendar'))
+        else:
+            flash('Errore durante l\'aggiunta dell\'appuntamento.', 'error')
+    
+    return render_template('trainer/add_appointment.html', clienti=clienti)
+
+@app.route('/edit_appointment/<int:appointment_id>', methods=['GET', 'POST'])
+@login_required
+def edit_appointment(appointment_id):
+    if session.get('user_role') != 'trainer':
+        abort(403)
+    
+    appointment = db.get_appointment_by_id(appointment_id)
+    
+    if not appointment:
+        flash('Appuntamento non trovato', 'danger')
+        return redirect(url_for('trainer_calendar'))
+    
+    if appointment['trainer_id'] != session.get('user_id'):
+        abort(403)
+    
+    if request.method == 'POST':
+        # Raccolta dei dati dal form
+        client_id = request.form.get('client_id')
+        date_time = request.form.get('date_time')
+        end_date_time = request.form.get('end_date_time')
+        appointment_type = request.form.get('type')
+        status = request.form.get('status')
+        notes = request.form.get('notes')
+        
+        
+        # Aggiornamento dell'appuntamento
+        db.update_appointment(
+            appointment_id=appointment_id,
+            title=request.form.get('title'),
+            client_id=request.form.get('client_id'),
+            notes=request.form.get('notes'),
+            date_time=request.form.get('date_time'),
+            end_date_time=request.form.get('end_date_time'),
+            appointment_type=request.form.get('type'),
+            status=request.form.get('status'),
+            is_trial=bool(request.form.get('is_trial')),
+            is_recovery=bool(request.form.get('is_recovery')),
+            is_lesson_zero=bool(request.form.get('is_lesson_zero'))
+        )
+        
+        flash('Appuntamento aggiornato con successo', 'success')
+        return redirect(url_for('trainer_calendar'))
+    
+    # Per il metodo GET, mostra il form di modifica
+    clients = db.get_all_clienti()
+    return render_template(
+        'trainer/edit_appointment.html',
+        appointment=appointment,
+        clients=clients
+    )
+
+@app.route('/delete_appointment/<int:appointment_id>', methods=['POST'])
+@login_required
+def delete_appointment(appointment_id):
+    print("CSRF Token ricevuto:", request.headers.get('X-CSRFToken'))
+
+    if session.get('user_role') != 'trainer':
+        flash('Non hai i permessi per eliminare questo appuntamento.', 'error')
+        return redirect(url_for('trainer_calendar'))
+
+    appointment = db.get_appointment_by_id(appointment_id)
+    print(appointment)
+    if not appointment:
+        flash('Appuntamento non trovato.', 'error')
+        return redirect(url_for('trainer_calendar'))
+
+    if appointment['trainer_id'] != session.get('user_id'):
+        flash('Non sei autorizzato a eliminare questo appuntamento.', 'error')
+        return redirect(url_for('trainer_calendar'))
+
+    if db.delete_appointment(appointment_id):
+        flash('Appuntamento eliminato con successo.', 'success')
+    else:
+        flash('Errore durante l\'eliminazione dell\'appuntamento.', 'error')
+
+    return redirect(url_for('trainer_calendar'))
+
+from flask_wtf.csrf import generate_csrf
+
+@app.context_processor
+def inject_csrf_token():
+    return dict(csrf=generate_csrf())
+
+@app.after_request
+def set_csrf_cookie(response):
+    response.set_cookie('csrf_token', generate_csrf())
+    return response
+
 if __name__ == '__main__':
     #db.migrate_database()
     #db.create_user_tables
     #db.init_db()
+    db.create_appointments_table()
+    db.migrate_appointments_table()
     app.run(debug=True)

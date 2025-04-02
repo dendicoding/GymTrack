@@ -46,7 +46,7 @@
                             <th>Azioni</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="tabellaPacchetti">
                         {% for pacchetto in pacchetti %}
                             <tr class="align-middle">
                                 <td>{{ pacchetto.nome }}</td>
@@ -66,6 +66,7 @@
                                     {% else %}
                                         <span class="badge bg-danger">No</span>
                                     {% endif %}
+                                </td>
                                 <td>
                                     {% if pacchetto.attivo %}
                                         <span class="badge bg-success">Attivo</span>
@@ -91,6 +92,7 @@
                         {% endfor %}
                     </tbody>
                 </table>
+                <div id="paginationControls" class="mt-3 d-flex justify-content-center"></div>
             </div>
         {% else %}
             <div class="alert alert-info">
@@ -103,12 +105,54 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const cercaPacchetto = document.getElementById('cercaPacchetto');
-    
+    const table = document.getElementById('tabellaPacchetti');
+    const rows = table.getElementsByTagName('tr');
+    const rowsPerPage = 10; // Numero di righe per pagina
+    const paginationControls = document.getElementById('paginationControls');
+
+    let currentPage = 1;
+    const totalPages = Math.ceil(rows.length / rowsPerPage);
+
+    function showPage(page) {
+        const start = (page - 1) * rowsPerPage;
+        const end = start + rowsPerPage;
+
+        for (let i = 0; i < rows.length; i++) {
+            rows[i].style.display = i >= start && i < end ? '' : 'none';
+        }
+    }
+
+    function createPaginationControls() {
+        paginationControls.innerHTML = '';
+
+        for (let i = 1; i <= totalPages; i++) {
+            const button = document.createElement('button');
+            button.className = 'btn btn-sm btn-primary mx-1';
+            button.textContent = i;
+
+            if (i === currentPage) {
+                button.classList.add('active');
+            }
+
+            button.addEventListener('click', function () {
+                currentPage = i;
+                showPage(currentPage);
+                createPaginationControls();
+            });
+
+            paginationControls.appendChild(button);
+        }
+    }
+
+    // Inizializza la paginazione
+    showPage(currentPage);
+    createPaginationControls();
+
+    // Filtro per la ricerca
     cercaPacchetto.addEventListener('keyup', function() {
         const testoCercato = this.value.toLowerCase();
-        const righe = document.querySelectorAll('tbody tr');
-        
-        righe.forEach(function(riga) {
+
+        Array.from(rows).forEach(function(riga) {
             const testoRiga = riga.textContent.toLowerCase();
             riga.style.display = testoRiga.includes(testoCercato) ? '' : 'none';
         });

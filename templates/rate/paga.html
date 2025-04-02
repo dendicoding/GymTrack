@@ -33,6 +33,7 @@
                 </div>
 
                 <form method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="mb-4">
                         <label for="data_pagamento" class="form-label">Data Pagamento</label>
                         <div class="input-group">

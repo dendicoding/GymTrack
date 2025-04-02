@@ -1,0 +1,570 @@
+{% extends "base.html" %}
+
+{% block title %}Calendario Settimanale{% endblock %}
+
+{% block content %}
+<div class="calendar-container">
+    <div class="calendar-header">
+        <h1>Calendario Settimanale</h1>
+        <div class="calendar-controls">
+            <a href="{{ url_for('trainer_calendar', start_date=(current_date - timedelta(days=7)).strftime('%Y-%m-%d')) }}" class="btn btn-outline-secondary">
+                <i class="fas fa-chevron-left"></i> Settimana Precedente
+            </a>
+            <span class="current-week">
+                {{ current_date.strftime('%d %b') }} - {{ (current_date + timedelta(days=6)).strftime('%d %b %Y') }}
+            </span>
+            <a href="{{ url_for('trainer_calendar', start_date=(current_date + timedelta(days=7)).strftime('%Y-%m-%d')) }}" class="btn btn-outline-secondary">
+                Settimana Successiva <i class="fas fa-chevron-right"></i>
+            </a>
+        </div>
+        <a href="{{ url_for('add_appointment') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Nuovo Appuntamento
+        </a>
+    </div>
+
+    <div class="calendar">
+        <div class="timeline">
+            <div class="spacer"></div>
+            {% for hour in range(7, 22) %}
+            <div class="time-marker">{{ hour }}:00</div>
+            {% endfor %}
+        </div>
+        <div class="days">
+            {% for day_offset in range(7) %}
+            {% set day_date = (current_date + timedelta(days=day_offset)).date() %}
+            {% set day_appointments = grouped_appointments.get(day_date, []) %}
+            
+            <div class="day">
+                <div class="date {% if day_date == date.today() %}today{% endif %}">
+                    <p class="date-num">{{ day_date.day }}</p>
+                    <p class="date-day">{{ day_date.strftime('%a') }}</p>
+                </div>
+                <div class="events">
+                    {% for appointment in day_appointments %}
+                    <div class="event appointment-{{ appointment.type|default('default')|lower|replace(' ', '_') }}" 
+                         data-appointment-id="{{ appointment.id }}"
+                         style="
+                             top: calc(({{ appointment.date_time.hour - 7 }} * 60 + {{ appointment.date_time.minute }}) * var(--minuteHeight)); 
+                             height: calc(({{ (appointment.end_date_time - appointment.date_time).total_seconds() / 60 }} * var(--minuteHeight)));
+                         ">
+                        <div class="event-icon status-{{ appointment.status|default('scheduled')|lower|replace(' ', '_') }}">
+                            {% if appointment.status == 'Completato' or appointment.status == 'Confermato' %}
+                                <i class="fas fa-check-circle"></i>
+                            {% elif appointment.status == 'Spostato' or appointment.status == 'Saltato' %}
+                                <i class="fas fa-times-circle"></i>
+                            {% elif appointment.status == 'Appuntamento Non Svolto' %}
+                                <i class="fas fa-user-slash"></i>
+                            {% else %}
+                                <i class="fas fa-calendar-check"></i>
+                            {% endif %}
+                        </div>
+                        <div class="event-content">
+                            <p class="title">{{ appointment.client_name }}</p>
+                            <p class="time">{{ appointment.date_time.strftime('%H:%M') }} - {{ appointment.end_date_time.strftime('%H:%M') }}</p>
+                        </div>
+                        <script type="application/json" class="appointment-data">
+                            {
+                                "id": {{ appointment.id }},
+                                "client_name": "{{ appointment.client_name }}",
+                                "date_time": "{{ appointment.date_time.isoformat() }}",
+                                "end_date_time": "{{ appointment.end_date_time.isoformat() }}",
+                                "type": "{{ appointment.appointment_type|default('') }}",
+                                "status": "{{ appointment.status|default('') }}",
+                                "notes": "{{ appointment.notes|default('')|e }}"
+                            }
+                        </script>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal per i dettagli dell'appuntamento -->
+<div class="modal fade" id="appointmentModal" tabindex="-1" aria-labelledby="appointmentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="appointmentModalLabel">Dettagli Appuntamento</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="appointment-details">
+                    <p><strong>Cliente:</strong> <span id="modal-client"></span></p>
+                    <p><strong>Data:</strong> <span id="modal-date"></span></p>
+                    <p><strong>Orario:</strong> <span id="modal-time"></span></p>
+                    <p><strong>Tipo:</strong> <span id="modal-type"></span></p>
+                    <p><strong>Stato:</strong> <span id="modal-status"></span></p>
+                    <p><strong>Note:</strong> <span id="modal-notes"></span></p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Chiudi</button>
+                <a href="#" id="edit-appointment" class="btn btn-primary">Modifica</a>
+                <button type="button" id="delete-appointment" class="btn btn-danger">Elimina</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal di conferma eliminazione -->
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-labelledby="deleteConfirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteConfirmModalLabel">Conferma Eliminazione</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Sei sicuro di voler eliminare questo appuntamento?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                <button type="button" id="confirm-delete" class="btn btn-danger">Elimina</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<input type="hidden" name="csrf_token" value="{{ csrf }}">
+
+<style>
+    :root {
+        --numDays: 7;
+        --numHours: 15; /* 7:00 to 21:00 */
+        --minuteHeight: 0.6px; /* Adjusted for smaller calendar */
+        --timeHeight: calc(60 * var(--minuteHeight));
+        --calBgColor: #f8f9fa;
+        --eventBorderColor: #dee2e6;
+        --defaultEventColor: #d1ffe6;
+        
+        /* Colori per i tipi di appuntamento */
+        --consultation-color: #d1e7ff;
+        --training-color: #ffd1d1;
+        --followup-color: #fff3d1;
+        --assessment-color: #d1ffed;
+        --allenamento_funzionale-color: #d1e7ff;
+        --chiamata-color: #ffd1d1;
+        --blocco_agenda-color: #fff3d1;
+        --allenamento_ems-color: #d1ffed;
+        
+        /* Colori per gli stati */
+        --scheduled-color: #4caf50;
+        --completed-color: #2196f3;
+        --cancelled-color: #f44336;
+        --no-show-color: #ff9800;
+        --confermato-color: #4caf50;
+        --spostato-color: #f44336;
+        --saltato-color: #ff9800;
+        --prova_fissata-color: #2196f3;
+        --prova_in_chiamata-color: #9c27b0;
+        --appuntamento_non_svolto-color: #ff9800;
+    }
+
+    .calendar-container {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    .calendar-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-bottom: 1rem;
+    }
+
+    .calendar-controls {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .current-week {
+        font-weight: 600;
+        font-size: 1.1rem;
+    }
+
+    .calendar {
+        display: grid;
+        gap: 5px;
+        grid-template-columns: auto 1fr;
+        margin: 1rem 0;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    .timeline {
+        display: grid;
+        grid-template-rows: repeat(var(--numHours), var(--timeHeight));
+        background-color: #f8f9fa;
+        border-right: 1px solid #dee2e6;
+        padding: 0 5px;
+    }
+
+    .days {
+        display: grid;
+        grid-column: 2;
+        gap: 5px;
+        grid-template-columns: repeat(var(--numDays), 1fr);
+    }
+
+    .day {
+        border-right: 1px solid #eee;
+    }
+
+    .day:last-child {
+        border-right: none;
+    }
+
+    .today {
+        background-color: #e8f4ff;
+        border-radius: 5px;
+    }
+
+    .events {
+        position: relative;
+        height: calc(var(--numHours) * var(--timeHeight));
+        background: var(--calBgColor);
+    }
+
+    .event {
+        position: absolute;
+        left: 5%;
+        width: 90%;
+        border: 1px solid var(--eventBorderColor);
+        border-radius: 5px;
+        padding: 0.25rem;
+        background: var(--defaultEventColor);
+        font-size: 0.8rem;
+        overflow: hidden;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: flex-start;
+    }
+
+    .event:hover {
+        transform: scale(1.02);
+        z-index: 100;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Stili per tipi di appuntamento */
+    .appointment-allenamento_funzionale {
+        background-color: var(--allenamento_funzionale-color);
+    }
+
+    .appointment-chiamata {
+        background-color: var(--chiamata-color);
+    }
+
+    .appointment-blocco_agenda {
+        background-color: var(--blocco_agenda-color);
+    }
+
+    .appointment-allenamento_ems {
+        background-color: var(--allenamento_ems-color);
+    }
+
+    .event-icon {
+        margin-right: 5px;
+        font-size: 1rem;
+    }
+
+    /* Stili per stati di appuntamento */
+    .status-confermato i {
+        color: var(--confermato-color);
+    }
+
+    .status-spostato i {
+        color: var(--spostato-color);
+    }
+
+    .status-saltato i {
+        color: var(--saltato-color);
+    }
+
+    .status-prova_fissata i {
+        color: var(--prova_fissata-color);
+    }
+
+    .status-prova_in_chiamata i {
+        color: var(--prova_in_chiamata-color);
+    }
+
+    .status-appuntamento_non_svolto i {
+        color: var(--appuntamento_non_svolto-color);
+    }
+
+    .event-content {
+        flex: 1;
+    }
+
+    .title {
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .time {
+        font-size: 0.75rem;
+        margin-bottom: 0;
+    }
+
+    .date {
+        display: flex;
+        gap: 1em;
+        align-items: center;
+        justify-content: center;
+        height: var(--timeHeight);
+        padding: 0.5rem 0;
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #dee2e6;
+    }
+
+    .date-num {
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin: 0;
+    }
+
+    .date-day {
+        font-size: 0.9rem;
+        font-weight: 400;
+        margin: 0;
+    }
+
+    .time-marker {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: var(--timeHeight);
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
+
+    .appointment-details p {
+        margin-bottom: 0.5rem;
+    }
+
+    /* Nascondi i dati JSON */
+    .appointment-data {
+        display: none;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .calendar-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+        
+        .calendar-controls {
+            width: 100%;
+            justify-content: space-between;
+        }
+        
+        .days {
+            grid-template-columns: repeat(3, 1fr);
+        }
+        
+        :root {
+            --numDays: 3;
+        }
+    }
+    
+    @media (max-width: 576px) {
+        .days {
+            grid-template-columns: 1fr;
+        }
+        
+        :root {
+            --numDays: 1;
+        }
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Inizializzazione del calendario...');
+    
+    // Funzione per inizializzare un modal manualmente se Bootstrap non è disponibile
+    function setupModal(modalId) {
+        const modal = document.getElementById(modalId);
+        
+        if (!modal) {
+            console.error('Modal non trovato:', modalId);
+            return {
+                show: function() { console.error('Modal non trovato:', modalId); },
+                hide: function() { console.error('Modal non trovato:', modalId); }
+            };
+        }
+        
+        return {
+            show: function() {
+                modal.style.display = 'block';
+                modal.classList.add('show');
+                document.body.classList.add('modal-open');
+                const backdrop = document.createElement('div');
+                backdrop.className = 'modal-backdrop fade show';
+                document.body.appendChild(backdrop);
+            },
+            hide: function() {
+                modal.style.display = 'none';
+                modal.classList.remove('show');
+                document.body.classList.remove('modal-open');
+                const backdrop = document.querySelector('.modal-backdrop');
+                if (backdrop) backdrop.remove();
+            }
+        };
+    }
+    
+    // Verifica che Bootstrap sia disponibile
+    let appointmentModal, deleteConfirmModal;
+    
+    if (typeof bootstrap === 'undefined') {
+        console.log('Bootstrap non rilevato, utilizzo implementazione manuale dei modal');
+        appointmentModal = setupModal('appointmentModal');
+        deleteConfirmModal = setupModal('deleteConfirmModal');
+        
+        // Gestione chiusura dei modal
+        document.querySelectorAll('[data-bs-dismiss="modal"]').forEach(button => {
+            button.addEventListener('click', function() {
+                const modalId = this.closest('.modal').id;
+                if (modalId === 'appointmentModal') appointmentModal.hide();
+                if (modalId === 'deleteConfirmModal') deleteConfirmModal.hide();
+            });
+        });
+    } else {
+        console.log('Bootstrap rilevato, utilizzo dei modal nativi');
+        appointmentModal = new bootstrap.Modal(document.getElementById('appointmentModal'));
+        deleteConfirmModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+    }
+    
+    let currentAppointmentId = null;
+    
+    // Aggiunge event listener per click sugli appuntamenti
+    const events = document.querySelectorAll('.event');
+    console.log(`Trovati ${events.length} appuntamenti nel calendario`);
+    
+    events.forEach(event => {
+        event.addEventListener('click', function() {
+            console.log('Evento cliccato:', this);
+            
+            try {
+                // Ottieni i dati dell'appuntamento dall'elemento script JSON interno
+                const dataScript = this.querySelector('.appointment-data');
+                if (!dataScript) {
+                    console.error('Dati appuntamento non trovati');
+                    return;
+                }
+                
+                const appointmentData = JSON.parse(dataScript.textContent);
+                console.log('Dati appuntamento:', appointmentData);
+                
+                currentAppointmentId = appointmentData.id;
+                
+                // Popola il modal con i dati dell'appuntamento
+                document.getElementById('modal-client').textContent = appointmentData.client_name || 'N/D';
+                
+                try {
+                    const appointmentDate = new Date(appointmentData.date_time);
+                    document.getElementById('modal-date').textContent = appointmentDate.toLocaleDateString('it-IT', { 
+                        weekday: 'long', 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                    });
+                    
+                    document.getElementById('modal-time').textContent = `${appointmentDate.toLocaleTimeString('it-IT', { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                    })} - ${new Date(appointmentData.end_date_time).toLocaleTimeString('it-IT', { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                    })}`;
+                } catch (dateError) {
+                    console.error('Errore nella formattazione della data:', dateError);
+                    document.getElementById('modal-date').textContent = 'Errore data';
+                    document.getElementById('modal-time').textContent = 'Errore orario';
+                }
+                
+                document.getElementById('modal-type').textContent = appointmentData.type || '-';
+                document.getElementById('modal-status').textContent = appointmentData.status || '-';
+                document.getElementById('modal-notes').textContent = appointmentData.notes || '-';
+                
+                // Aggiorna il link per modificare l'appuntamento
+                document.getElementById('edit-appointment').href = `/edit_appointment/${appointmentData.id}`;
+                
+                // Mostra il modal
+                console.log('Mostro il modal dell\'appuntamento');
+                appointmentModal.show();
+            } catch (error) {
+                console.error('Errore durante l\'elaborazione del click:', error);
+                alert('Si è verificato un errore nell\'apertura dei dettagli dell\'appuntamento.');
+            }
+        });
+    });
+    
+    // Gestione dell'eliminazione dell'appuntamento
+    document.getElementById('delete-appointment').addEventListener('click', function() {
+        console.log('Bottone elimina cliccato');
+        appointmentModal.hide();
+        deleteConfirmModal.show();
+    });
+    
+    document.getElementById('confirm-delete').addEventListener('click', function() {
+        console.log('Conferma eliminazione cliccata');
+        
+        if (currentAppointmentId) {
+            // Invia richiesta per eliminare l'appuntamento
+            fetch(`/delete_appointment/${currentAppointmentId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    // Ricarica la pagina dopo l'eliminazione
+                    window.location.reload();
+                } else {
+                    alert('Errore durante l\'eliminazione dell\'appuntamento');
+                }
+            })
+            .catch(error => {
+                console.error('Errore:', error);
+                alert('Si è verificato un errore durante l\'eliminazione');
+            });
+        }
+        
+        deleteConfirmModal.hide();
+    });
+    
+    // Funzione per ottenere il token CSRF dai cookie
+    function getCsrfToken() {
+        const name = 'csrf_token=';
+        const decodedCookie = decodeURIComponent(document.cookie);
+        const cookieArray = decodedCookie.split(';');
+        
+        for (let i = 0; i < cookieArray.length; i++) {
+            let cookie = cookieArray[i].trim();
+            if (cookie.indexOf(name) === 0) {
+                return cookie.substring(name.length, cookie.length);
+            }
+        }
+        return '';
+    }
+
+    console.log('CSRF Token:', getCsrfToken());
+});
+</script>
+{% endblock %}

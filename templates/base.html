@@ -79,6 +79,11 @@
                             </li>
                             {% if session.user_role == 'trainer' %}
                             <li>
+                                <a class="dropdown-item {% if request.path == url_for('trainer_calendar') %}active{% endif %}" href="{{ url_for('trainer_calendar') }}">
+                                    <i class="fas fa-calendar-alt me-1"></i>Calendario Personale
+                                </a>
+                            </li>
+                            <li>
                                 <a class="dropdown-item {% if request.path == url_for('trainer_attendance') %}active{% endif %}" href="{{ url_for('trainer_attendance') }}">
                                     <i class="fas fa-calendar-check me-1"></i>Presenze Trainer
                                 </a>
@@ -128,7 +133,7 @@
 
     <footer class="footer mt-auto py-3 bg-light fixed-bottom">
         <div class="container text-center">
-            <span class="text-muted">© 2025 GymTrack - DGB, V: 0.0.16</span>
+            <span class="text-muted">© 2025 GymTrack - DGB, V: 0.0.17</span>
         </div>
     </footer>
 

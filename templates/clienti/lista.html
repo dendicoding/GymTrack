@@ -100,6 +100,7 @@
                     {% endif %}
                 </tbody>
             </table>
+            <div id="paginationControls" class="mt-3 d-flex justify-content-center"></div>
         </div>
     </div>
 </div>
@@ -107,33 +108,49 @@
 
 {% block extra_js %}
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Filtraggio clienti
-        const filtroCliente = document.getElementById('filtroCliente');
-        const tabellaClienti = document.getElementById('tabellaClienti');
-        const righe = tabellaClienti.getElementsByTagName('tr');
-        
-        filtroCliente.addEventListener('keyup', function() {
-            const textoCercato = filtroCliente.value.toLowerCase();
-            
-            for (let i = 0; i < righe.length; i++) {
-                const riga = righe[i];
-                const celle = riga.getElementsByTagName('td');
-                
-                if (celle.length > 0) {
-                    let testoRiga = '';
-                    for (let j = 0; j < 4; j++) {  // Solo le prime 4 colonne (nome, cognome, email, telefono)
-                        testoRiga += celle[j].textContent || celle[j].innerText;
-                    }
-                    
-                    if (testoRiga.toLowerCase().indexOf(textoCercato) > -1) {
-                        riga.style.display = '';
-                    } else {
-                        riga.style.display = 'none';
-                    }
-                }
+    document.addEventListener('DOMContentLoaded', function () {
+        const table = document.getElementById('tabellaClienti');
+        const rows = table.getElementsByTagName('tr');
+        const rowsPerPage = 10; // Numero di righe per pagina
+        const paginationControls = document.getElementById('paginationControls');
+
+        let currentPage = 1;
+        const totalPages = Math.ceil(rows.length / rowsPerPage);
+
+        function showPage(page) {
+            const start = (page - 1) * rowsPerPage;
+            const end = start + rowsPerPage;
+
+            for (let i = 0; i < rows.length; i++) {
+                rows[i].style.display = i >= start && i < end ? '' : 'none';
             }
-        });
+        }
+
+        function createPaginationControls() {
+            paginationControls.innerHTML = '';
+
+            for (let i = 1; i <= totalPages; i++) {
+                const button = document.createElement('button');
+                button.className = 'btn btn-sm btn-primary mx-1';
+                button.textContent = i;
+
+                if (i === currentPage) {
+                    button.classList.add('active');
+                }
+
+                button.addEventListener('click', function () {
+                    currentPage = i;
+                    showPage(currentPage);
+                    createPaginationControls();
+                });
+
+                paginationControls.appendChild(button);
+            }
+        }
+
+        // Inizializza la paginazione
+        showPage(currentPage);
+        createPaginationControls();
     });
 </script>
 {% endblock %}

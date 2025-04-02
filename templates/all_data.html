@@ -28,7 +28,7 @@
                         <th>Azioni</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="tabellaUtenti">
                     {% for utente in utenti %}
                     <tr>
                         <td>{{ utente.id }}</td>
@@ -45,7 +45,57 @@
                     {% endfor %}
                 </tbody>
             </table>
+            <div id="paginationControls" class="mt-3 d-flex justify-content-center"></div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const table = document.getElementById('tabellaUtenti');
+    const rows = table.getElementsByTagName('tr');
+    const rowsPerPage = 10; // Numero di righe per pagina
+    const paginationControls = document.getElementById('paginationControls');
+
+    let currentPage = 1;
+    const totalPages = Math.ceil(rows.length / rowsPerPage);
+
+    function showPage(page) {
+        const start = (page - 1) * rowsPerPage;
+        const end = start + rowsPerPage;
+
+        for (let i = 0; i < rows.length; i++) {
+            rows[i].style.display = i >= start && i < end ? '' : 'none';
+        }
+    }
+
+    function createPaginationControls() {
+        paginationControls.innerHTML = '';
+
+        for (let i = 1; i <= totalPages; i++) {
+            const button = document.createElement('button');
+            button.className = 'btn btn-sm btn-primary mx-1';
+            button.textContent = i;
+
+            if (i === currentPage) {
+                button.classList.add('active');
+            }
+
+            button.addEventListener('click', function () {
+                currentPage = i;
+                showPage(currentPage);
+                createPaginationControls();
+            });
+
+            paginationControls.appendChild(button);
+        }
+    }
+
+    // Inizializza la paginazione
+    showPage(currentPage);
+    createPaginationControls();
+});
+</script>
 {% endblock %}

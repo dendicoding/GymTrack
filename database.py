@@ -515,16 +515,29 @@ def get_lezioni_abbonamento(abbonamento_id):
 def add_lezione(abbonamento_id, data, note, registrata_da):
     conn = get_db_connection()
     cursor = conn.cursor()
-    
-    cursor.execute('''
-    INSERT INTO lezioni (abbonamento_id, data, note, registrata_da)
-    VALUES (?, ?, ?, ?)
-    ''', (abbonamento_id, data, note, registrata_da))
-    
-    conn.commit()
-    lezione_id = cursor.lastrowid
-    conn.close()
-    return lezione_id
+    try:
+        # Inserisci la nuova lezione
+        cursor.execute('''
+        INSERT INTO lezioni (abbonamento_id, data, note, registrata_da)
+        VALUES (?, ?, ?, ?)
+        ''', (abbonamento_id, data, note, registrata_da))
+        
+        # Incrementa il numero di lezioni utilizzate per l'abbonamento
+        cursor.execute('''
+        UPDATE abbonamenti
+        SET lezioni_utilizzate = lezioni_utilizzate + 1
+        WHERE id = ?
+        ''', (abbonamento_id,))
+        
+        conn.commit()
+        lezione_id = cursor.lastrowid
+        return lezione_id
+    except Exception as e:
+        print(f"Errore durante l'aggiunta della lezione: {e}")
+        conn.rollback()
+        return None
+    finally:
+        conn.close()
 
 def completa_lezione(lezione_id):
     conn = get_db_connection()
@@ -1049,13 +1062,19 @@ def create_user_tables():
     conn.commit()
     conn.close()
 
-def authenticate_user(email, password, role):
-    """Autentica un utente in base al ruolo specificato"""
+def authenticate_user(email, password):
+    """Autentica un utente dalla tabella utenti in base a email e password."""
     conn = get_db_connection()
-    query = f"SELECT id, nome, email FROM {role} WHERE email = ? AND password = ? AND attivo = 1"
-    user = conn.execute(query, (email, password)).fetchone()
-    conn.close()
-    return dict(user) if user else None
+    try:
+        query = '''
+        SELECT id, nome, cognome, email, ruolo 
+        FROM utenti 
+        WHERE email = ? AND password = ? AND attivo = 1
+        '''
+        user = conn.execute(query, (email, password)).fetchone()
+        return dict(user) if user else None
+    finally:
+        conn.close()
 
 def get_franchisor(franchisor_id):
     conn = get_db_connection()
@@ -1211,19 +1230,6 @@ def build_hierarchy(user_role=None, user_email=None):
             hierarchy.append({'area_managers': []})  # Ensure consistent structure for franchisor
 
     return hierarchy
-
-# In database.py
-
-def get_sedi(user_role, user_email):
-    if user_role == 'franchisor':
-        return get_sedi_by_franchisor_email(user_email)
-    elif user_role == 'area_manager':
-        return get_sedi_by_area_manager_email(user_email)
-    elif user_role == 'societa':
-        return get_sedi_by_societa_email(user_email)
-    elif user_role == 'trainer':
-        return get_sedi_by_trainer_email(user_email)
-        
 
     
 def update_franchisor(franchisor_id, nome, email, password):
@@ -1715,3 +1721,153 @@ def get_resoconto(resoconto_id):
     conn.close()
     return resoconto
 
+def create_appointments_table():
+    conn = get_db_connection()
+    try:
+        conn.execute('''
+        CREATE TABLE IF NOT EXISTS appointments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            trainer_id INTEGER NOT NULL,
+            client_id INTEGER NOT NULL,
+            title TEXT NOT NULL,
+            notes TEXT,
+            date_time DATETIME NOT NULL,
+            appointment_type TEXT NOT NULL,
+            status TEXT NOT NULL,
+            is_trial BOOLEAN DEFAULT 0,
+            is_recovery BOOLEAN DEFAULT 0,
+            is_lesson_zero BOOLEAN DEFAULT 0,
+            FOREIGN KEY (trainer_id) REFERENCES trainer (id),
+            FOREIGN KEY (client_id) REFERENCES clienti (id)
+        )
+        ''')
+        conn.commit()
+    finally:
+        conn.close()
+
+def get_appointments_by_trainer(trainer_id, start_date):
+    conn = get_db_connection()
+    try:
+        end_date = (datetime.strptime(start_date, '%Y-%m-%d') + timedelta(days=7)).strftime('%Y-%m-%d')
+        appointments = conn.execute('''
+        SELECT a.*, c.nome || ' ' || c.cognome AS client_name
+        FROM appointments a
+        JOIN clienti c ON a.client_id = c.id
+        WHERE a.trainer_id = ? AND a.date_time BETWEEN ? AND ?
+        ORDER BY a.date_time ASC
+        ''', (trainer_id, start_date, end_date)).fetchall()
+
+        # Parse date_time and end_date_time into datetime objects
+        parsed_appointments = []
+        for appointment in appointments:
+            appointment = dict(appointment)
+            try:
+                appointment['date_time'] = datetime.strptime(appointment['date_time'], '%Y-%m-%d %H:%M:%S')
+            except ValueError:
+                appointment['date_time'] = datetime.strptime(appointment['date_time'], '%Y-%m-%dT%H:%M')
+            try:
+                appointment['end_date_time'] = datetime.strptime(appointment['end_date_time'], '%Y-%m-%d %H:%M:%S')
+            except ValueError:
+                appointment['end_date_time'] = datetime.strptime(appointment['end_date_time'], '%Y-%m-%dT%H:%M')
+            parsed_appointments.append(appointment)
+        return parsed_appointments
+    finally:
+        conn.close()
+
+def add_appointment(trainer_id, client_id, title, notes, date_time, end_date_time, appointment_type, status, is_trial, is_recovery, is_lesson_zero):
+    conn = get_db_connection()
+    try:
+        print(f"Salvataggio appuntamento: {date_time}, {end_date_time}")  # Log per debug
+        conn.execute('''
+        INSERT INTO appointments (trainer_id, client_id, title, notes, date_time, end_date_time, appointment_type, status, is_trial, is_recovery, is_lesson_zero)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (trainer_id, client_id, title, notes, date_time, end_date_time, appointment_type, status, is_trial, is_recovery, is_lesson_zero))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Errore durante l'aggiunta dell'appuntamento: {e}")
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
+
+def get_appointment_by_id(appointment_id):
+    conn = get_db_connection()
+    try:
+        appointment = conn.execute('''
+        SELECT a.*, c.nome || ' ' || c.cognome AS client_name
+        FROM appointments a
+        JOIN clienti c ON a.client_id = c.id
+        WHERE a.id = ?
+        ''', (appointment_id,)).fetchone()
+        
+        if appointment:
+            appointment = dict(appointment)
+            try:
+                appointment['date_time'] = datetime.strptime(appointment['date_time'], '%Y-%m-%d %H:%M:%S')
+            except ValueError:
+                appointment['date_time'] = datetime.strptime(appointment['date_time'], '%Y-%m-%dT%H:%M')
+            try:
+                appointment['end_date_time'] = datetime.strptime(appointment['end_date_time'], '%Y-%m-%d %H:%M:%S')
+            except ValueError:
+                appointment['end_date_time'] = datetime.strptime(appointment['end_date_time'], '%Y-%m-%dT%H:%M')
+        
+        return appointment
+    finally:
+        conn.close()
+
+def delete_appointment(appointment_id):
+    conn = get_db_connection()
+    try:
+        conn.execute('DELETE FROM appointments WHERE id = ?', (appointment_id,))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Errore eliminazione appuntamento: {e}")
+        return False
+    finally:
+        conn.close()
+
+def migrate_appointments_table():
+    conn = get_db_connection()
+    try:
+        conn.execute('''
+        ALTER TABLE appointments ADD COLUMN end_date_time DATETIME
+        ''')
+        conn.commit()
+    except sqlite3.OperationalError as e:
+        if "duplicate column name" in str(e).lower():
+            print("La colonna 'end_date_time' esiste già.")
+        else:
+            print(f"Errore durante la migrazione: {e}")
+    finally:
+        conn.close()
+
+def update_appointment(appointment_id, title, client_id, notes, date_time, end_date_time, appointment_type, status, is_trial, is_recovery, is_lesson_zero):
+    """
+    Aggiorna un appuntamento esistente nel database.
+    """
+    conn = get_db_connection()
+    try:
+        conn.execute('''
+        UPDATE appointments
+        SET title = ?,
+            client_id = ?,          
+            notes = ?, 
+            date_time = ?, 
+            end_date_time = ?, 
+            appointment_type = ?, 
+            status = ?, 
+            is_trial = ?, 
+            is_recovery = ?, 
+            is_lesson_zero = ?
+        WHERE id = ?
+        ''', (title, client_id, notes, date_time, end_date_time, appointment_type, status, is_trial, is_recovery, is_lesson_zero, appointment_id))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Errore durante l'aggiornamento dell'appuntamento: {e}")
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
