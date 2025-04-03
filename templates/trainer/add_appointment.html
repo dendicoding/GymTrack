@@ -62,6 +62,39 @@
         <input class="form-check-input" type="checkbox" id="is_lesson_zero" name="is_lesson_zero">
         <label class="form-check-label" for="is_lesson_zero">Lezione 0</label>
     </div>
+    <div class="form-check">
+        <input class="form-check-input" type="checkbox" id="is_recurring" name="is_recurring">
+        <label class="form-check-label" for="is_recurring">Ripetuto</label>
+    </div>
+    <div id="recurring-options" style="display: none;">
+        <div class="mb-3">
+            <label for="duration" class="form-label">Durata (minuti)</label>
+            <input type="number" class="form-control" id="duration" name="duration" min="1">
+        </div>
+        <div class="mb-3">
+            <label for="day_of_week" class="form-label">Giorno della settimana</label>
+            <input type="text" class="form-control" id="day_of_week" name="day_of_week" readonly>
+        </div>
+    </div>
     <button type="submit" class="btn btn-success mt-3">Aggiungi</button>
 </form>
+
+<script>
+    document.getElementById('is_recurring').addEventListener('change', function () {
+        const recurringOptions = document.getElementById('recurring-options');
+        const startDateInput = document.getElementById('date_time');
+        const dayOfWeekInput = document.getElementById('day_of_week');
+        if (this.checked) {
+            recurringOptions.style.display = 'block';
+            startDateInput.addEventListener('change', function () {
+                const date = new Date(this.value);
+                const days = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
+                dayOfWeekInput.value = days[date.getDay()];
+            });
+        } else {
+            recurringOptions.style.display = 'none';
+            dayOfWeekInput.value = '';
+        }
+    });
+</script>
 {% endblock %}

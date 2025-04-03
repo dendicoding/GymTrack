@@ -1718,7 +1718,7 @@ def get_trainers_with_status(sede_ids):
                 COALESCE((
                     SELECT e.azione 
                     FROM eventi e 
-                    WHERE e.utente_id = t.id AND (e.azione = 'entra' OR e.azione = 'esci') 
+                    WHERE e.email = t.email AND (e.azione = 'entra' OR e.azione = 'esci') 
                     ORDER BY e.data_evento DESC LIMIT 1
                 ), 'esci') AS stato
             FROM trainer t
@@ -1811,17 +1811,14 @@ def get_appointments_by_trainer(trainer_id, start_date):
 def add_appointment(trainer_id, client_id, title, notes, date_time, end_date_time, appointment_type, status, is_trial, is_recovery, is_lesson_zero):
     conn = get_db_connection()
     try:
-        print(f"Salvataggio appuntamento: {date_time}, {end_date_time}")  # Log per debug
         conn.execute('''
-        INSERT INTO appointments (trainer_id, client_id, title, notes, date_time, end_date_time, appointment_type, status, is_trial, is_recovery, is_lesson_zero)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO appointments (trainer_id, client_id, title, notes, date_time, end_date_time, appointment_type, status, is_trial, is_recovery, is_lesson_zero)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (trainer_id, client_id, title, notes, date_time, end_date_time, appointment_type, status, is_trial, is_recovery, is_lesson_zero))
         conn.commit()
-        return True
     except Exception as e:
         print(f"Errore durante l'aggiunta dell'appuntamento: {e}")
         conn.rollback()
-        return False
     finally:
         conn.close()
 
