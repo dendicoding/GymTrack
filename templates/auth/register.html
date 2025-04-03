@@ -22,6 +22,7 @@
                     {% endwith %}
                     
                     <form method="POST" action="{{ url_for('register') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <div class="mb-3">
                             <label for="nome" class="form-label">Nome</label>
                             <input type="text" class="form-control" id="nome" name="nome" required>

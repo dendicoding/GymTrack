@@ -5,6 +5,7 @@
 {% block content %}
 <h1>Nuovo Appuntamento</h1>
 <form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="mb-3">
         <label for="title" class="form-label">Titolo</label>
         <input type="text" class="form-control" id="title" name="title" required>

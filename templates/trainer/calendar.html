@@ -22,6 +22,49 @@
         </a>
     </div>
 
+    <div class="calendar-legend mb-4">
+        <h5>Legenda Tipi di Appuntamento</h5>
+        <ul class="list-inline d-flex flex-wrap">
+            <li class="list-inline-item d-flex align-items-center me-3">
+                <span class="legend-color" style="background-color: var(--allenamento_funzionale-color);"></span> Allenamento Funzionale
+            </li>
+            <li class="list-inline-item d-flex align-items-center me-3">
+                <span class="legend-color" style="background-color: var(--chiamata-color);"></span> Chiamata
+            </li>
+            <li class="list-inline-item d-flex align-items-center me-3">
+                <span class="legend-color" style="background-color: var(--blocco_agenda-color);"></span> Blocco Agenda
+            </li>
+            <li class="list-inline-item d-flex align-items-center me-3">
+                <span class="legend-color" style="background-color: var(--allenamento_ems-color);"></span> Allenamento EMS
+            </li>
+        </ul>
+
+        <h5>Legenda Stati di Appuntamento</h5>
+        <ul class="list-inline d-flex flex-wrap">
+            <li class="list-inline-item d-flex align-items-center me-3">
+                <i class="fas fa-check-circle" style="color: var(--confermato-color);"></i> Confermato
+            </li>
+            <li class="list-inline-item d-flex align-items-center me-3">
+                <i class="fas fa-times-circle" style="color: var(--spostato-color);"></i> Spostato
+            </li>
+            <li class="list-inline-item d-flex align-items-center me-3">
+                <i class="fas fa-user-slash" style="color: var(--saltato-color);"></i> Saltato
+            </li>
+            <li class="list-inline-item d-flex align-items-center me-3">
+                <i class="fas fa-calendar-check" style="color: var(--completed-color);"></i> Completato
+            </li>
+            <li class="list-inline-item d-flex align-items-center me-3">
+                <i class="fas fa-calendar-plus" style="color: var(--prova_fissata-color);"></i> Prova Fissata
+            </li>
+            <li class="list-inline-item d-flex align-items-center me-3">
+                <i class="fas fa-phone" style="color: var(--prova_in_chiamata-color);"></i> Prova in Chiamata
+            </li>
+            <li class="list-inline-item d-flex align-items-center me-3">
+                <i class="fas fa-exclamation-circle" style="color: var(--appuntamento_non_svolto-color);"></i> Appuntamento Non Svolto
+            </li>
+        </ul>
+    </div>
+
     <div class="calendar">
         <div class="timeline">
             <div class="spacer"></div>
@@ -41,8 +84,8 @@
                 </div>
                 <div class="events">
                     {% for appointment in day_appointments %}
-                    <div class="event appointment-{{ appointment.type|default('default')|lower|replace(' ', '_') }}" 
-                         data-appointment-id="{{ appointment.id }}"
+                    <div class="event appointment-{{ appointment.appointment_type|default('default')|lower|replace(' ', '_') }}" 
+                         data-appointment-type="{{ appointment.appointment_type }}"
                          style="
                              top: calc(({{ appointment.date_time.hour - 7 }} * 60 + {{ appointment.date_time.minute }}) * var(--minuteHeight)); 
                              height: calc(({{ (appointment.end_date_time - appointment.date_time).total_seconds() / 60 }} * var(--minuteHeight)));
@@ -59,7 +102,7 @@
                             {% endif %}
                         </div>
                         <div class="event-content">
-                            <p class="title">{{ appointment.client_name }}</p>
+                            <p class="title">{{ appointment.title }}</p>
                             <p class="time">{{ appointment.date_time.strftime('%H:%M') }} - {{ appointment.end_date_time.strftime('%H:%M') }}</p>
                         </div>
                         <script type="application/json" class="appointment-data">
@@ -141,10 +184,6 @@
         --defaultEventColor: #d1ffe6;
         
         /* Colori per i tipi di appuntamento */
-        --consultation-color: #d1e7ff;
-        --training-color: #ffd1d1;
-        --followup-color: #fff3d1;
-        --assessment-color: #d1ffed;
         --allenamento_funzionale-color: #d1e7ff;
         --chiamata-color: #ffd1d1;
         --blocco_agenda-color: #fff3d1;
@@ -388,6 +427,48 @@
         :root {
             --numDays: 1;
         }
+    }
+
+    .calendar-legend {
+        background-color: #f8f9fa;
+        padding: 10px;
+        border: 1px solid #dee2e6;
+        border-radius: 5px;
+    }
+
+    .calendar-legend h5 {
+        margin-bottom: 10px;
+        font-size: 1rem;
+        font-weight: bold;
+    }
+
+    .calendar-legend .list-inline {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .calendar-legend .list-inline-item {
+        display: flex;
+        align-items: center;
+        font-size: 0.9rem;
+    }
+
+    .calendar-legend .legend-color {
+        display: inline-block;
+        width: 15px;
+        height: 15px;
+        margin-right: 5px;
+        border-radius: 3px;
+        border: 1px solid #ccc;
+    }
+
+    .calendar-legend i {
+        font-size: 1.2rem;
+        margin-right: 5px;
     }
 </style>
 
