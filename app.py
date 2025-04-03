@@ -678,6 +678,35 @@ def completa_lezione(lezione_id):
     flash('Lezione completata con successo!', 'success')
     return redirect(request.referrer or url_for('index'))
 
+@app.route('/rate/<int:rata_id>/modifica', methods=['GET', 'POST'])
+def modifica_rata(rata_id):
+    rata = db.get_rata(rata_id)
+    if not rata:
+        flash('Rata non trovata', 'error')
+        return redirect(url_for('index'))
+
+    if request.method == 'POST':
+        if rata['pagato']:
+            # Se la rata è pagata, aggiorna data_pagamento e metodo_pagamento
+            data_pagamento = request.form.get('data_pagamento')
+            metodo_pagamento = request.form.get('metodo_pagamento')
+            if db.modifica_rata_pagata(rata_id, data_pagamento, metodo_pagamento):
+                flash('Rata modificata con successo!', 'success')
+            else:
+                flash('Errore durante la modifica della rata', 'error')
+        else:
+            # Se la rata non è pagata, aggiorna importo e data_scadenza
+            importo = request.form.get('importo', type=float)
+            data_scadenza = request.form.get('data_scadenza')
+            if db.modifica_rata_non_pagata(rata_id, importo, data_scadenza):
+                flash('Rata modificata con successo!', 'success')
+            else:
+                flash('Errore durante la modifica della rata', 'error')
+
+        return redirect(url_for('dettaglio_abbonamento', abbonamento_id=rata['abbonamento_id']))
+
+    return render_template('rate/modifica_rata.html', rata=rata)
+
 @app.route('/rate/<int:rata_id>/paga', methods=['GET', 'POST'])
 def paga_rata(rata_id):
     rata = db.get_rata(rata_id)

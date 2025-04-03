@@ -12,6 +12,15 @@
     </ol>
 </nav>
 
+<style>
+    .table .btn {
+        white-space: nowrap; /* Evita che il testo vada a capo */
+    }
+    .table .d-flex .btn {
+        flex: 1; /* Assicura che i pulsanti abbiano la stessa larghezza */
+    }
+</style>
+
 <div class="row">
     <div class="col-md-8">
         <!-- Dettagli Abbonamento -->
@@ -110,12 +119,16 @@
                                     {% endif %}
                                 </td>
                                 <td>
-                                    {% if not rata.pagato %}
-                                        <a href="{{ url_for('paga_rata', rata_id=rata.id) }}" 
-                                           class="btn btn-sm btn-success">
-                                            <i class="fas fa-money-bill-wave"></i> Paga
+                                    <div class="d-flex gap-2">
+                                        {% if not rata.pagato %}
+                                            <a href="{{ url_for('paga_rata', rata_id=rata.id) }}" class="btn btn-sm btn-success flex-fill">
+                                                <i class="fas fa-money-bill-wave"></i> Paga
+                                            </a>
+                                        {% endif %}
+                                        <a href="{{ url_for('modifica_rata', rata_id=rata.id) }}" class="btn btn-sm btn-warning flex-fill">
+                                            <i class="fas fa-edit"></i> Modifica
                                         </a>
-                                    {% endif %}
+                                    </div>
                                 </td>
                             </tr>
                             {% endfor %}

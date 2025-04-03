@@ -539,6 +539,40 @@ def add_lezione(abbonamento_id, data, note, registrata_da):
     finally:
         conn.close()
 
+def modifica_rata_pagata(rata_id, data_pagamento, metodo_pagamento):
+    conn = get_db_connection()
+    try:
+        conn.execute('''
+        UPDATE rate
+        SET data_pagamento = ?, metodo_pagamento = ?
+        WHERE id = ?
+        ''', (data_pagamento, metodo_pagamento, rata_id))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Errore durante la modifica della rata pagata: {e}")
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
+
+def modifica_rata_non_pagata(rata_id, importo, data_scadenza):
+    conn = get_db_connection()
+    try:
+        conn.execute('''
+        UPDATE rate
+        SET importo = ?, data_scadenza = ?
+        WHERE id = ?
+        ''', (importo, data_scadenza, rata_id))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Errore durante la modifica della rata non pagata: {e}")
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
+
 def completa_lezione(lezione_id):
     conn = get_db_connection()
     conn.execute('''
