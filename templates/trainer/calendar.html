@@ -65,6 +65,48 @@
         </ul>
     </div>
 
+
+    <!-- Modal per creare un nuovo appuntamento -->
+    <div class="modal fade" id="createAppointmentModal" tabindex="-1" aria-labelledby="createAppointmentModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form id="createAppointmentForm" method="POST" action="{{ url_for('add_appointment') }}">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="createAppointmentModalLabel">Nuovo Appuntamento</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" name="csrf_token" value="{{ csrf }}">
+                        <div class="mb-3">
+                            <label for="title" class="form-label">Titolo</label>
+                            <input type="text" class="form-control" id="title" name="title" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="date_time" class="form-label">Data e Ora</label>
+                            <input type="datetime-local" class="form-control" id="date_time" name="date_time" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="end_date_time" class="form-label">Data e Ora di Fine</label>
+                            <input type="datetime-local" class="form-control" id="end_date_time" name="end_date_time" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="client_id" class="form-label">Cliente</label>
+                            <select class="form-select" id="client_id" name="client_id" required>
+                                {% for cliente in clienti %}
+                                <option value="{{ cliente.id }}">{{ cliente.nome }} {{ cliente.cognome }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                        <button type="submit" class="btn btn-primary">Crea</button>
+                    </div>
+                </form>
+            </div>
+        </div> 
+    </div>
+    
     <div class="calendar">
         <div class="timeline">
             <div class="spacer"></div>
@@ -77,7 +119,7 @@
             {% set day_date = (current_date + timedelta(days=day_offset)).date() %}
             {% set day_appointments = grouped_appointments.get(day_date, []) %}
             
-            <div class="day">
+            <div class="day" data-date="{{ day_date }}">
                 <div class="date {% if day_date == date.today() %}today{% endif %}">
                     <p class="date-num">{{ day_date.day }}</p>
                     <p class="date-day">{{ day_date.strftime('%a') }}</p>
@@ -646,6 +688,188 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     console.log('CSRF Token:', getCsrfToken());
+});
+
+document.addEventListener('DOMContentLoaded', function () {
+    const calendarDays = document.querySelectorAll('.day'); // Seleziona i giorni del calendario
+    const createAppointmentModal = new bootstrap.Modal(document.getElementById('createAppointmentModal'));
+    const dateTimeInput = document.getElementById('date_time');
+    const endDateTimeInput = document.getElementById('end_date_time');
+
+    if (calendarDays.length === 0) {
+        console.error('Nessun elemento .day trovato nel calendario.');
+        return;
+    }
+
+    calendarDays.forEach(day => {
+        day.addEventListener('click', function (event) {
+            const dayDate = this.getAttribute('data-date');
+            if (!dayDate) {
+                console.error('Attributo data-date non trovato per questo elemento .day.');
+                return;
+            }
+
+            const rect = this.getBoundingClientRect();
+            const clickY = event.clientY - rect.top; // Posizione del clic rispetto al giorno
+            const hour = Math.floor(clickY / rect.height * 15) + 7; // Calcola l'ora (7:00 - 21:00)
+            const minute = Math.floor((clickY % (rect.height / 15)) / (rect.height / 15) * 60);
+
+            // Precompila i campi del modulo
+            const startDateTime = new Date(`${dayDate}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00`);
+            const localStartDateTime = new Date(startDateTime.getTime() - startDateTime.getTimezoneOffset() * 60000);
+            dateTimeInput.value = localStartDateTime.toISOString().slice(0, 16); // Formatta come datetime-local
+            endDateTimeInput.value = new Date(localStartDateTime.getTime() + 60 * 60 * 1000).toISOString().slice(0, 16); // +1 ora            dateTimeInput.value = startDateTime.toISOString().slice(0, 16); // Formatta come datetime-local
+                        endDateTimeInput.value = new Date(startDateTime.getTime() + 60 * 60 * 1000).toISOString().slice(0, 16); // +1 ora
+
+            // Mostra il modal
+            createAppointmentModal.show();
+        });
+    });
+});
+
+document.addEventListener('DOMContentLoaded', function () {
+    const calendarDays = document.querySelectorAll('.day'); // Seleziona i giorni del calendario
+
+    if (calendarDays.length === 0) {
+        console.error('Nessun elemento .day trovato nel calendario.');
+        return;
+    }
+
+    calendarDays.forEach(day => {
+        day.addEventListener('click', function (event) {
+            const dayDate = this.getAttribute('data-date');
+            if (!dayDate) {
+                console.error('Attributo data-date non trovato per questo elemento .day.');
+                return;
+            }
+
+            const rect = this.getBoundingClientRect();
+            const clickY = event.clientY - rect.top; // Posizione del clic rispetto al giorno
+            const hour = Math.floor(clickY / rect.height * 15) + 7; // Calcola l'ora (7:00 - 21:00)
+            const minute = Math.floor((clickY % (rect.height / 15)) / (rect.height / 15) * 60);
+
+            // Costruisci la data e l'ora in formato ISO
+            const startDateTime = new Date(`${dayDate}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00`);
+            const formattedDateTime = startDateTime.toISOString().slice(0, 16); // Formatta come datetime-local
+
+            // Reindirizza alla pagina del form di nuovo appuntamento con i parametri precompilati
+            window.location.href = `/trainer/appointment/new?date_time=${encodeURIComponent(formattedDateTime)}`;
+        });
+    });
+});
+
+document.addEventListener('DOMContentLoaded', function () {
+    // Listener per gli appuntamenti
+    const events = document.querySelectorAll('.event');
+    events.forEach(event => {
+        event.addEventListener('click', function (e) {
+            e.stopPropagation(); // Impedisce che il click sull'appuntamento attivi il listener del giorno
+            const dataScript = this.querySelector('.appointment-data');
+            if (!dataScript) {
+                console.error('Dati appuntamento non trovati');
+                return;
+            }
+
+            const appointmentData = JSON.parse(dataScript.textContent);
+            console.log('Dati appuntamento:', appointmentData);
+
+            // Mostra i dettagli dell'appuntamento nel modal
+            document.getElementById('modal-client').textContent = appointmentData.client_name || 'N/D';
+            document.getElementById('modal-date').textContent = new Date(appointmentData.date_time).toLocaleDateString('it-IT');
+            document.getElementById('modal-time').textContent = `${new Date(appointmentData.date_time).toLocaleTimeString('it-IT')} - ${new Date(appointmentData.end_date_time).toLocaleTimeString('it-IT')}`;
+            document.getElementById('modal-type').textContent = appointmentData.type || '-';
+            document.getElementById('modal-status').textContent = appointmentData.status || '-';
+            document.getElementById('modal-notes').textContent = appointmentData.notes || '-';
+
+            // Aggiorna il link per modificare l'appuntamento
+            document.getElementById('edit-appointment').href = `/edit_appointment/${appointmentData.id}`;
+
+            // Mostra il modal
+            const appointmentModal = new bootstrap.Modal(document.getElementById('appointmentModal'));
+            appointmentModal.show();
+        });
+    });
+
+    // Listener per i giorni del calendario
+    const calendarDays = document.querySelectorAll('.day');
+    calendarDays.forEach(day => {
+        day.addEventListener('click', function (event) {
+            const dayDate = this.getAttribute('data-date');
+            if (!dayDate) {
+                console.error('Attributo data-date non trovato per questo elemento .day.');
+                return;
+            }
+
+            const rect = this.getBoundingClientRect();
+            const clickY = event.clientY - rect.top; // Posizione del clic rispetto al giorno
+            const hour = Math.floor(clickY / rect.height * 15) + 7; // Calcola l'ora (7:00 - 21:00)
+            const minute = Math.floor((clickY % (rect.height / 15)) / (rect.height / 15) * 60);
+
+            // Costruisci la data e l'ora in formato ISO
+            const startDateTime = new Date(`${dayDate}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00`);
+
+            // Formatta la data e l'ora in base al fuso orario locale
+            const formattedDateTime = `${startDateTime.getFullYear()}-${String(startDateTime.getMonth() + 1).padStart(2, '0')}-${String(startDateTime.getDate()).padStart(2, '0')}T${String(startDateTime.getHours()).padStart(2, '0')}:${String(startDateTime.getMinutes()).padStart(2, '0')}`;
+
+            // Reindirizza alla pagina del form di nuovo appuntamento con i parametri precompilati
+            window.location.href = `/trainer/appointment/new?date_time=${encodeURIComponent(formattedDateTime)}`;
+
+            // Reindirizza alla pagina del form di nuovo appuntamento con i parametri precompilati
+            window.location.href = `/trainer/appointment/new?date_time=${encodeURIComponent(formattedDateTime)}`;
+        });
+    });
+});
+
+document.addEventListener('DOMContentLoaded', function () {
+    const appointmentModalElement = document.getElementById('appointmentModal');
+    const appointmentModal = new bootstrap.Modal(appointmentModalElement);
+
+    // Rimuovi il backdrop manualmente quando il modal viene chiuso
+    appointmentModalElement.addEventListener('hidden.bs.modal', function () {
+        const backdrop = document.querySelector('.modal-backdrop');
+        if (backdrop) {
+            backdrop.remove();
+        }
+        document.body.classList.remove('modal-open');
+    });
+});
+
+document.addEventListener('DOMContentLoaded', function () {
+    const calendarDays = document.querySelectorAll('.day'); // Seleziona i giorni del calendario
+
+    if (calendarDays.length === 0) {
+        console.error('Nessun elemento .day trovato nel calendario.');
+        return;
+    }
+
+    calendarDays.forEach(day => {
+        day.addEventListener('click', function (event) {
+            const dayDate = this.getAttribute('data-date');
+            if (!dayDate) {
+                console.error('Attributo data-date non trovato per questo elemento .day.');
+                return;
+            }
+
+            const rect = this.getBoundingClientRect();
+            const clickY = event.clientY - rect.top; // Posizione del clic rispetto al giorno
+            const hour = Math.floor(clickY / rect.height * 15) + 7; // Calcola l'ora (7:00 - 21:00)
+            const minute = Math.floor((clickY % (rect.height / 15)) / (rect.height / 15) * 60);
+
+            // Costruisci la data e l'ora in base al fuso orario locale
+            let startDateTime = new Date(`${dayDate}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00`);
+
+            // Sottrai un'ora
+            startDateTime.setHours(startDateTime.getHours() - 1);
+
+            // Formatta la data e l'ora manualmente per il campo datetime-local
+            const formattedDateTime = `${startDateTime.getFullYear()}-${String(startDateTime.getMonth() + 1).padStart(2, '0')}-${String(startDateTime.getDate()).padStart(2, '0')}T${String(startDateTime.getHours()).padStart(2, '0')}:${String(startDateTime.getMinutes()).padStart(2, '0')}`;
+
+            console.log('Data e ora calcolate:', formattedDateTime);
+
+            // Reindirizza alla pagina del form di nuovo appuntamento con i parametri precompilati
+            window.location.href = `/trainer/appointment/new?date_time=${encodeURIComponent(formattedDateTime)}`;
+        });
+    });
 });
 </script>
 {% endblock %}

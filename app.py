@@ -1275,6 +1275,9 @@ def add_appointment():
 
     clienti = db.get_clienti_effettivi([sede['id']])
 
+    # Precompila la data e ora se fornita nella query string
+    prefilled_date_time = request.args.get('date_time', '')
+
     if request.method == 'POST':
         client_id = request.form['client_id']
         title = request.form['title']
@@ -1311,7 +1314,7 @@ def add_appointment():
 
         return redirect(url_for('trainer_calendar'))
 
-    return render_template('trainer/add_appointment.html', clienti=clienti)
+    return render_template('trainer/add_appointment.html', clienti=clienti, prefilled_date_time=prefilled_date_time)
 
 @app.route('/edit_appointment/<int:appointment_id>', methods=['GET', 'POST'])
 @login_required
