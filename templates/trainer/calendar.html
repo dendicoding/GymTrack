@@ -144,13 +144,15 @@
                             {% endif %}
                         </div>
                         <div class="event-content">
-                            <p class="title">{{ appointment.title }}</p>
-                            <p class="time">{{ appointment.date_time.strftime('%H:%M') }} - {{ appointment.end_date_time.strftime('%H:%M') }}</p>
+                            <p class="time-title">
+                                {{ appointment.date_time.strftime('%H:%M') }} - {{ appointment.title }}
+                            </p>
                         </div>
                         <script type="application/json" class="appointment-data">
                             {
                                 "id": {{ appointment.id }},
                                 "client_name": "{{ appointment.client_name }}",
+                                "trainer_name": "{{ appointment.trainer_name }}",
                                 "date_time": "{{ appointment.date_time.isoformat() }}",
                                 "end_date_time": "{{ appointment.end_date_time.isoformat() }}",
                                 "type": "{{ appointment.appointment_type|default('') }}",
@@ -178,6 +180,7 @@
             <div class="modal-body">
                 <div class="appointment-details">
                     <p><strong>Cliente:</strong> <span id="modal-client"></span></p>
+                    <p><strong>Trainer:</strong> <span id="modal-trainer"></span></p> <!-- Campo per il trainer -->
                     <p><strong>Data:</strong> <span id="modal-date"></span></p>
                     <p><strong>Orario:</strong> <span id="modal-time"></span></p>
                     <p><strong>Tipo:</strong> <span id="modal-type"></span></p>
@@ -396,6 +399,14 @@
     .time {
         font-size: 0.75rem;
         margin-bottom: 0;
+    }
+
+    .time-title {
+        font-size: 0.75rem; /* Riduce la dimensione del testo */
+        font-weight: 400;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     .date {
@@ -775,6 +786,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             // Mostra i dettagli dell'appuntamento nel modal
             document.getElementById('modal-client').textContent = appointmentData.client_name || 'N/D';
+            document.getElementById('modal-trainer').textContent = appointmentData.trainer_name || 'N/D';
             document.getElementById('modal-date').textContent = new Date(appointmentData.date_time).toLocaleDateString('it-IT');
             document.getElementById('modal-time').textContent = `${new Date(appointmentData.date_time).toLocaleTimeString('it-IT')} - ${new Date(appointmentData.end_date_time).toLocaleTimeString('it-IT')}`;
             document.getElementById('modal-type').textContent = appointmentData.type || '-';

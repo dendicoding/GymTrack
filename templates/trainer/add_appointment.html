@@ -81,21 +81,23 @@
 </form>
 
 <script>
-    document.getElementById('is_recurring').addEventListener('change', function () {
-        const recurringOptions = document.getElementById('recurring-options');
-        const startDateInput = document.getElementById('date_time');
-        const dayOfWeekInput = document.getElementById('day_of_week');
-        if (this.checked) {
-            recurringOptions.style.display = 'block';
-            startDateInput.addEventListener('change', function () {
-                const date = new Date(this.value);
-                const days = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
-                dayOfWeekInput.value = days[date.getDay()];
-            });
+    const appointmentType = document.getElementById('appointment_type');
+    const clientSelect = document.getElementById('client_id');
+    const titleInput = document.getElementById('title');
+
+    function updateTitle() {
+        if (appointmentType.value === 'Blocco Agenda') {
+            titleInput.value = 'Blocco Agenda';
         } else {
-            recurringOptions.style.display = 'none';
-            dayOfWeekInput.value = '';
+            const selectedClient = clientSelect.options[clientSelect.selectedIndex];
+            titleInput.value = selectedClient ? selectedClient.text : '';
         }
-    });
+    }
+
+    appointmentType.addEventListener('change', updateTitle);
+    clientSelect.addEventListener('change', updateTitle);
+
+    // Initialize the title on page load
+    document.addEventListener('DOMContentLoaded', updateTitle);
 </script>
 {% endblock %}

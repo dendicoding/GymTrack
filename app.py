@@ -1277,7 +1277,9 @@ def trainer_calendar():
 
     # Fetch appointments for all user IDs in the same `sede`
     appointments = db.get_appointments_by_users(user_ids, start_date)
+    print("get_appointments_by_users chiamata con:", user_ids, start_date)
 
+    print(appointments)
     # Group appointments by date
     grouped_appointments = defaultdict(list)
     for appointment in appointments:

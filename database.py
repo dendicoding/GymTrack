@@ -1265,36 +1265,7 @@ def build_hierarchy(user_role=None, user_email=None):
 
     return hierarchy
 
-def get_appointments_by_users(user_ids, start_date):
-    """Retrieve appointments for multiple users starting from a specific date."""
-    conn = get_db_connection()
-    try:
-        # Calculate the end date (7 days from the start date)
-        end_date = (datetime.strptime(start_date, '%Y-%m-%d') + timedelta(days=7)).strftime('%Y-%m-%d')
 
-        # Query to fetch appointments
-        query = '''
-            SELECT a.*, c.nome || ' ' || c.cognome AS client_name
-            FROM appointments a
-            JOIN clienti c ON a.client_id = c.id
-            WHERE a.trainer_id IN ({})
-            AND a.date_time BETWEEN ? AND ?
-            ORDER BY a.date_time ASC
-        '''.format(','.join('?' for _ in user_ids))
-        params = user_ids + [start_date, end_date]
-        appointments = conn.execute(query, params).fetchall()
-
-        # Parse date_time and end_date_time into datetime objects
-        parsed_appointments = []
-        for appointment in appointments:
-            appointment = dict(appointment)
-            appointment['date_time'] = datetime.strptime(appointment['date_time'], '%Y-%m-%d %H:%M:%S')
-            appointment['end_date_time'] = datetime.strptime(appointment['end_date_time'], '%Y-%m-%d %H:%M:%S')
-            parsed_appointments.append(appointment)
-
-        return parsed_appointments
-    finally:
-        conn.close()
 
 def get_user_by_email(email):
     """Retrieve a user by their email."""
@@ -1828,15 +1799,18 @@ def get_appointments_by_users(user_ids, start_date):
 
         # Query to fetch appointments
         query = '''
-            SELECT a.*, c.nome || ' ' || c.cognome AS client_name
+            SELECT a.*, c.nome || ' ' || c.cognome AS client_name, u.nome || ' ' || u.cognome AS trainer_name
             FROM appointments a
             JOIN clienti c ON a.client_id = c.id
+            JOIN utenti u ON a.trainer_id = u.id
             WHERE a.trainer_id IN ({})
             AND a.date_time BETWEEN ? AND ?
             ORDER BY a.date_time ASC
         '''.format(','.join('?' for _ in user_ids))
         params = user_ids + [start_date, end_date]
         appointments = conn.execute(query, params).fetchall()
+        print("SECONDA-------------")
+        print(appointments)
 
         # Parse date_time and end_date_time into datetime objects
         parsed_appointments = []
@@ -1874,9 +1848,13 @@ def get_appointment_by_id(appointment_id):
     conn = get_db_connection()
     try:
         appointment = conn.execute('''
-        SELECT a.*, c.nome || ' ' || c.cognome AS client_name
+        SELECT 
+            a.*, 
+            c.nome || ' ' || c.cognome AS client_name, 
+            u.nome || ' ' || u.cognome AS trainer_name
         FROM appointments a
         JOIN clienti c ON a.client_id = c.id
+        JOIN utenti u ON a.trainer_id = u.id
         WHERE a.id = ?
         ''', (appointment_id,)).fetchone()
         
