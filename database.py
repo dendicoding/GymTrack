@@ -248,33 +248,54 @@ def get_all_pacchetti():
     conn.close()
     return pacchetti
 
+def get_all_pacchetti_validi():
+    conn = get_db_connection()
+    oggi = datetime.now().strftime('%Y-%m-%d')
+    pacchetti = conn.execute('''
+    SELECT * FROM pacchetti
+    WHERE data_scadenza IS NULL OR data_scadenza >= ?
+    ORDER BY nome
+    ''', (oggi,)).fetchall()
+    conn.close()
+    return pacchetti
+
+def delete_pacchetto(pacchetto_id):
+    conn = get_db_connection()
+    try:
+        conn.execute('DELETE FROM pacchetti WHERE id = ?', (pacchetto_id,))
+        conn.commit()
+    except Exception as e:
+        print(f"Errore durante l'eliminazione del pacchetto: {e}")
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
 def get_pacchetto(pacchetto_id):
     conn = get_db_connection()
     pacchetto = conn.execute('SELECT * FROM pacchetti WHERE id = ?', (pacchetto_id,)).fetchone()
     conn.close()
     return pacchetto
 
-def add_pacchetto(nome, descrizione, prezzo, numero_lezioni, durata_giorni, attivo, pagamento_unico):
+def add_pacchetto(nome, descrizione, prezzo, numero_lezioni, durata_giorni, attivo, pagamento_unico, data_scadenza=None):
     conn = get_db_connection()
     cursor = conn.cursor()
-    
     cursor.execute('''
-    INSERT INTO pacchetti (nome, descrizione, prezzo, numero_lezioni, durata_giorni, attivo, pagamento_unico)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-    ''', (nome, descrizione, prezzo, numero_lezioni, durata_giorni, attivo, pagamento_unico))
-    
+    INSERT INTO pacchetti (nome, descrizione, prezzo, numero_lezioni, durata_giorni, attivo, pagamento_unico, data_scadenza)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (nome, descrizione, prezzo, numero_lezioni, durata_giorni, attivo, pagamento_unico, data_scadenza))
     conn.commit()
     pacchetto_id = cursor.lastrowid
     conn.close()
     return pacchetto_id
 
-def update_pacchetto(pacchetto_id, nome, descrizione, prezzo, numero_lezioni, durata_giorni, attivo, pagamento_unico):
+def update_pacchetto(pacchetto_id, nome, descrizione, prezzo, numero_lezioni, durata_giorni, attivo, pagamento_unico, data_scadenza=None):
     conn = get_db_connection()
     conn.execute('''
     UPDATE pacchetti 
-    SET nome = ?, descrizione = ?, prezzo = ?, numero_lezioni = ?, durata_giorni = ?, attivo = ?, pagamento_unico = ?
+    SET nome = ?, descrizione = ?, prezzo = ?, numero_lezioni = ?, durata_giorni = ?, attivo = ?, pagamento_unico = ?, data_scadenza = ?
     WHERE id = ?
-    ''', (nome, descrizione, prezzo, numero_lezioni, durata_giorni, attivo, pagamento_unico, pacchetto_id))
+    ''', (nome, descrizione, prezzo, numero_lezioni, durata_giorni, attivo, pagamento_unico, data_scadenza, pacchetto_id))
     
     conn.commit()
     conn.close()
@@ -933,25 +954,16 @@ def migrate_abbonamenti():
 
 def migrate_database():
     conn = get_db_connection()
+    cursor = conn.cursor()
     try:
-        conn.execute('''
-            CREATE TABLE IF NOT EXISTS resoconti (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            trainer_id INTEGER NOT NULL,
-            data DATE NOT NULL,
-            ore_lavoro INTEGER NOT NULL,
-            ore_buca INTEGER NOT NULL,
-            attivita_buca TEXT NOT NULL,
-            FOREIGN KEY (trainer_id) REFERENCES trainer (id)
-        );
-
+        # Aggiungi il campo data_scadenza alla tabella pacchetti
+        cursor.execute('''
+        ALTER TABLE pacchetti ADD COLUMN data_scadenza DATE
         ''')
-
-        conn.commit()
     except Exception as e:
-        print(f"Error during migration: {e}")
-        conn.rollback()
+        print(f"Errore durante la migrazione del database: {e}")
     finally:
+        conn.commit()
         conn.close()
 
 def delete_abbonamento(abbonamento_id):

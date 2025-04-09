@@ -25,10 +25,10 @@
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="mb-3">
                         <label for="pacchetto" class="form-label">Pacchetto</label>
-                        <select class="form-select" id="pacchetto" name="pacchetto_id" required onchange="updatePrezzo()">
+                        <select class="form-select" id="pacchetto" name="pacchetto_id" required>
                             <option value="">Seleziona un pacchetto...</option>
                             {% for pacchetto in pacchetti %}
-                                <option value="{{ pacchetto.id }}" data-prezzo="{{ pacchetto.prezzo }}" data-pagamento-unico="{{ pacchetto.pagamento_unico }}">
+                                <option value="{{ pacchetto.id }}">
                                     {{ pacchetto.nome }} - €{{ pacchetto.prezzo }}
                                 </option>
                             {% endfor %}

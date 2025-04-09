@@ -477,6 +477,21 @@ def elimina_cliente(cliente_id):
     flash(f'Cliente {cliente["nome"]} {cliente["cognome"]} eliminato con successo!', 'success')
     return redirect(url_for('lista_clienti'))
 
+@app.route('/pacchetti/<int:pacchetto_id>/elimina', methods=['POST'])
+def elimina_pacchetto(pacchetto_id):
+    pacchetto = db.get_pacchetto(pacchetto_id)
+    if not pacchetto:
+        flash('Pacchetto non trovato', 'error')
+        return redirect(url_for('lista_pacchetti'))
+    
+    try:
+        db.delete_pacchetto(pacchetto_id)
+        flash('Pacchetto eliminato con successo!', 'success')
+    except Exception as e:
+        flash(f'Errore durante l\'eliminazione del pacchetto: {e}', 'danger')
+    
+    return redirect(url_for('lista_pacchetti'))
+
 @app.route('/clienti/<int:cliente_id>/promuovi', methods=['POST', 'GET'])
 def promuovi_cliente(cliente_id):
     success, message = db.promuovi_cliente(cliente_id)
@@ -490,6 +505,7 @@ def promuovi_cliente(cliente_id):
 @app.route('/pacchetti')
 def lista_pacchetti():
     pacchetti = db.get_all_pacchetti()
+    
     return render_template('pacchetti/lista.html', pacchetti=pacchetti)
 
 @app.route('/pacchetti/<int:pacchetto_id>')
@@ -523,10 +539,11 @@ def nuovo_pacchetto():
         durata_giorni = request.form.get('durata_giorni', type=int)
         attivo = 'attivo' in request.form
         pagamento_unico = 'pagamento_unico' in request.form
+        data_scadenza = request.form.get('data_scadenza')
 
         # Aggiungi il pacchetto al database
         try:
-            db.add_pacchetto(nome, descrizione, prezzo, numero_lezioni, durata_giorni, attivo, pagamento_unico)
+            db.add_pacchetto(nome, descrizione, prezzo, numero_lezioni, durata_giorni, attivo, pagamento_unico, data_scadenza)
             flash('Pacchetto aggiunto con successo!', 'success')
             return redirect(url_for('lista_pacchetti'))
         except Exception as e:
@@ -550,13 +567,15 @@ def modifica_pacchetto(pacchetto_id):
         durata_giorni = int(request.form.get('durata_giorni'))
         attivo = 'attivo' in request.form
         pagamento_unico = 'pagamento_unico' in request.form
+        usa_data_scadenza = 'usa_data_scadenza' in request.form
+        data_scadenza = request.form.get('data_scadenza') if usa_data_scadenza else None
         
-        if db.update_pacchetto(pacchetto_id, nome, descrizione, prezzo, numero_lezioni, durata_giorni, attivo, pagamento_unico):
-            db.log_event(session.get('user_id'), session.get('user_email'), 'Modificato pacchetto', f'Pacchetto ID: {pacchetto_id}')
-            flash('Pacchetto aggiornato con successo', 'success')
-            return redirect(url_for('dettaglio_pacchetto', pacchetto_id=pacchetto_id))
+        if db.update_pacchetto(pacchetto_id, nome, descrizione, prezzo, numero_lezioni, durata_giorni, attivo, pagamento_unico, data_scadenza):
+            flash('Pacchetto aggiornato con successo!', 'success')
         else:
-            flash('Errore durante l\'aggiornamento del pacchetto', 'error')
+            flash('Errore durante l\'aggiornamento del pacchetto.', 'error')
+        
+        return redirect(url_for('dettaglio_pacchetto', pacchetto_id=pacchetto_id))
     
     return render_template('pacchetti/modifica.html', pacchetto=pacchetto)
 
@@ -580,7 +599,7 @@ def nuovo_abbonamento(cliente_id):
         else:
             flash('Errore durante la creazione dell\'abbonamento', 'error')
     
-    pacchetti = db.get_all_pacchetti()
+    pacchetti = db.get_all_pacchetti_validi()
     return render_template('abbonamenti/nuovo.html', 
                          cliente=cliente, 
                          pacchetti=pacchetti,
@@ -1440,7 +1459,7 @@ def set_csrf_cookie(response):
     return response
 
 if __name__ == '__main__':
-    #db.migrate_database()
+    db.migrate_database()
     #db.create_user_tables
     #db.init_db()
     db.create_appointments_table()
