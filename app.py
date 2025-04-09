@@ -515,17 +515,25 @@ def dettaglio_pacchetto(pacchetto_id):
 @app.route('/pacchetti/nuovo', methods=['GET', 'POST'])
 def nuovo_pacchetto():
     if request.method == 'POST':
+        # Recupera i dati dal form
         nome = request.form.get('nome')
         descrizione = request.form.get('descrizione')
-        prezzo = float(request.form.get('prezzo'))
-        numero_lezioni = int(request.form.get('numero_lezioni'))
-        durata_giorni = int(request.form.get('durata_giorni'))
+        prezzo = request.form.get('prezzo', type=float)
+        numero_lezioni = request.form.get('numero_lezioni', type=int)
+        durata_giorni = request.form.get('durata_giorni', type=int)
         attivo = 'attivo' in request.form
         pagamento_unico = 'pagamento_unico' in request.form
-        
-        if db.add_pacchetto(nome, descrizione, prezzo, numero_lezioni, durata_giorni, attivo, pagamento_unico):
-            flash('Pacchetto creato con successo', 'success')
+
+        # Aggiungi il pacchetto al database
+        try:
+            db.add_pacchetto(nome, descrizione, prezzo, numero_lezioni, durata_giorni, attivo, pagamento_unico)
+            flash('Pacchetto aggiunto con successo!', 'success')
             return redirect(url_for('lista_pacchetti'))
+        except Exception as e:
+            flash(f'Errore durante l\'aggiunta del pacchetto: {e}', 'danger')
+
+    # In caso di richiesta GET o errore, mostra il form
+    return render_template('pacchetti/nuovo.html')
 
 @app.route('/pacchetti/<int:pacchetto_id>/modifica', methods=['GET', 'POST'])
 def modifica_pacchetto(pacchetto_id):
@@ -1242,16 +1250,41 @@ def trainer_calendar():
     if session.get('user_role') != 'trainer':
         abort(403)
     
-    trainer_id = session.get('user_id')
-    start_date = request.args.get('start_date', date.today().strftime('%Y-%m-%d'))
-    appointments = db.get_appointments_by_trainer(trainer_id, start_date)
+    # Step 1: Get the logged-in trainer's email
+    trainer_email = session.get('user_email')
 
-    # Raggruppa gli appuntamenti per data
+    # Step 2: Find the user ID of the logged-in trainer
+    logged_in_user = db.get_user_by_email(trainer_email)
+    if not logged_in_user:
+        flash('Errore: utente non trovato.', 'error')
+        return redirect(url_for('index'))
+    logged_in_user_id = logged_in_user['id']
+
+    # Step 3: Fetch the `sede` associated with the logged-in trainer
+    sede = db.get_sede_by_trainer_email(trainer_email)
+    if not sede:
+        flash('Errore: sede non trovata.', 'error')
+        return redirect(url_for('index'))
+    
+    # Step 4: Fetch all trainers in the same `sede`
+    trainers_in_sede = db.get_trainers_by_sede(sede['id'])
+    
+    # Step 5: Get the user IDs linked to these trainers
+    user_ids = [db.get_user_by_email(trainer['email'])['id'] for trainer in trainers_in_sede]
+
+    # Get the start date for the calendar (default to today)
+    start_date = request.args.get('start_date', date.today().strftime('%Y-%m-%d'))
+
+    # Fetch appointments for all user IDs in the same `sede`
+    appointments = db.get_appointments_by_users(user_ids, start_date)
+
+    # Group appointments by date
     grouped_appointments = defaultdict(list)
     for appointment in appointments:
         appointment_date = appointment['date_time'].date()
         grouped_appointments[appointment_date].append(appointment)
 
+    # Render the calendar template
     return render_template(
         'trainer/calendar.html',
         current_date=datetime.strptime(start_date, '%Y-%m-%d'),

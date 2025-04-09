@@ -1265,7 +1265,47 @@ def build_hierarchy(user_role=None, user_email=None):
 
     return hierarchy
 
-    
+def get_appointments_by_users(user_ids, start_date):
+    """Retrieve appointments for multiple users starting from a specific date."""
+    conn = get_db_connection()
+    try:
+        # Calculate the end date (7 days from the start date)
+        end_date = (datetime.strptime(start_date, '%Y-%m-%d') + timedelta(days=7)).strftime('%Y-%m-%d')
+
+        # Query to fetch appointments
+        query = '''
+            SELECT a.*, c.nome || ' ' || c.cognome AS client_name
+            FROM appointments a
+            JOIN clienti c ON a.client_id = c.id
+            WHERE a.trainer_id IN ({})
+            AND a.date_time BETWEEN ? AND ?
+            ORDER BY a.date_time ASC
+        '''.format(','.join('?' for _ in user_ids))
+        params = user_ids + [start_date, end_date]
+        appointments = conn.execute(query, params).fetchall()
+
+        # Parse date_time and end_date_time into datetime objects
+        parsed_appointments = []
+        for appointment in appointments:
+            appointment = dict(appointment)
+            appointment['date_time'] = datetime.strptime(appointment['date_time'], '%Y-%m-%d %H:%M:%S')
+            appointment['end_date_time'] = datetime.strptime(appointment['end_date_time'], '%Y-%m-%d %H:%M:%S')
+            parsed_appointments.append(appointment)
+
+        return parsed_appointments
+    finally:
+        conn.close()
+
+def get_user_by_email(email):
+    """Retrieve a user by their email."""
+    conn = get_db_connection()
+    try:
+        query = 'SELECT * FROM utenti WHERE email = ?'
+        user = conn.execute(query, (email,)).fetchone()
+        return dict(user) if user else None
+    finally:
+        conn.close()
+
 def update_franchisor(franchisor_id, nome, email, password):
     conn = get_db_connection()
     try:
@@ -1779,17 +1819,24 @@ def create_appointments_table():
     finally:
         conn.close()
 
-def get_appointments_by_trainer(trainer_id, start_date):
+def get_appointments_by_users(user_ids, start_date):
+    """Retrieve appointments for multiple users starting from a specific date."""
     conn = get_db_connection()
     try:
+        # Calculate the end date (7 days from the start date)
         end_date = (datetime.strptime(start_date, '%Y-%m-%d') + timedelta(days=7)).strftime('%Y-%m-%d')
-        appointments = conn.execute('''
-        SELECT a.*, c.nome || ' ' || c.cognome AS client_name
-        FROM appointments a
-        JOIN clienti c ON a.client_id = c.id
-        WHERE a.trainer_id = ? AND a.date_time BETWEEN ? AND ?
-        ORDER BY a.date_time ASC
-        ''', (trainer_id, start_date, end_date)).fetchall()
+
+        # Query to fetch appointments
+        query = '''
+            SELECT a.*, c.nome || ' ' || c.cognome AS client_name
+            FROM appointments a
+            JOIN clienti c ON a.client_id = c.id
+            WHERE a.trainer_id IN ({})
+            AND a.date_time BETWEEN ? AND ?
+            ORDER BY a.date_time ASC
+        '''.format(','.join('?' for _ in user_ids))
+        params = user_ids + [start_date, end_date]
+        appointments = conn.execute(query, params).fetchall()
 
         # Parse date_time and end_date_time into datetime objects
         parsed_appointments = []
@@ -1804,6 +1851,7 @@ def get_appointments_by_trainer(trainer_id, start_date):
             except ValueError:
                 appointment['end_date_time'] = datetime.strptime(appointment['end_date_time'], '%Y-%m-%dT%H:%M')
             parsed_appointments.append(appointment)
+
         return parsed_appointments
     finally:
         conn.close()
@@ -1859,6 +1907,43 @@ def delete_appointment(appointment_id):
     finally:
         conn.close()
 
+
+def get_appointments_by_trainers(trainer_ids, start_date):
+    """Retrieve appointments for multiple trainers starting from a specific date."""
+    conn = get_db_connection()
+    try:
+        # Calculate the end date (7 days from the start date)
+        end_date = (datetime.strptime(start_date, '%Y-%m-%d') + timedelta(days=7)).strftime('%Y-%m-%d')
+
+        # Query to fetch appointments
+        query = '''
+            SELECT a.*, c.nome || ' ' || c.cognome AS client_name
+            FROM appointments a
+            JOIN clienti c ON a.client_id = c.id
+            WHERE a.trainer_id IN ({})
+            AND a.date_time BETWEEN ? AND ?
+            ORDER BY a.date_time ASC
+        '''.format(','.join('?' for _ in trainer_ids))
+        params = trainer_ids + [start_date, end_date]
+        appointments = conn.execute(query, params).fetchall()
+
+        # Parse date_time and end_date_time into datetime objects
+        parsed_appointments = []
+        for appointment in appointments:
+            appointment = dict(appointment)
+            try:
+                appointment['date_time'] = datetime.strptime(appointment['date_time'], '%Y-%m-%d %H:%M:%S')
+            except ValueError:
+                appointment['date_time'] = datetime.strptime(appointment['date_time'], '%Y-%m-%dT%H:%M')
+            try:
+                appointment['end_date_time'] = datetime.strptime(appointment['end_date_time'], '%Y-%m-%d %H:%M:%S')
+            except ValueError:
+                appointment['end_date_time'] = datetime.strptime(appointment['end_date_time'], '%Y-%m-%dT%H:%M')
+            parsed_appointments.append(appointment)
+
+        return parsed_appointments
+    finally:
+        conn.close()
 def migrate_appointments_table():
     conn = get_db_connection()
     try:
