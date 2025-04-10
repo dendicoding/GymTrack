@@ -1436,9 +1436,7 @@ def delete_appointment(appointment_id):
         flash('Appuntamento non trovato.', 'error')
         return redirect(url_for('trainer_calendar'))
 
-    if appointment['trainer_id'] != session.get('user_id'):
-        flash('Non sei autorizzato a eliminare questo appuntamento.', 'error')
-        return redirect(url_for('trainer_calendar'))
+
 
     if db.delete_appointment(appointment_id):
         flash('Appuntamento eliminato con successo.', 'success')

@@ -38,35 +38,64 @@
                         </ul>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link {% if request.path == url_for('trainer_calendar') %}active{% endif %}" href="{{ url_for('trainer_calendar') }}">
+                            <i class="fas fa-calendar-alt me-1"></i>Calendario 
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link {% if '/pacchetti' in request.path %}active{% endif %}" href="{{ url_for('lista_pacchetti') }}">
                             <i class="fas fa-box me-1"></i>Pacchetti
                         </a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.path == url_for('calendario') %}active{% endif %}" href="{{ url_for('calendario') }}">
-                            <i class="fas fa-calendar-alt me-1"></i>Calendario
+                    
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle {% if request.path == url_for('calendario') or request.path == url_for('scadenziario') %}active{% endif %}" 
+                           href="#" 
+                           role="button" 
+                           data-bs-toggle="dropdown">
+                            <i class="fas fa-coins me-1"></i>Rate
                         </a>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <a class="dropdown-item {% if request.path == url_for('calendario') %}active{% endif %}" href="{{ url_for('calendario') }}">
+                                    <i class="fas fa-calendar-alt me-1"></i>Calendario Rate
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item {% if request.path == url_for('scadenziario') %}active{% endif %}" href="{{ url_for('scadenziario') }}">
+                                    <i class="fas fa-clock me-1"></i>Scadenziario Rate
+                                </a>
+                            </li>
+                        </ul>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.path == url_for('scadenziario') %}active{% endif %}" href="{{ url_for('scadenziario') }}">
-                            <i class="fas fa-clock me-1"></i>Scadenziario
+                    
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle {% if request.path == url_for('hierarchy') or request.path == url_for('all_utenti') %}active{% endif %}" 
+                           href="#" 
+                           role="button" 
+                           data-bs-toggle="dropdown">
+                            <i class="fas fa-cogs me-1"></i>Sistema
                         </a>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <a class="dropdown-item {% if request.path == url_for('hierarchy') %}active{% endif %}" href="{{ url_for('hierarchy') }}">
+                                    <i class="fas fa-sitemap me-1"></i>Gerarchia
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item {% if request.path == url_for('all_utenti') %}active{% endif %}" href="{{ url_for('all_utenti') }}">
+                                    <i class="fa-solid fa-users-gear me-1"></i>Utenti
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item {% if request.path == url_for('lista_eventi') %}active{% endif %}" href="{{ url_for('lista_eventi') }}">
+                                    <i class="fa-solid fa-certificate me-1"></i>Eventi
+                                </a>
+                            </li>
+                        </ul>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.path == url_for('hierarchy') %}active{% endif %}" href="{{ url_for('hierarchy') }}">
-                            <i class="fas fa-sitemap me-1"></i>Gerarchia
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.path == url_for('all_utenti') %}active{% endif %}" href="{{ url_for('all_utenti') }}">
-                            <i class="fa-solid fa-users-gear me-1"></i>Utenti
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.path == url_for('lista_eventi') %}active{% endif %}" href="{{ url_for('lista_eventi') }}">
-                            <i class="fa-solid fa-certificate me-1"></i>Eventi
-                        </a>
-                    </li>
+                    
+                    
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle {% if '/trainer' in request.path %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown">
                             <i class="fas fa-user-tie me-1"></i>Trainer
@@ -78,11 +107,6 @@
                                 </a>
                             </li>
                             {% if session.user_role == 'trainer' %}
-                            <li>
-                                <a class="dropdown-item {% if request.path == url_for('trainer_calendar') %}active{% endif %}" href="{{ url_for('trainer_calendar') }}">
-                                    <i class="fas fa-calendar-alt me-1"></i>Calendario Personale
-                                </a>
-                            </li>
                             <li>
                                 <a class="dropdown-item {% if request.path == url_for('trainer_attendance') %}active{% endif %}" href="{{ url_for('trainer_attendance') }}">
                                     <i class="fas fa-calendar-check me-1"></i>Presenze Trainer
@@ -133,7 +157,7 @@
 
     <footer class="footer mt-auto py-3 bg-light fixed-bottom">
         <div class="container text-center">
-            <span class="text-muted">© 2025 GymTrack - DGB, V: 0.1.4</span>
+            <span class="text-muted">© 2025 GymTrack - DGB, V: 0.1.5</span>
         </div>
     </footer>
 
@@ -142,3 +166,4 @@
     {% block extra_js %}{% endblock %}
 </body>
 </html>
+``` 
