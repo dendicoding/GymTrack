@@ -21,6 +21,22 @@
             <i class="fas fa-plus"></i> Nuovo Appuntamento
         </a>
     </div>
+    <!-- Menu a tendina per filtrare gli eventi -->
+    <form method="GET" action="{{ url_for('trainer_calendar') }}" class="mb-4">
+        <div class="row">
+            <div class="col-md-4">
+                <select name="sede_id" class="form-select" onchange="this.form.submit()">
+                    <option value="">Tutte le sedi</option>
+                    {% for sede in sedi %}
+                    <option value="{{ sede.id }}" {% if sede.id == selected_sede_id %}selected{% endif %}>
+                        {{ sede.nome }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <input type="hidden" name="start_date" value="{{ current_date.strftime('%Y-%m-%d') }}">
+    </form>
 
     <div class="calendar-legend mb-4">
         <h5>Legenda Tipi di Appuntamento</h5>

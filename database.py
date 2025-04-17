@@ -1977,3 +1977,38 @@ def update_appointment(appointment_id, title, client_id, notes, date_time, end_d
         return False
     finally:
         conn.close()
+
+def get_appointments_by_sedi(sede_ids, start_date):
+    """
+    Recupera gli appuntamenti per un elenco di sedi a partire da una data specifica.
+    
+    :param sede_ids: Lista di ID delle sedi.
+    :param start_date: Data di inizio (stringa in formato 'YYYY-MM-DD').
+    :return: Lista di appuntamenti.
+    """
+    conn = get_db_connection()
+    try:
+        # Calcola la data di fine (7 giorni dopo la data di inizio)
+        end_date = (datetime.strptime(start_date, '%Y-%m-%d') + timedelta(days=7)).strftime('%Y-%m-%d')
+
+        # Costruisci la query per recuperare gli appuntamenti
+        placeholders = ','.join('?' for _ in sede_ids)
+        query = f'''
+            SELECT 
+                a.*, 
+                c.nome || ' ' || c.cognome AS client_name, 
+                t.nome || ' ' || t.cognome AS trainer_name
+            FROM appointments a
+            JOIN clienti c ON a.client_id = c.id
+            JOIN trainer t ON a.trainer_id = t.id
+            WHERE c.sede_id IN ({placeholders})
+            AND a.date_time BETWEEN ? AND ?
+            ORDER BY a.date_time ASC
+        '''
+        params = sede_ids + [start_date, end_date]
+        appointments = conn.execute(query, params).fetchall()
+
+        # Converte i risultati in un elenco di dizionari
+        return [dict(appointment) for appointment in appointments]
+    finally:
+        conn.close()

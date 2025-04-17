@@ -1266,52 +1266,63 @@ def view_resoconto(resoconto_id):
 @app.route('/trainer/calendar', methods=['GET'])
 @login_required
 def trainer_calendar():
-    if session.get('user_role') != 'trainer':
-        abort(403)
-    
-    # Step 1: Get the logged-in trainer's email
-    trainer_email = session.get('user_email')
+    # Step 1: Ottieni il ruolo e l'email dell'utente loggato
+    user_role = session.get('user_role')
+    user_email = session.get('user_email')
 
-    # Step 2: Find the user ID of the logged-in trainer
-    logged_in_user = db.get_user_by_email(trainer_email)
-    if not logged_in_user:
-        flash('Errore: utente non trovato.', 'error')
-        return redirect(url_for('index'))
-    logged_in_user_id = logged_in_user['id']
+    # Step 2: Determina le sedi sotto la gerarchia dell'utente
+    sedi = []
+    if user_role == 'trainer':
+        sede = db.get_sede_by_trainer_email(user_email)
+        if sede:
+            sedi.append(sede)
+    elif user_role == 'sede':
+        sede = db.get_sede_by_email(user_email)
+        if sede:
+            sedi.append(sede)
+    elif user_role == 'area_manager':
+        societa = db.get_societa_by_area_manager_email(user_email)
+        for company in societa:
+            sedi.extend(db.get_sedi_by_societa(company['id']))
+    elif user_role == 'franchisor':
+        area_managers = db.get_area_managers_by_franchisor_email(user_email)
+        for manager in area_managers:
+            societa = db.get_societa_by_area_manager(manager['id'])
+            for company in societa:
+                sedi.extend(db.get_sedi_by_societa(company['id']))
 
-    # Step 3: Fetch the `sede` associated with the logged-in trainer
-    sede = db.get_sede_by_trainer_email(trainer_email)
-    if not sede:
-        flash('Errore: sede non trovata.', 'error')
-        return redirect(url_for('index'))
-    
-    # Step 4: Fetch all trainers in the same `sede`
-    trainers_in_sede = db.get_trainers_by_sede(sede['id'])
-    
-    # Step 5: Get the user IDs linked to these trainers
-    user_ids = [db.get_user_by_email(trainer['email'])['id'] for trainer in trainers_in_sede]
+    # Step 3: Filtra gli eventi in base alla sede selezionata
+    selected_sede_id = request.args.get('sede_id', type=int)
+    user_ids = []
+    if selected_sede_id:
+        # Ottieni i trainer associati alla sede selezionata
+        trainers_in_sede = db.get_trainers_by_sede(selected_sede_id)
+        user_ids = [db.get_user_by_email(trainer['email'])['id'] for trainer in trainers_in_sede]
+    else:
+        # Se nessuna sede è selezionata, ottieni tutti i trainer delle sedi sotto la gerarchia
+        for sede in sedi:
+            trainers_in_sede = db.get_trainers_by_sede(sede['id'])
+            user_ids.extend([db.get_user_by_email(trainer['email'])['id'] for trainer in trainers_in_sede])
 
-    # Get the start date for the calendar (default to today)
+    # Step 4: Ottieni gli appuntamenti per gli utenti trovati
     start_date = request.args.get('start_date', date.today().strftime('%Y-%m-%d'))
-
-    # Fetch appointments for all user IDs in the same `sede`
     appointments = db.get_appointments_by_users(user_ids, start_date)
-    print("get_appointments_by_users chiamata con:", user_ids, start_date)
 
-    print(appointments)
-    # Group appointments by date
+    # Raggruppa gli appuntamenti per data
     grouped_appointments = defaultdict(list)
     for appointment in appointments:
         appointment_date = appointment['date_time'].date()
         grouped_appointments[appointment_date].append(appointment)
 
-    # Render the calendar template
+    # Step 5: Renderizza il template del calendario
     return render_template(
         'trainer/calendar.html',
         current_date=datetime.strptime(start_date, '%Y-%m-%d'),
         timedelta=timedelta,
         date=date,
-        grouped_appointments=grouped_appointments
+        grouped_appointments=grouped_appointments,
+        sedi=sedi,
+        selected_sede_id=selected_sede_id
     )
 
 
