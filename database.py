@@ -1183,7 +1183,7 @@ def build_hierarchy(user_role=None, user_email=None):
         franchisor = get_franchisor_by_email(user_email)
         if franchisor:
             franchisor_id = franchisor['id']
-    elif user_role == 'area_manager':
+    elif user_role == 'area manager':
         conn = get_db_connection()
         try:
             area_manager = conn.execute('SELECT * FROM area_manager WHERE email = ?', (user_email,)).fetchone()

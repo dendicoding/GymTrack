@@ -256,7 +256,7 @@ def index():
         if societa:
             sedi = db.get_sedi_by_societa(societa['id'])
             sede_ids.extend([sede['id'] for sede in sedi])
-    elif user_role == 'area_manager':
+    elif user_role == 'area manager':
         societa = db.get_societa_by_area_manager_email(user_email)
         for company in societa:
             sedi = db.get_sedi_by_societa(company['id'])
@@ -300,7 +300,7 @@ def lista_clienti():
         if societa:
             sedi = db.get_sedi_by_societa(societa['id'])
             sede_ids.extend([sede['id'] for sede in sedi])
-    elif user_role == 'area_manager':
+    elif user_role == 'area manager':
         societa = db.get_societa_by_area_manager_email(user_email)
         for company in societa:
             sedi = db.get_sedi_by_societa(company['id'])
@@ -375,7 +375,7 @@ def nuovo_cliente():
         for area_manager in hierarchy[0].get('area_managers', []):
             for societa in area_manager.get('societa', []):
                 sedi.extend(societa.get('sedi', []))
-    elif user_role == 'area_manager':
+    elif user_role == 'area manager':
         for societa in hierarchy[0].get('area_managers', [])[0].get('societa', []):
             sedi.extend(societa.get('sedi', []))
     elif user_role == 'societa':
@@ -810,7 +810,7 @@ def calendario():
         if societa:
             sedi = db.get_sedi_by_societa(societa['id'])
             sede_ids.extend([sede['id'] for sede in sedi])
-    elif user_role == 'area_manager':
+    elif user_role == 'area manager':
         societa = db.get_societa_by_area_manager_email(user_email)
         for company in societa:
             sedi = db.get_sedi_by_societa(company['id'])
@@ -887,7 +887,7 @@ def scadenziario():
         if societa:
             sedi = db.get_sedi_by_societa(societa['id'])
             sede_ids.extend([sede['id'] for sede in sedi])
-    elif user_role == 'area_manager':
+    elif user_role == 'area manager':
         societa = db.get_societa_by_area_manager_email(user_email)
         for company in societa:
             sedi = db.get_sedi_by_societa(company['id'])
@@ -926,7 +926,7 @@ def incassi_mese():
         if societa:
             sedi = db.get_sedi_by_societa(societa['id'])
             sede_ids.extend([sede['id'] for sede in sedi])
-    elif user_role == 'area_manager':
+    elif user_role == 'area manager':
         societa = db.get_societa_by_area_manager_email(user_email)
         for company in societa:
             sedi = db.get_sedi_by_societa(company['id'])
@@ -1172,7 +1172,7 @@ def trainer_status():
         if societa:
             sedi = db.get_sedi_by_societa(societa['id'])
             sede_ids.extend([sede['id'] for sede in sedi])
-    elif user_role == 'area_manager':
+    elif user_role == 'area manager':
         societa = db.get_societa_by_area_manager_email(user_email)
         for company in societa:
             sedi = db.get_sedi_by_societa(company['id'])
@@ -1230,7 +1230,7 @@ def view_trainers():
         if societa:
             sedi = db.get_sedi_by_societa(societa['id'])
             sede_ids.extend([sede['id'] for sede in sedi])
-    elif user_role == 'area_manager':
+    elif user_role == 'area manager':
         societa = db.get_societa_by_area_manager_email(user_email)
         for company in societa:
             sedi = db.get_sedi_by_societa(company['id'])
@@ -1269,6 +1269,7 @@ def trainer_calendar():
     # Step 1: Ottieni il ruolo e l'email dell'utente loggato
     user_role = session.get('user_role')
     user_email = session.get('user_email')
+    print(f"Ruolo ed email {user_role}: {user_email}")
 
     # Step 2: Determina le sedi sotto la gerarchia dell'utente
     sedi = []
@@ -1280,8 +1281,10 @@ def trainer_calendar():
         sede = db.get_sede_by_email(user_email)
         if sede:
             sedi.append(sede)
-    elif user_role == 'area_manager':
+    elif user_role == 'area manager':
         societa = db.get_societa_by_area_manager_email(user_email)
+        print(f"Società sotto l'area manager {user_email}: {societa}")
+
         for company in societa:
             sedi.extend(db.get_sedi_by_societa(company['id']))
     elif user_role == 'franchisor':
