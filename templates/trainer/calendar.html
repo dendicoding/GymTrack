@@ -6,38 +6,31 @@
 <div class="calendar-container">
     <div class="calendar-header">
         <h1>Calendario Settimanale</h1>
-        <div class="calendar-controls">
-            <a href="{{ url_for('trainer_calendar', start_date=(current_date - timedelta(days=7)).strftime('%Y-%m-%d')) }}" class="btn btn-outline-secondary">
-                <i class="fas fa-chevron-left"></i> Settimana Precedente
+        
+        <div class="d-flex justify-content-between align-items-center mt-3 mb-4">
+            <a href="{{ url_for('add_appointment') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Nuovo Appuntamento
             </a>
-            <span class="current-week">
-                {{ current_date.strftime('%d %b') }} - {{ (current_date + timedelta(days=6)).strftime('%d %b %Y') }}
-            </span>
-            <a href="{{ url_for('trainer_calendar', start_date=(current_date + timedelta(days=7)).strftime('%Y-%m-%d')) }}" class="btn btn-outline-secondary">
-                Settimana Successiva <i class="fas fa-chevron-right"></i>
-            </a>
+            
+            <!-- Menu a tendina per filtrare gli eventi -->
+            <form method="GET" action="{{ url_for('trainer_calendar') }}" id="sede-filter-form" class="ml-auto">
+                <div class="row">
+                    <div class="col-md-12">
+                        <select name="sede_id" class="form-select" onchange="this.form.submit()">
+                            <option value="">Tutte le sedi</option>
+                            {% for sede in sedi %}
+                            <option value="{{ sede.id }}" {% if sede.id == selected_sede_id %}selected{% endif %}>
+                                {{ sede.nome }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <input type="hidden" name="start_date" id="current-start-date" value="{{ current_date.strftime('%Y-%m-%d') }}">
+            </form>
         </div>
-        <a href="{{ url_for('add_appointment') }}" class="btn btn-primary">
-            <i class="fas fa-plus"></i> Nuovo Appuntamento
-        </a>
     </div>
-    <!-- Menu a tendina per filtrare gli eventi -->
-    <form method="GET" action="{{ url_for('trainer_calendar') }}" class="mb-4">
-        <div class="row">
-            <div class="col-md-4">
-                <select name="sede_id" class="form-select" onchange="this.form.submit()">
-                    <option value="">Tutte le sedi</option>
-                    {% for sede in sedi %}
-                    <option value="{{ sede.id }}" {% if sede.id == selected_sede_id %}selected{% endif %}>
-                        {{ sede.nome }}
-                    </option>
-                    {% endfor %}
-                </select>
-            </div>
-        </div>
-        <input type="hidden" name="start_date" value="{{ current_date.strftime('%Y-%m-%d') }}">
-    </form>
-
+    
     <div class="calendar-legend mb-4">
         <h5>Legenda Tipi di Appuntamento</h5>
         <ul class="list-inline d-flex flex-wrap">
@@ -81,108 +74,8 @@
         </ul>
     </div>
 
-
-    <!-- Modal per creare un nuovo appuntamento -->
-    <div class="modal fade" id="createAppointmentModal" tabindex="-1" aria-labelledby="createAppointmentModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <form id="createAppointmentForm" method="POST" action="{{ url_for('add_appointment') }}">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="createAppointmentModalLabel">Nuovo Appuntamento</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <input type="hidden" name="csrf_token" value="{{ csrf }}">
-                        <div class="mb-3">
-                            <label for="title" class="form-label">Titolo</label>
-                            <input type="text" class="form-control" id="title" name="title" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="date_time" class="form-label">Data e Ora</label>
-                            <input type="datetime-local" class="form-control" id="date_time" name="date_time" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="end_date_time" class="form-label">Data e Ora di Fine</label>
-                            <input type="datetime-local" class="form-control" id="end_date_time" name="end_date_time" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="client_id" class="form-label">Cliente</label>
-                            <select class="form-select" id="client_id" name="client_id" required>
-                                {% for cliente in clienti %}
-                                <option value="{{ cliente.id }}">{{ cliente.nome }} {{ cliente.cognome }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
-                        <button type="submit" class="btn btn-primary">Crea</button>
-                    </div>
-                </form>
-            </div>
-        </div> 
-    </div>
-    
-    <div class="calendar">
-        <div class="timeline">
-            <div class="spacer"></div>
-            {% for hour in range(7, 22) %}
-            <div class="time-marker">{{ hour }}:00</div>
-            {% endfor %}
-        </div>
-        <div class="days">
-            {% for day_offset in range(7) %}
-            {% set day_date = (current_date + timedelta(days=day_offset)).date() %}
-            {% set day_appointments = grouped_appointments.get(day_date, []) %}
-            
-            <div class="day" data-date="{{ day_date }}">
-                <div class="date {% if day_date == date.today() %}today{% endif %}">
-                    <p class="date-num">{{ day_date.day }}</p>
-                    <p class="date-day">{{ day_date.strftime('%a') }}</p>
-                </div>
-                <div class="events">
-                    {% for appointment in day_appointments %}
-                    <div class="event appointment-{{ appointment.appointment_type|default('default')|lower|replace(' ', '_') }}" 
-                         data-appointment-type="{{ appointment.appointment_type }}"
-                         style="
-                             top: calc(({{ appointment.date_time.hour - 7 }} * 60 + {{ appointment.date_time.minute }}) * var(--minuteHeight)); 
-                             height: calc(({{ (appointment.end_date_time - appointment.date_time).total_seconds() / 60 }} * var(--minuteHeight)));
-                         ">
-                        <div class="event-icon status-{{ appointment.status|default('scheduled')|lower|replace(' ', '_') }}">
-                            {% if appointment.status == 'Completato' or appointment.status == 'Confermato' %}
-                                <i class="fas fa-check-circle"></i>
-                            {% elif appointment.status == 'Spostato' or appointment.status == 'Saltato' %}
-                                <i class="fas fa-times-circle"></i>
-                            {% elif appointment.status == 'Appuntamento Non Svolto' %}
-                                <i class="fas fa-user-slash"></i>
-                            {% else %}
-                                <i class="fas fa-calendar-check"></i>
-                            {% endif %}
-                        </div>
-                        <div class="event-content">
-                            <p class="time-title">
-                                {{ appointment.date_time.strftime('%H:%M') }} - {{ appointment.title }}
-                            </p>
-                        </div>
-                        <script type="application/json" class="appointment-data">
-                            {
-                                "id": {{ appointment.id }},
-                                "client_name": "{{ appointment.client_name }}",
-                                "trainer_name": "{{ appointment.trainer_name }}",
-                                "date_time": "{{ appointment.date_time.isoformat() }}",
-                                "end_date_time": "{{ appointment.end_date_time.isoformat() }}",
-                                "type": "{{ appointment.appointment_type|default('') }}",
-                                "status": "{{ appointment.status|default('') }}",
-                                "notes": "{{ appointment.notes|default('')|e }}"
-                            }
-                        </script>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
+    <!-- Contenitore di FullCalendar -->
+    <div id="calendar"></div>
 </div>
 
 <!-- Modal per i dettagli dell'appuntamento -->
@@ -196,7 +89,7 @@
             <div class="modal-body">
                 <div class="appointment-details">
                     <p><strong>Cliente:</strong> <span id="modal-client"></span></p>
-                    <p><strong>Trainer:</strong> <span id="modal-trainer"></span></p> <!-- Campo per il trainer -->
+                    <p><strong>Trainer:</strong> <span id="modal-trainer"></span></p>
                     <p><strong>Data:</strong> <span id="modal-date"></span></p>
                     <p><strong>Orario:</strong> <span id="modal-time"></span></p>
                     <p><strong>Tipo:</strong> <span id="modal-type"></span></p>
@@ -236,14 +129,6 @@
 
 <style>
     :root {
-        --numDays: 7;
-        --numHours: 15; /* 7:00 to 21:00 */
-        --minuteHeight: 0.6px; /* Adjusted for smaller calendar */
-        --timeHeight: calc(60 * var(--minuteHeight));
-        --calBgColor: #f8f9fa;
-        --eventBorderColor: #dee2e6;
-        --defaultEventColor: #d1ffe6;
-        
         /* Colori per i tipi di appuntamento */
         --allenamento_funzionale-color: #d1e7ff;
         --chiamata-color: #ffd1d1;
@@ -266,243 +151,51 @@
     .calendar-container {
         max-width: 1200px;
         margin: 0 auto;
+        padding: 0 15px;
     }
 
     .calendar-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        flex-wrap: wrap;
-        margin-bottom: 1rem;
+        margin-bottom: 1.5rem;
     }
 
-    .calendar-controls {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-    }
-
-    .current-week {
-        font-weight: 600;
-        font-size: 1.1rem;
-    }
-
-    .calendar {
-        display: grid;
-        gap: 5px;
-        grid-template-columns: auto 1fr;
-        margin: 1rem 0;
-        border: 1px solid #dee2e6;
+    #calendar {
+        margin-bottom: 30px;
+        background-color: #fff;
         border-radius: 8px;
-        overflow: hidden;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
 
-    .timeline {
-        display: grid;
-        grid-template-rows: repeat(var(--numHours), var(--timeHeight));
-        background-color: #f8f9fa;
-        border-right: 1px solid #dee2e6;
-        padding: 0 5px;
-    }
-
-    .days {
-        display: grid;
-        grid-column: 2;
-        gap: 5px;
-        grid-template-columns: repeat(var(--numDays), 1fr);
-    }
-
-    .day {
-        border-right: 1px solid #eee;
-    }
-
-    .day:last-child {
-        border-right: none;
-    }
-
-    .today {
-        background-color: #e8f4ff;
-        border-radius: 5px;
-    }
-
-    .events {
-        position: relative;
-        height: calc(var(--numHours) * var(--timeHeight));
-        background: var(--calBgColor);
-    }
-
-    .event {
-        position: absolute;
-        left: 5%;
-        width: 90%;
-        border: 1px solid var(--eventBorderColor);
-        border-radius: 5px;
-        padding: 0.25rem;
-        background: var(--defaultEventColor);
-        font-size: 0.8rem;
-        overflow: hidden;
+    .fc-event {
         cursor: pointer;
-        transition: all 0.2s ease;
-        display: flex;
-        align-items: flex-start;
+        border-radius: 4px;
+        padding: 2px 4px;
+        margin: 1px 0;
+        border: none;
     }
 
-    .event:hover {
-        transform: scale(1.02);
-        z-index: 100;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    }
-
-    /* Stili per tipi di appuntamento */
-    .appointment-allenamento_funzionale {
-        background-color: var(--allenamento_funzionale-color);
-    }
-
-    .appointment-chiamata {
-        background-color: var(--chiamata-color);
-    }
-
-    .appointment-blocco_agenda {
-        background-color: var(--blocco_agenda-color);
-    }
-
-    .appointment-allenamento_ems {
-        background-color: var(--allenamento_ems-color);
-    }
-
-    .event-icon {
-        margin-right: 5px;
-        font-size: 1rem;
-    }
-
-    /* Stili per stati di appuntamento */
-    .status-confermato i {
-        color: var(--confermato-color);
-    }
-
-    .status-spostato i {
-        color: var(--spostato-color);
-    }
-
-    .status-saltato i {
-        color: var(--saltato-color);
-    }
-
-    .status-prova_fissata i {
-        color: var(--prova_fissata-color);
-    }
-
-    .status-prova_in_chiamata i {
-        color: var(--prova_in_chiamata-color);
-    }
-
-    .status-appuntamento_non_svolto i {
-        color: var(--appuntamento_non_svolto-color);
-    }
-
-    .event-content {
-        flex: 1;
-    }
-
-    .title {
-        font-weight: 600;
-        margin-bottom: 0.25rem;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .time {
-        font-size: 0.75rem;
-        margin-bottom: 0;
-    }
-
-    .time-title {
-        font-size: 0.75rem; /* Riduce la dimensione del testo */
-        font-weight: 400;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .date {
-        display: flex;
-        gap: 1em;
-        align-items: center;
-        justify-content: center;
-        height: var(--timeHeight);
-        padding: 0.5rem 0;
-        background-color: #f8f9fa;
-        border-bottom: 1px solid #dee2e6;
-    }
-
-    .date-num {
-        font-size: 1.2rem;
-        font-weight: 600;
-        margin: 0;
-    }
-
-    .date-day {
-        font-size: 0.9rem;
-        font-weight: 400;
-        margin: 0;
-    }
-
-    .time-marker {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        height: var(--timeHeight);
-        font-size: 0.8rem;
+    .fc-event .event-title {
         font-weight: 500;
+        font-size: 0.85rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
-    .appointment-details p {
-        margin-bottom: 0.5rem;
+    .fc-event .event-icon {
+        margin-right: 5px;
     }
 
-    /* Nascondi i dati JSON */
-    .appointment-data {
+    .fc-daygrid-event-dot {
         display: none;
     }
 
-    /* Responsive */
-    @media (max-width: 768px) {
-        .calendar-header {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 0.5rem;
-        }
-        
-        .calendar-controls {
-            width: 100%;
-            justify-content: space-between;
-        }
-        
-        .days {
-            grid-template-columns: repeat(3, 1fr);
-        }
-        
-        :root {
-            --numDays: 3;
-        }
-    }
-    
-    @media (max-width: 576px) {
-        .days {
-            grid-template-columns: 1fr;
-        }
-        
-        :root {
-            --numDays: 1;
-        }
-    }
-
+    /* Stili per la legenda */
     .calendar-legend {
         background-color: #f8f9fa;
-        padding: 10px;
+        padding: 15px;
         border: 1px solid #dee2e6;
-        border-radius: 5px;
+        border-radius: 8px;
+        margin-bottom: 20px;
     }
 
     .calendar-legend h5 {
@@ -539,143 +232,208 @@
         font-size: 1.2rem;
         margin-right: 5px;
     }
-</style>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Inizializzazione del calendario...');
-    
-    // Funzione per inizializzare un modal manualmente se Bootstrap non è disponibile
-    function setupModal(modalId) {
-        const modal = document.getElementById(modalId);
-        
-        if (!modal) {
-            console.error('Modal non trovato:', modalId);
-            return {
-                show: function() { console.error('Modal non trovato:', modalId); },
-                hide: function() { console.error('Modal non trovato:', modalId); }
-            };
+    /* Responsività */
+    @media (max-width: 768px) {
+        .fc-header-toolbar {
+            flex-direction: column;
+            gap: 10px;
         }
         
-        return {
-            show: function() {
-                modal.style.display = 'block';
-                modal.classList.add('show');
-                document.body.classList.add('modal-open');
-                const backdrop = document.createElement('div');
-                backdrop.className = 'modal-backdrop fade show';
-                document.body.appendChild(backdrop);
-            },
-            hide: function() {
-                modal.style.display = 'none';
-                modal.classList.remove('show');
-                document.body.classList.remove('modal-open');
-                const backdrop = document.querySelector('.modal-backdrop');
-                if (backdrop) backdrop.remove();
-            }
-        };
+        .fc-toolbar-chunk {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
     }
     
-    // Verifica che Bootstrap sia disponibile
-    let appointmentModal, deleteConfirmModal;
+    /* Stili personalizzati per lo stato degli appuntamenti */
+    .status-confermato-icon {
+        color: var(--confermato-color);
+    }
     
-    if (typeof bootstrap === 'undefined') {
-        console.log('Bootstrap non rilevato, utilizzo implementazione manuale dei modal');
-        appointmentModal = setupModal('appointmentModal');
-        deleteConfirmModal = setupModal('deleteConfirmModal');
-        
-        // Gestione chiusura dei modal
-        document.querySelectorAll('[data-bs-dismiss="modal"]').forEach(button => {
-            button.addEventListener('click', function() {
-                const modalId = this.closest('.modal').id;
-                if (modalId === 'appointmentModal') appointmentModal.hide();
-                if (modalId === 'deleteConfirmModal') deleteConfirmModal.hide();
+    .status-spostato-icon {
+        color: var(--spostato-color);
+    }
+    
+    .status-saltato-icon {
+        color: var(--saltato-color);
+    }
+    
+    .status-completato-icon {
+        color: var(--completed-color);
+    }
+    
+    .status-prova_fissata-icon {
+        color: var(--prova_fissata-color);
+    }
+    
+    .status-prova_in_chiamata-icon {
+        color: var(--prova_in_chiamata-color);
+    }
+    
+    .status-appuntamento_non_svolto-icon {
+        color: var(--appuntamento_non_svolto-color);
+    }
+</style>
+
+<!-- Script per FullCalendar -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Carica FullCalendar
+    const calendarEl = document.getElementById('calendar');
+    
+    // Controlla se FullCalendar è caricato
+    if (!window.FullCalendar) {
+        console.error('FullCalendar non è caricato. Assicurati di includere le librerie necessarie.');
+        calendarEl.innerHTML = '<div class="alert alert-danger">Errore: FullCalendar non è caricato correttamente.</div>';
+        return;
+    }
+    
+    // Array degli appuntamenti formattati per FullCalendar
+    const events = [];
+    
+    // Converti gli appuntamenti dal formato Django/Flask al formato FullCalendar
+    {% for day, appointments in grouped_appointments.items() %}
+        {% for appointment in appointments %}
+            events.push({
+                id: {{ appointment.id }},
+                title: '{{ appointment.title }}',
+                start: '{{ appointment.date_time.isoformat() }}',
+                end: '{{ appointment.end_date_time.isoformat() }}',
+                type: '{{ appointment.appointment_type|default("") }}',
+                status: '{{ appointment.status|default("") }}',
+                client_name: '{{ appointment.client_name }}',
+                trainer_name: '{{ appointment.trainer_name|default("") }}',
+                notes: '{{ appointment.notes|default("")|e }}',
+                backgroundColor: getAppointmentColor('{{ appointment.appointment_type|default("default")|lower|replace(" ", "_") }}'),
+                borderColor: getAppointmentColor('{{ appointment.appointment_type|default("default")|lower|replace(" ", "_") }}'),
+                textColor: '#333',
+                extendedProps: {
+                    status_icon: getStatusIcon('{{ appointment.status|default("scheduled")|lower|replace(" ", "_") }}')
+                }
             });
-        });
-    } else {
-        console.log('Bootstrap rilevato, utilizzo dei modal nativi');
-        appointmentModal = new bootstrap.Modal(document.getElementById('appointmentModal'));
-        deleteConfirmModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
-    }
+        {% endfor %}
+    {% endfor %}
     
-    let currentAppointmentId = null;
-    
-    // Aggiunge event listener per click sugli appuntamenti
-    const events = document.querySelectorAll('.event');
-    console.log(`Trovati ${events.length} appuntamenti nel calendario`);
-    
-    events.forEach(event => {
-        event.addEventListener('click', function() {
-            console.log('Evento cliccato:', this);
+    // Inizializza il calendario
+    const calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'timeGridWeek',
+        initialDate: '{{ current_date.strftime("%Y-%m-%d") }}',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'timeGridWeek,timeGridDay'
+        },
+        locale: 'it',
+        height: 'auto',
+        allDaySlot: false,
+        slotMinTime: '07:00',
+        slotMaxTime: '22:00',
+        slotDuration: '00:30:00',
+        navLinks: true,
+        nowIndicator: true,
+        dayMaxEvents: true,
+        timeZone: 'local',
+        businessHours: {
+            daysOfWeek: [1, 2, 3, 4, 5, 6], // Lunedì - Sabato
+            startTime: '07:00',
+            endTime: '22:00',
+        },
+        events: events,
+        eventContent: function(arg) {
+            // Personalizza il contenuto degli eventi
+            const statusIcon = arg.event.extendedProps.status_icon;
+            const timeText = arg.timeText;
+            const title = arg.event.title;
             
-            try {
-                // Ottieni i dati dell'appuntamento dall'elemento script JSON interno
-                const dataScript = this.querySelector('.appointment-data');
-                if (!dataScript) {
-                    console.error('Dati appuntamento non trovati');
-                    return;
-                }
-                
-                const appointmentData = JSON.parse(dataScript.textContent);
-                console.log('Dati appuntamento:', appointmentData);
-                
-                currentAppointmentId = appointmentData.id;
-                
-                // Popola il modal con i dati dell'appuntamento
-                document.getElementById('modal-client').textContent = appointmentData.client_name || 'N/D';
-                
-                try {
-                    const appointmentDate = new Date(appointmentData.date_time);
-                    document.getElementById('modal-date').textContent = appointmentDate.toLocaleDateString('it-IT', { 
-                        weekday: 'long', 
-                        year: 'numeric', 
-                        month: 'long', 
-                        day: 'numeric' 
-                    });
-                    
-                    document.getElementById('modal-time').textContent = `${appointmentDate.toLocaleTimeString('it-IT', { 
-                        hour: '2-digit', 
-                        minute: '2-digit' 
-                    })} - ${new Date(appointmentData.end_date_time).toLocaleTimeString('it-IT', { 
-                        hour: '2-digit', 
-                        minute: '2-digit' 
-                    })}`;
-                } catch (dateError) {
-                    console.error('Errore nella formattazione della data:', dateError);
-                    document.getElementById('modal-date').textContent = 'Errore data';
-                    document.getElementById('modal-time').textContent = 'Errore orario';
-                }
-                
-                document.getElementById('modal-type').textContent = appointmentData.type || '-';
-                document.getElementById('modal-status').textContent = appointmentData.status || '-';
-                document.getElementById('modal-notes').textContent = appointmentData.notes || '-';
-                
-                // Aggiorna il link per modificare l'appuntamento
-                document.getElementById('edit-appointment').href = `/edit_appointment/${appointmentData.id}`;
-                
-                // Mostra il modal
-                console.log('Mostro il modal dell\'appuntamento');
-                appointmentModal.show();
-            } catch (error) {
-                console.error('Errore durante l\'elaborazione del click:', error);
-                alert('Si è verificato un errore nell\'apertura dei dettagli dell\'appuntamento.');
+            // Crea il contenuto dell'evento con l'icona di stato
+            const contentEl = document.createElement('div');
+            contentEl.classList.add('fc-event-content');
+            
+            // Aggiungi l'icona dello stato se disponibile
+            if (statusIcon) {
+                const iconEl = document.createElement('span');
+                iconEl.classList.add('event-icon');
+                iconEl.innerHTML = statusIcon;
+                contentEl.appendChild(iconEl);
             }
-        });
+            
+            // Titolo con orario
+            const titleEl = document.createElement('div');
+            titleEl.classList.add('event-title');
+            titleEl.innerHTML = `${timeText} - ${title}`;
+            contentEl.appendChild(titleEl);
+            
+            return { domNodes: [contentEl] };
+        },
+        eventClick: function(info) {
+            // Mostra i dettagli dell'appuntamento nel modal
+            const event = info.event;
+            
+            document.getElementById('modal-client').textContent = event.extendedProps.client_name || 'N/D';
+            document.getElementById('modal-trainer').textContent = event.extendedProps.trainer_name || 'N/D';
+            
+            const start = new Date(event.start);
+            const end = new Date(event.end);
+            
+            const options = { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            };
+            
+            document.getElementById('modal-date').textContent = start.toLocaleDateString('it-IT', options);
+            document.getElementById('modal-time').textContent = `${start.toLocaleTimeString('it-IT', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            })} - ${end.toLocaleTimeString('it-IT', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            })}`;
+            
+            document.getElementById('modal-type').textContent = event.extendedProps.type || '-';
+            document.getElementById('modal-status').textContent = event.extendedProps.status || '-';
+            document.getElementById('modal-notes').textContent = event.extendedProps.notes || '-';
+            
+            // Aggiorna il link per modificare l'appuntamento
+            document.getElementById('edit-appointment').href = `/edit_appointment/${event.id}`;
+            
+            // Salva l'ID dell'appuntamento corrente per l'eliminazione
+            window.currentAppointmentId = event.id;
+            
+            // Mostra il modal
+            const appointmentModal = new bootstrap.Modal(document.getElementById('appointmentModal'));
+            appointmentModal.show();
+        },
+        dateClick: function(info) {
+            // Reindirizza alla pagina per creare un nuovo appuntamento
+            window.location.href = `/trainer/appointment/new?date_time=${encodeURIComponent(info.dateStr)}`;
+        },
+        datesSet: function(info) {
+            // Aggiorna il campo nascosto con la data di inizio per il filtro
+            const startDate = info.view.activeStart;
+            document.getElementById('current-start-date').value = startDate.toISOString().split('T')[0];
+        }
     });
+    
+    // Renderizza il calendario
+    calendar.render();
     
     // Gestione dell'eliminazione dell'appuntamento
     document.getElementById('delete-appointment').addEventListener('click', function() {
-        console.log('Bottone elimina cliccato');
+        const appointmentModal = bootstrap.Modal.getInstance(document.getElementById('appointmentModal'));
         appointmentModal.hide();
+        
+        const deleteConfirmModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
         deleteConfirmModal.show();
     });
     
     document.getElementById('confirm-delete').addEventListener('click', function() {
-        console.log('Conferma eliminazione cliccata');
-        
-        if (currentAppointmentId) {
+        if (window.currentAppointmentId) {
             // Invia richiesta per eliminare l'appuntamento
-            fetch(`/delete_appointment/${currentAppointmentId}`, {
+            fetch(`/delete_appointment/${window.currentAppointmentId}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -696,6 +454,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
         
+        const deleteConfirmModal = bootstrap.Modal.getInstance(document.getElementById('deleteConfirmModal'));
         deleteConfirmModal.hide();
     });
     
@@ -711,193 +470,38 @@ document.addEventListener('DOMContentLoaded', function() {
                 return cookie.substring(name.length, cookie.length);
             }
         }
-        return '';
+        
+        // Se non trovato nei cookie, prendi il valore nascosto nel form
+        const csrfInput = document.querySelector('input[name="csrf_token"]');
+        return csrfInput ? csrfInput.value : '';
     }
-
-    console.log('CSRF Token:', getCsrfToken());
-});
-
-document.addEventListener('DOMContentLoaded', function () {
-    const calendarDays = document.querySelectorAll('.day'); // Seleziona i giorni del calendario
-    const createAppointmentModal = new bootstrap.Modal(document.getElementById('createAppointmentModal'));
-    const dateTimeInput = document.getElementById('date_time');
-    const endDateTimeInput = document.getElementById('end_date_time');
-
-    if (calendarDays.length === 0) {
-        console.error('Nessun elemento .day trovato nel calendario.');
-        return;
+    
+    // Funzione per ottenere il colore in base al tipo di appuntamento
+    function getAppointmentColor(appointmentType) {
+        const colorMap = {
+            'allenamento_funzionale': 'var(--allenamento_funzionale-color)',
+            'chiamata': 'var(--chiamata-color)',
+            'blocco_agenda': 'var(--blocco_agenda-color)',
+            'allenamento_ems': 'var(--allenamento_ems-color)'
+        };
+        
+        return colorMap[appointmentType] || '#d1ffe6'; // colore predefinito
     }
-
-    calendarDays.forEach(day => {
-        day.addEventListener('click', function (event) {
-            const dayDate = this.getAttribute('data-date');
-            if (!dayDate) {
-                console.error('Attributo data-date non trovato per questo elemento .day.');
-                return;
-            }
-
-            const rect = this.getBoundingClientRect();
-            const clickY = event.clientY - rect.top; // Posizione del clic rispetto al giorno
-            const hour = Math.floor(clickY / rect.height * 15) + 7; // Calcola l'ora (7:00 - 21:00)
-            const minute = Math.floor((clickY % (rect.height / 15)) / (rect.height / 15) * 60);
-
-            // Precompila i campi del modulo
-            const startDateTime = new Date(`${dayDate}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00`);
-            const localStartDateTime = new Date(startDateTime.getTime() - startDateTime.getTimezoneOffset() * 60000);
-            dateTimeInput.value = localStartDateTime.toISOString().slice(0, 16); // Formatta come datetime-local
-            endDateTimeInput.value = new Date(localStartDateTime.getTime() + 60 * 60 * 1000).toISOString().slice(0, 16); // +1 ora            dateTimeInput.value = startDateTime.toISOString().slice(0, 16); // Formatta come datetime-local
-                        endDateTimeInput.value = new Date(startDateTime.getTime() + 60 * 60 * 1000).toISOString().slice(0, 16); // +1 ora
-
-            // Mostra il modal
-            createAppointmentModal.show();
-        });
-    });
-});
-
-document.addEventListener('DOMContentLoaded', function () {
-    const calendarDays = document.querySelectorAll('.day'); // Seleziona i giorni del calendario
-
-    if (calendarDays.length === 0) {
-        console.error('Nessun elemento .day trovato nel calendario.');
-        return;
+    
+    // Funzione per ottenere l'icona in base allo stato dell'appuntamento
+    function getStatusIcon(status) {
+        const iconMap = {
+            'confermato': '<i class="fas fa-check-circle status-confermato-icon"></i>',
+            'spostato': '<i class="fas fa-times-circle status-spostato-icon"></i>',
+            'saltato': '<i class="fas fa-user-slash status-saltato-icon"></i>',
+            'completato': '<i class="fas fa-calendar-check status-completato-icon"></i>',
+            'prova_fissata': '<i class="fas fa-calendar-plus status-prova_fissata-icon"></i>',
+            'prova_in_chiamata': '<i class="fas fa-phone status-prova_in_chiamata-icon"></i>',
+            'appuntamento_non_svolto': '<i class="fas fa-exclamation-circle status-appuntamento_non_svolto-icon"></i>'
+        };
+        
+        return iconMap[status] || '<i class="fas fa-calendar-check"></i>'; // icona predefinita
     }
-
-    calendarDays.forEach(day => {
-        day.addEventListener('click', function (event) {
-            const dayDate = this.getAttribute('data-date');
-            if (!dayDate) {
-                console.error('Attributo data-date non trovato per questo elemento .day.');
-                return;
-            }
-
-            const rect = this.getBoundingClientRect();
-            const clickY = event.clientY - rect.top; // Posizione del clic rispetto al giorno
-            const hour = Math.floor(clickY / rect.height * 15) + 7; // Calcola l'ora (7:00 - 21:00)
-            const minute = Math.floor((clickY % (rect.height / 15)) / (rect.height / 15) * 60);
-
-            // Costruisci la data e l'ora in formato ISO
-            const startDateTime = new Date(`${dayDate}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00`);
-            const formattedDateTime = startDateTime.toISOString().slice(0, 16); // Formatta come datetime-local
-
-            // Reindirizza alla pagina del form di nuovo appuntamento con i parametri precompilati
-            window.location.href = `/trainer/appointment/new?date_time=${encodeURIComponent(formattedDateTime)}`;
-        });
-    });
-});
-
-document.addEventListener('DOMContentLoaded', function () {
-    // Listener per gli appuntamenti
-    const events = document.querySelectorAll('.event');
-    events.forEach(event => {
-        event.addEventListener('click', function (e) {
-            e.stopPropagation(); // Impedisce che il click sull'appuntamento attivi il listener del giorno
-            const dataScript = this.querySelector('.appointment-data');
-            if (!dataScript) {
-                console.error('Dati appuntamento non trovati');
-                return;
-            }
-
-            const appointmentData = JSON.parse(dataScript.textContent);
-            console.log('Dati appuntamento:', appointmentData);
-
-            // Mostra i dettagli dell'appuntamento nel modal
-            document.getElementById('modal-client').textContent = appointmentData.client_name || 'N/D';
-            document.getElementById('modal-trainer').textContent = appointmentData.trainer_name || 'N/D';
-            document.getElementById('modal-date').textContent = new Date(appointmentData.date_time).toLocaleDateString('it-IT');
-            document.getElementById('modal-time').textContent = `${new Date(appointmentData.date_time).toLocaleTimeString('it-IT')} - ${new Date(appointmentData.end_date_time).toLocaleTimeString('it-IT')}`;
-            document.getElementById('modal-type').textContent = appointmentData.type || '-';
-            document.getElementById('modal-status').textContent = appointmentData.status || '-';
-            document.getElementById('modal-notes').textContent = appointmentData.notes || '-';
-
-            // Aggiorna il link per modificare l'appuntamento
-            document.getElementById('edit-appointment').href = `/edit_appointment/${appointmentData.id}`;
-
-            // Mostra il modal
-            const appointmentModal = new bootstrap.Modal(document.getElementById('appointmentModal'));
-            appointmentModal.show();
-        });
-    });
-
-    // Listener per i giorni del calendario
-    const calendarDays = document.querySelectorAll('.day');
-    calendarDays.forEach(day => {
-        day.addEventListener('click', function (event) {
-            const dayDate = this.getAttribute('data-date');
-            if (!dayDate) {
-                console.error('Attributo data-date non trovato per questo elemento .day.');
-                return;
-            }
-
-            const rect = this.getBoundingClientRect();
-            const clickY = event.clientY - rect.top; // Posizione del clic rispetto al giorno
-            const hour = Math.floor(clickY / rect.height * 15) + 7; // Calcola l'ora (7:00 - 21:00)
-            const minute = Math.floor((clickY % (rect.height / 15)) / (rect.height / 15) * 60);
-
-            // Costruisci la data e l'ora in formato ISO
-            const startDateTime = new Date(`${dayDate}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00`);
-
-            // Formatta la data e l'ora in base al fuso orario locale
-            const formattedDateTime = `${startDateTime.getFullYear()}-${String(startDateTime.getMonth() + 1).padStart(2, '0')}-${String(startDateTime.getDate()).padStart(2, '0')}T${String(startDateTime.getHours()).padStart(2, '0')}:${String(startDateTime.getMinutes()).padStart(2, '0')}`;
-
-            // Reindirizza alla pagina del form di nuovo appuntamento con i parametri precompilati
-            window.location.href = `/trainer/appointment/new?date_time=${encodeURIComponent(formattedDateTime)}`;
-
-            // Reindirizza alla pagina del form di nuovo appuntamento con i parametri precompilati
-            window.location.href = `/trainer/appointment/new?date_time=${encodeURIComponent(formattedDateTime)}`;
-        });
-    });
-});
-
-document.addEventListener('DOMContentLoaded', function () {
-    const appointmentModalElement = document.getElementById('appointmentModal');
-    const appointmentModal = new bootstrap.Modal(appointmentModalElement);
-
-    // Rimuovi il backdrop manualmente quando il modal viene chiuso
-    appointmentModalElement.addEventListener('hidden.bs.modal', function () {
-        const backdrop = document.querySelector('.modal-backdrop');
-        if (backdrop) {
-            backdrop.remove();
-        }
-        document.body.classList.remove('modal-open');
-    });
-});
-
-document.addEventListener('DOMContentLoaded', function () {
-    const calendarDays = document.querySelectorAll('.day'); // Seleziona i giorni del calendario
-
-    if (calendarDays.length === 0) {
-        console.error('Nessun elemento .day trovato nel calendario.');
-        return;
-    }
-
-    calendarDays.forEach(day => {
-        day.addEventListener('click', function (event) {
-            const dayDate = this.getAttribute('data-date');
-            if (!dayDate) {
-                console.error('Attributo data-date non trovato per questo elemento .day.');
-                return;
-            }
-
-            const rect = this.getBoundingClientRect();
-            const clickY = event.clientY - rect.top; // Posizione del clic rispetto al giorno
-            const hour = Math.floor(clickY / rect.height * 15) + 7; // Calcola l'ora (7:00 - 21:00)
-            const minute = Math.floor((clickY % (rect.height / 15)) / (rect.height / 15) * 60);
-
-            // Costruisci la data e l'ora in base al fuso orario locale
-            let startDateTime = new Date(`${dayDate}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00`);
-
-            // Sottrai un'ora
-            startDateTime.setHours(startDateTime.getHours() - 1);
-
-            // Formatta la data e l'ora manualmente per il campo datetime-local
-            const formattedDateTime = `${startDateTime.getFullYear()}-${String(startDateTime.getMonth() + 1).padStart(2, '0')}-${String(startDateTime.getDate()).padStart(2, '0')}T${String(startDateTime.getHours()).padStart(2, '0')}:${String(startDateTime.getMinutes()).padStart(2, '0')}`;
-
-            console.log('Data e ora calcolate:', formattedDateTime);
-
-            // Reindirizza alla pagina del form di nuovo appuntamento con i parametri precompilati
-            window.location.href = `/trainer/appointment/new?date_time=${encodeURIComponent(formattedDateTime)}`;
-        });
-    });
 });
 </script>
 {% endblock %}

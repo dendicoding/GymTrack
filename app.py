@@ -1247,20 +1247,6 @@ def view_trainers():
     trainers = db.get_trainers_with_status(sede_ids)
     return render_template('trainer/view_trainers.html', trainers=trainers)
 
-@app.route('/trainer/<int:trainer_id>/resoconti', methods=['GET'])
-@login_required
-def trainer_resoconti(trainer_id):
-    resoconti = db.get_resoconti_by_trainer(trainer_id)
-    return render_template('trainer/resoconti.html', resoconti=resoconti)
-
-@app.route('/trainer/resoconto/<int:resoconto_id>', methods=['GET'])
-@login_required
-def view_resoconto(resoconto_id):
-    resoconto = db.get_resoconto(resoconto_id)
-    if not resoconto:
-        flash('Resoconto non trovato', 'error')
-        return redirect(url_for('view_trainers'))
-    return render_template('trainer/view_resoconto.html', resoconto=resoconto)
 
 
 @app.route('/trainer/calendar', methods=['GET'])
@@ -1333,12 +1319,13 @@ def trainer_calendar():
 @login_required
 def add_appointment():
     if session.get('user_role') != 'trainer':
-        abort(403)
+        flash('Non hai i permessi per aggiungere appuntamenti.', 'error')
+        return redirect(url_for('index'))
 
     trainer_id = session.get('user_id')
     sede = db.get_sede_by_trainer_email(session.get('user_email'))
     if not sede:
-        flash('Errore: sede non trovata.', 'error')
+        flash('Non è stata trovata una sede associata al trainer.', 'error')
         return redirect(url_for('index'))
 
     clienti = db.get_clienti_effettivi([sede['id']])
@@ -1347,40 +1334,28 @@ def add_appointment():
     prefilled_date_time = request.args.get('date_time', '')
 
     if request.method == 'POST':
-        client_id = request.form['client_id']
         title = request.form['title']
         notes = request.form['notes']
-        date_time = datetime.strptime(request.form['date_time'], '%Y-%m-%dT%H:%M')
-        end_date_time = datetime.strptime(request.form['end_date_time'], '%Y-%m-%dT%H:%M')
+        date_time = request.form['date_time']
+        end_date_time = request.form['end_date_time']
         appointment_type = request.form['appointment_type']
         status = request.form['status']
+        client_id = request.form['client_id']
         is_trial = 'is_trial' in request.form
         is_recovery = 'is_recovery' in request.form
         is_lesson_zero = 'is_lesson_zero' in request.form
-        is_recurring = 'is_recurring' in request.form
-        duration = int(request.form['duration']) if 'duration' in request.form and request.form['duration'] else None
 
-        if is_recurring and duration:
-            # Calcola il giorno della settimana
-            day_of_week = date_time.weekday()  # 0 = Lunedì, 6 = Domenica
-            current_date = date_time
-            while current_date <= end_date_time:
-                if current_date.weekday() == day_of_week:
-                    recurring_end_time = current_date + timedelta(minutes=duration)
-                    db.add_appointment(
-                        trainer_id, client_id, title, notes, current_date, recurring_end_time,
-                        appointment_type, status, is_trial, is_recovery, is_lesson_zero
-                    )
-                current_date += timedelta(days=1)
-            flash('Appuntamenti ripetuti creati con successo!', 'success')
+        # Salva l'appuntamento nel database
+        appointment_id = db.add_appointment(
+            trainer_id, client_id, title, notes, date_time, end_date_time,
+            appointment_type, status, is_trial, is_recovery, is_lesson_zero
+        )
+
+        if appointment_id:
+            flash('Appuntamento aggiunto con successo!', 'success')
+            return redirect(url_for('trainer_calendar'))
         else:
-            db.add_appointment(
-                trainer_id, client_id, title, notes, date_time, end_date_time,
-                appointment_type, status, is_trial, is_recovery, is_lesson_zero
-            )
-            flash('Appuntamento creato con successo!', 'success')
-
-        return redirect(url_for('trainer_calendar'))
+            flash('Errore durante l\'aggiunta dell\'appuntamento.', 'error')
 
     return render_template('trainer/add_appointment.html', clienti=clienti, prefilled_date_time=prefilled_date_time)
 

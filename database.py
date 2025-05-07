@@ -1802,6 +1802,8 @@ def create_appointments_table():
     finally:
         conn.close()
 
+from dateutil.parser import parse  # Importa il parser per gestire i formati ISO 8601
+
 def get_appointments_by_users(user_ids, start_date):
     """Retrieve appointments for multiple users starting from a specific date."""
     conn = get_db_connection()
@@ -1841,6 +1843,7 @@ def get_appointments_by_users(user_ids, start_date):
         return parsed_appointments
     finally:
         conn.close()
+
 
 def add_appointment(trainer_id, client_id, title, notes, date_time, end_date_time, appointment_type, status, is_trial, is_recovery, is_lesson_zero):
     conn = get_db_connection()
