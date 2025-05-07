@@ -101,6 +101,7 @@
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Chiudi</button>
                 <a href="#" id="edit-appointment" class="btn btn-primary">Modifica</a>
                 <button type="button" id="delete-appointment" class="btn btn-danger">Elimina</button>
+                <a href="#" id="duplicate-appointment" class="btn btn-warning">Duplica</a>
             </div>
         </div>
     </div>
@@ -323,7 +324,7 @@ document.addEventListener('DOMContentLoaded', function() {
         headerToolbar: {
             left: 'prev,next today',
             center: 'title',
-            right: 'timeGridWeek,timeGridDay'
+            right: 'dayGridMonth,timeGridWeek,timeGridDay' 
         },
         locale: 'it',
         height: 'auto',
@@ -362,7 +363,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Titolo con orario
             const titleEl = document.createElement('div');
             titleEl.classList.add('event-title');
-            titleEl.innerHTML = `${timeText} - ${title}`;
+            titleEl.innerHTML = `${title}`;
             contentEl.appendChild(titleEl);
             
             return { domNodes: [contentEl] };
@@ -370,20 +371,20 @@ document.addEventListener('DOMContentLoaded', function() {
         eventClick: function(info) {
             // Mostra i dettagli dell'appuntamento nel modal
             const event = info.event;
-            
+
             document.getElementById('modal-client').textContent = event.extendedProps.client_name || 'N/D';
             document.getElementById('modal-trainer').textContent = event.extendedProps.trainer_name || 'N/D';
-            
+
             const start = new Date(event.start);
             const end = new Date(event.end);
-            
+
             const options = { 
                 weekday: 'long', 
                 year: 'numeric', 
                 month: 'long', 
                 day: 'numeric' 
             };
-            
+
             document.getElementById('modal-date').textContent = start.toLocaleDateString('it-IT', options);
             document.getElementById('modal-time').textContent = `${start.toLocaleTimeString('it-IT', { 
                 hour: '2-digit', 
@@ -392,24 +393,29 @@ document.addEventListener('DOMContentLoaded', function() {
                 hour: '2-digit', 
                 minute: '2-digit' 
             })}`;
-            
+
             document.getElementById('modal-type').textContent = event.extendedProps.type || '-';
             document.getElementById('modal-status').textContent = event.extendedProps.status || '-';
             document.getElementById('modal-notes').textContent = event.extendedProps.notes || '-';
-            
+
             // Aggiorna il link per modificare l'appuntamento
             document.getElementById('edit-appointment').href = `/edit_appointment/${event.id}`;
-            
+
             // Salva l'ID dell'appuntamento corrente per l'eliminazione
             window.currentAppointmentId = event.id;
-            
+
+            // Configura il pulsante "Duplica"
+            document.getElementById('duplicate-appointment').href = `/trainer/appointment/new?title=${encodeURIComponent(event.title)}&notes=${encodeURIComponent(event.extendedProps.notes || '')}&date_time=${encodeURIComponent(convertToLocal(event.start))}&end_date_time=${encodeURIComponent(convertToLocal(event.end))}&appointment_type=${encodeURIComponent(event.extendedProps.type || '')}&status=${encodeURIComponent(event.extendedProps.status || '')}&client_id=${encodeURIComponent(event.extendedProps.client_id || '')}`;
+
             // Mostra il modal
             const appointmentModal = new bootstrap.Modal(document.getElementById('appointmentModal'));
             appointmentModal.show();
         },
         dateClick: function(info) {
+            // Rimuovi il fuso orario dal valore della data
+            const formattedDate = info.dateStr.split('+')[0];
             // Reindirizza alla pagina per creare un nuovo appuntamento
-            window.location.href = `/trainer/appointment/new?date_time=${encodeURIComponent(info.dateStr)}`;
+            window.location.href = `/trainer/appointment/new?date_time=${encodeURIComponent(formattedDate)}`;
         },
         datesSet: function(info) {
             // Aggiorna il campo nascosto con la data di inizio per il filtro
@@ -501,6 +507,12 @@ document.addEventListener('DOMContentLoaded', function() {
         };
         
         return iconMap[status] || '<i class="fas fa-calendar-check"></i>'; // icona predefinita
+    }
+
+    // Funzione per convertire una data in formato locale
+    function convertToLocal(date) {
+        const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+        return localDate.toISOString().slice(0, 16); // Rimuove il fuso orario e i secondi
     }
 });
 </script>

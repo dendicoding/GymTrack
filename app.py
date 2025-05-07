@@ -1332,6 +1332,15 @@ def add_appointment():
 
     # Precompila la data e ora se fornita nella query string
     prefilled_date_time = request.args.get('date_time', '')
+    prefilled_end_date_time = request.args.get('end_date_time', '')
+
+    # Rimuovi il suffisso `.000Z` e formatta correttamente i valori
+    if prefilled_date_time:
+        prefilled_date_time = prefilled_date_time.split('.')[0]  # Rimuove `.000Z`
+        prefilled_date_time = prefilled_date_time.replace('Z', '')  # Rimuove `Z`
+    if prefilled_end_date_time:
+        prefilled_end_date_time = prefilled_end_date_time.split('.')[0]  # Rimuove `.000Z`
+        prefilled_end_date_time = prefilled_end_date_time.replace('Z', '')  # Rimuove `Z`
 
     if request.method == 'POST':
         title = request.form['title']
@@ -1357,7 +1366,12 @@ def add_appointment():
         else:
             flash('Errore durante l\'aggiunta dell\'appuntamento.', 'error')
 
-    return render_template('trainer/add_appointment.html', clienti=clienti, prefilled_date_time=prefilled_date_time)
+    return render_template(
+        'trainer/add_appointment.html',
+        clienti=clienti,
+        prefilled_date_time=prefilled_date_time,
+        prefilled_end_date_time=prefilled_end_date_time
+    )
 
 @app.route('/edit_appointment/<int:appointment_id>', methods=['GET', 'POST'])
 @login_required

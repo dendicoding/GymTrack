@@ -8,46 +8,49 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="mb-3">
         <label for="title" class="form-label">Titolo</label>
-        <input type="text" class="form-control" id="title" name="title" required>
+        <input type="text" class="form-control" id="title" name="title" value="{{ request.args.get('title', '') }}" required>
     </div>
     <div class="mb-3">
         <label for="notes" class="form-label">Note</label>
-        <textarea class="form-control" id="notes" name="notes"></textarea>
+        <textarea class="form-control" id="notes" name="notes">{{ request.args.get('notes', '') }}</textarea>
     </div>
     <div class="mb-3">
         <label for="date_time" class="form-label">Data e Ora</label>
         <input type="datetime-local" class="form-control" id="date_time" name="date_time" 
-       value="{{ prefilled_date_time.split('+')[0] if prefilled_date_time else '' }}" required>
+               value="{{ prefilled_date_time }}" required>
     </div>
     <div class="mb-3">
         <label for="end_date_time" class="form-label">Data e Ora di Fine</label>
-        <input type="datetime-local" class="form-control" id="end_date_time" name="end_date_time" required>
+        <input type="datetime-local" class="form-control" id="end_date_time" name="end_date_time" 
+               value="{{ prefilled_end_date_time }}" required>
     </div>
     <div class="mb-3">
         <label for="appointment_type" class="form-label">Tipo</label>
         <select class="form-select" id="appointment_type" name="appointment_type" required>
-            <option value="Allenamento Funzionale">Allenamento Funzionale</option>
-            <option value="Chiamata">Chiamata</option>
-            <option value="Blocco Agenda">Blocco Agenda</option>
-            <option value="Allenamento EMS">Allenamento EMS</option>
+            <option value="Allenamento Funzionale" {% if request.args.get('appointment_type') == 'Allenamento Funzionale' %}selected{% endif %}>Allenamento Funzionale</option>
+            <option value="Chiamata" {% if request.args.get('appointment_type') == 'Chiamata' %}selected{% endif %}>Chiamata</option>
+            <option value="Blocco Agenda" {% if request.args.get('appointment_type') == 'Blocco Agenda' %}selected{% endif %}>Blocco Agenda</option>
+            <option value="Allenamento EMS" {% if request.args.get('appointment_type') == 'Allenamento EMS' %}selected{% endif %}>Allenamento EMS</option>
         </select>
     </div>
     <div class="mb-3">
         <label for="status" class="form-label">Stato</label>
         <select class="form-select" id="status" name="status" required>
-            <option value="Confermato">Confermato</option>
-            <option value="Spostato">Spostato</option>
-            <option value="Saltato">Saltato</option>
-            <option value="Prova Fissata">Prova Fissata</option>
-            <option value="Prova in Chiamata">Prova in Chiamata</option>
-            <option value="Appuntamento Non Svolto">Appuntamento Non Svolto</option>
+            <option value="Confermato" {% if request.args.get('status') == 'Confermato' %}selected{% endif %}>Confermato</option>
+            <option value="Spostato" {% if request.args.get('status') == 'Spostato' %}selected{% endif %}>Spostato</option>
+            <option value="Saltato" {% if request.args.get('status') == 'Saltato' %}selected{% endif %}>Saltato</option>
+            <option value="Prova Fissata" {% if request.args.get('status') == 'Prova Fissata' %}selected{% endif %}>Prova Fissata</option>
+            <option value="Prova in Chiamata" {% if request.args.get('status') == 'Prova in Chiamata' %}selected{% endif %}>Prova in Chiamata</option>
+            <option value="Appuntamento Non Svolto" {% if request.args.get('status') == 'Appuntamento Non Svolto' %}selected{% endif %}>Appuntamento Non Svolto</option>
         </select>
     </div>
     <div class="mb-3">
         <label for="client_id" class="form-label">Cliente</label>
         <select class="form-select" id="client_id" name="client_id" required>
             {% for cliente in clienti %}
-            <option value="{{ cliente.id }}">{{ cliente.nome }} {{ cliente.cognome }}</option>
+            <option value="{{ cliente.id }}" {% if request.args.get('client_id') == cliente.id|string %}selected{% endif %}>
+                {{ cliente.nome }} {{ cliente.cognome }}
+            </option>
             {% endfor %}
         </select>
     </div>
