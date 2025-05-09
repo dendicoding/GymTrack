@@ -1809,14 +1809,17 @@ def get_appointments_by_users(user_ids, start_date):
     conn = get_db_connection()
     try:
         # Calculate the end date (7 days from the start date)
-        end_date = (datetime.strptime(start_date, '%Y-%m-%d') + timedelta(days=7)).strftime('%Y-%m-%d')
+        end_date = (datetime.strptime(start_date, '%Y-%m-%d') + timedelta(days=60)).strftime('%Y-%m-%d')
 
         # Query to fetch appointments
         query = '''
-            SELECT a.*, c.nome || ' ' || c.cognome AS client_name, u.nome || ' ' || u.cognome AS trainer_name
+            SELECT a.*, c.nome || ' ' || c.cognome AS client_name, u.nome || ' ' || u.cognome AS trainer_name,
+            ab.numero_lezioni,
+            ab.lezioni_utilizzate
             FROM appointments a
             JOIN clienti c ON a.client_id = c.id
             JOIN utenti u ON a.trainer_id = u.id
+            LEFT JOIN abbonamenti ab ON a.client_id = ab.cliente_id
             WHERE a.trainer_id IN ({})
             AND a.date_time BETWEEN ? AND ?
             ORDER BY a.date_time ASC
@@ -1845,13 +1848,13 @@ def get_appointments_by_users(user_ids, start_date):
         conn.close()
 
 
-def add_appointment(trainer_id, client_id, title, notes, date_time, end_date_time, appointment_type, status, is_trial, is_recovery, is_lesson_zero):
+def add_appointment(trainer_id, client_id, title, notes, date_time, end_date_time, appointment_type, status, is_trial, is_recovery, is_lesson_zero, package_id):
     conn = get_db_connection()
     try:
         conn.execute('''
-            INSERT INTO appointments (trainer_id, client_id, title, notes, date_time, end_date_time, appointment_type, status, is_trial, is_recovery, is_lesson_zero)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (trainer_id, client_id, title, notes, date_time, end_date_time, appointment_type, status, is_trial, is_recovery, is_lesson_zero))
+            INSERT INTO appointments (trainer_id, client_id, title, notes, date_time, end_date_time, appointment_type, status, is_trial, is_recovery, is_lesson_zero, package_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (trainer_id, client_id, title, notes, date_time, end_date_time, appointment_type, status, is_trial, is_recovery, is_lesson_zero, package_id))
         conn.commit()
     except Exception as e:
         print(f"Errore durante l'aggiunta dell'appuntamento: {e}")
@@ -1866,10 +1869,14 @@ def get_appointment_by_id(appointment_id):
         SELECT 
             a.*, 
             c.nome || ' ' || c.cognome AS client_name, 
-            u.nome || ' ' || u.cognome AS trainer_name
+            u.nome || ' ' || u.cognome AS trainer_name,
+            ab.id AS package_id,
+            ab.numero_lezioni,
+            ab.lezioni_utilizzate
         FROM appointments a
         JOIN clienti c ON a.client_id = c.id
         JOIN utenti u ON a.trainer_id = u.id
+        LEFT JOIN abbonamenti ab ON a.package_id = ab.id
         WHERE a.id = ?
         ''', (appointment_id,)).fetchone()
         
@@ -1941,12 +1948,12 @@ def migrate_appointments_table():
     conn = get_db_connection()
     try:
         conn.execute('''
-        ALTER TABLE appointments ADD COLUMN end_date_time DATETIME
+        ALTER TABLE appointments ADD COLUMN package_id INTEGER
         ''')
         conn.commit()
     except sqlite3.OperationalError as e:
         if "duplicate column name" in str(e).lower():
-            print("La colonna 'end_date_time' esiste già.")
+            print("La colonna 'package_id' esiste già.")
         else:
             print(f"Errore durante la migrazione: {e}")
     finally:

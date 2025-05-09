@@ -102,6 +102,7 @@
                 <a href="#" id="edit-appointment" class="btn btn-primary">Modifica</a>
                 <button type="button" id="delete-appointment" class="btn btn-danger">Elimina</button>
                 <a href="#" id="duplicate-appointment" class="btn btn-warning">Duplica</a>
+                <button type="button" id="mark-completed" class="btn btn-success" style="display: none;">Eseguito</button>
             </div>
         </div>
     </div>
@@ -299,7 +300,7 @@ document.addEventListener('DOMContentLoaded', function() {
         {% for appointment in appointments %}
             events.push({
                 id: {{ appointment.id }},
-                title: '{{ appointment.title }}',
+                title: '{{ appointment.client_name }}{% if appointment.numero_lezioni %} {{ appointment.lezioni_utilizzate }}/{{ appointment.numero_lezioni }}{% endif %}',
                 start: '{{ appointment.date_time.isoformat() }}',
                 end: '{{ appointment.end_date_time.isoformat() }}',
                 type: '{{ appointment.appointment_type|default("") }}',
@@ -320,7 +321,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Inizializza il calendario
     const calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'timeGridWeek',
-        initialDate: '{{ current_date.strftime("%Y-%m-%d") }}',
+        initialDate: new Date().toISOString().split('T')[0], // Imposta la data iniziale su oggi
         headerToolbar: {
             left: 'prev,next today',
             center: 'title',
@@ -369,7 +370,6 @@ document.addEventListener('DOMContentLoaded', function() {
             return { domNodes: [contentEl] };
         },
         eventClick: function(info) {
-            // Mostra i dettagli dell'appuntamento nel modal
             const event = info.event;
 
             document.getElementById('modal-client').textContent = event.extendedProps.client_name || 'N/D';
@@ -404,8 +404,16 @@ document.addEventListener('DOMContentLoaded', function() {
             // Salva l'ID dell'appuntamento corrente per l'eliminazione
             window.currentAppointmentId = event.id;
 
-            // Configura il pulsante "Duplica"
-            document.getElementById('duplicate-appointment').href = `/trainer/appointment/new?title=${encodeURIComponent(event.title)}&notes=${encodeURIComponent(event.extendedProps.notes || '')}&date_time=${encodeURIComponent(convertToLocal(event.start))}&end_date_time=${encodeURIComponent(convertToLocal(event.end))}&appointment_type=${encodeURIComponent(event.extendedProps.type || '')}&status=${encodeURIComponent(event.extendedProps.status || '')}&client_id=${encodeURIComponent(event.extendedProps.client_id || '')}`;
+            // Configura il pulsante "Eseguito"
+            const markCompletedButton = document.getElementById('mark-completed');
+            if (event.extendedProps.type === 'Allenamento Funzionale' || event.extendedProps.type === 'Allenamento EMS') {
+                markCompletedButton.style.display = 'inline-block';
+                markCompletedButton.onclick = function() {
+                    markAppointmentAsCompleted(event.id);
+                };
+            } else {
+                markCompletedButton.style.display = 'none';
+            }
 
             // Mostra il modal
             const appointmentModal = new bootstrap.Modal(document.getElementById('appointmentModal'));
@@ -513,6 +521,30 @@ document.addEventListener('DOMContentLoaded', function() {
     function convertToLocal(date) {
         const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
         return localDate.toISOString().slice(0, 16); // Rimuove il fuso orario e i secondi
+    }
+
+    // Funzione per segnare un appuntamento come completato
+    function markAppointmentAsCompleted(appointmentId) {
+        fetch(`/mark_appointment_completed/${appointmentId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                window.location.reload(); // Ricarica il calendario
+            } else {
+                alert(`Errore: ${data.message}`);
+            }
+        })
+        .catch(error => {
+            console.error('Errore:', error);
+            alert('Si è verificato un errore durante la registrazione della lezione');
+        });
     }
 });
 </script>

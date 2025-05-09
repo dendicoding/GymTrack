@@ -1294,7 +1294,7 @@ def trainer_calendar():
             user_ids.extend([db.get_user_by_email(trainer['email'])['id'] for trainer in trainers_in_sede])
 
     # Step 4: Ottieni gli appuntamenti per gli utenti trovati
-    start_date = request.args.get('start_date', date.today().strftime('%Y-%m-%d'))
+    start_date = (date.today() - timedelta(days=30)).strftime('%Y-%m-%d')
     appointments = db.get_appointments_by_users(user_ids, start_date)
 
     # Raggruppa gli appuntamenti per data
@@ -1314,6 +1314,51 @@ def trainer_calendar():
         selected_sede_id=selected_sede_id
     )
 
+@app.route('/mark_appointment_completed/<int:appointment_id>', methods=['POST'])
+@login_required
+def mark_appointment_completed(appointment_id):
+    # Ottieni i dettagli dell'appuntamento
+    appointment = db.get_appointment_by_id(appointment_id)
+    if not appointment:
+        return jsonify({'success': False, 'message': 'Appuntamento non trovato'}), 404
+
+    # Verifica che il tipo di appuntamento sia un allenamento
+    if appointment['appointment_type'] not in ['Allenamento Funzionale', 'Allenamento EMS']:
+        return jsonify({'success': False, 'message': 'Solo gli allenamenti possono essere completati'}), 400
+
+    # Verifica che il pacchetto sia associato all'appuntamento
+    if 'package_id' not in appointment or not appointment['package_id']:
+        return jsonify({'success': False, 'message': 'Nessun pacchetto associato a questo appuntamento'}), 400
+
+    # Registra la lezione
+    # Verifica se l'abbonamento è ancora valido
+    oggi = datetime.now().date()
+    
+    
+    if request.method == 'POST':
+        note = request.form.get('note', '')
+        user_id = session.get('user_id')
+        
+        # Registra la lezione
+        if db.add_lezione(appointment['package_id'], oggi, note, user_id):
+            db.log_event(session.get('user_id'), session.get('user_email'), 'Registrata lezione', f'Abbonamento ID: {appointment['package_id']}')
+            flash('Lezione registrata con successo', 'success')
+            return jsonify({'success': True, 'message': 'Lezione registrata con successo'})
+        else:
+            flash('Errore durante la registrazione della lezione', 'error')
+
+    return jsonify({'success': True, 'message': 'Lezione registrata con successo'}), 200
+
+@app.route('/get_pacchetti/<int:client_id>', methods=['GET'])
+@login_required
+def get_pacchetti(client_id):
+    pacchetti = db.get_abbonamenti_by_cliente(client_id)
+    print(f"Pacchetti per il cliente {client_id}: {pacchetti}")
+    return jsonify([{
+        'id': pacchetto['id'],
+        'nome': pacchetto['nome_pacchetto'],
+        'lezioni_rimanenti': pacchetto['numero_lezioni'] - pacchetto['lezioni_utilizzate']
+    } for pacchetto in pacchetti])
 
 @app.route('/trainer/appointment/new', methods=['GET', 'POST'])
 @login_required
@@ -1353,11 +1398,13 @@ def add_appointment():
         is_trial = 'is_trial' in request.form
         is_recovery = 'is_recovery' in request.form
         is_lesson_zero = 'is_lesson_zero' in request.form
+        package_id = request.form.get('package_id')  # Pacchetto selezionato
+
 
         # Salva l'appuntamento nel database
         appointment_id = db.add_appointment(
             trainer_id, client_id, title, notes, date_time, end_date_time,
-            appointment_type, status, is_trial, is_recovery, is_lesson_zero
+            appointment_type, status, is_trial, is_recovery, is_lesson_zero, package_id
         )
 
         if appointment_id:
@@ -1463,6 +1510,5 @@ if __name__ == '__main__':
     db.migrate_database()
     #db.create_user_tables
     #db.init_db()
-    db.create_appointments_table()
     db.migrate_appointments_table()
     app.run(debug=True)

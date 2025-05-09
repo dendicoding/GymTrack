@@ -80,6 +80,12 @@
             <input type="text" class="form-control" id="day_of_week" name="day_of_week" readonly>
         </div>
     </div>
+    <div class="mb-3" id="package-selection" style="display: none;">
+        <label for="package_id" class="form-label">Seleziona Pacchetto</label>
+        <select class="form-select" id="package_id" name="package_id">
+            <!-- I pacchetti verranno caricati dinamicamente -->
+        </select>
+    </div>
     <button type="submit" class="btn btn-success mt-3">Aggiungi</button>
 </form>
 
@@ -87,7 +93,10 @@
     const appointmentType = document.getElementById('appointment_type');
     const clientSelect = document.getElementById('client_id');
     const titleInput = document.getElementById('title');
+    const packageSelect = document.getElementById('package_id');
+    const packageSelection = document.getElementById('package-selection');
 
+    // Funzione per aggiornare il titolo in base al cliente selezionato
     function updateTitle() {
         if (appointmentType.value === 'Blocco Agenda') {
             titleInput.value = 'Blocco Agenda';
@@ -97,10 +106,55 @@
         }
     }
 
-    appointmentType.addEventListener('change', updateTitle);
-    clientSelect.addEventListener('change', updateTitle);
+    // Mostra o nasconde il campo "Seleziona Pacchetto" in base al tipo di appuntamento
+    appointmentType.addEventListener('change', function () {
+        if (appointmentType.value === 'Allenamento Funzionale' || appointmentType.value === 'Allenamento EMS') {
+            packageSelection.style.display = 'block';
+        } else {
+            packageSelection.style.display = 'none';
+        }
+        updateTitle();
+    });
 
-    // Initialize the title on page load
-    document.addEventListener('DOMContentLoaded', updateTitle);
+    // Carica i pacchetti disponibili per il cliente selezionato
+    clientSelect.addEventListener('change', function () {
+        const clientId = clientSelect.value;
+
+        if (clientId) {
+            fetch(`/get_pacchetti/${clientId}`)
+                .then(response => response.json())
+                .then(data => {
+                    packageSelect.innerHTML = ''; // Svuota il menu a tendina
+                    if (data.length > 0) {
+                        packageSelection.style.display = 'block';
+                        data.forEach(pacchetto => {
+                            const option = document.createElement('option');
+                            option.value = pacchetto.id;
+                            option.textContent = `${pacchetto.nome} - Lezioni rimanenti: ${pacchetto.lezioni_rimanenti}`;
+                            packageSelect.appendChild(option);
+                        });
+                    } else {
+                        packageSelection.style.display = 'none';
+                    }
+                })
+                .catch(error => {
+                    console.error('Errore durante il caricamento dei pacchetti:', error);
+                    packageSelection.style.display = 'none';
+                });
+        } else {
+            packageSelection.style.display = 'none';
+        }
+        updateTitle();
+    });
+
+    // Inizializza il titolo e il campo "Seleziona Pacchetto" al caricamento della pagina
+    document.addEventListener('DOMContentLoaded', function () {
+        updateTitle();
+        if (appointmentType.value === 'Allenamento Funzionale' || appointmentType.value === 'Allenamento EMS') {
+            packageSelection.style.display = 'block';
+        } else {
+            packageSelection.style.display = 'none';
+        }
+    });
 </script>
 {% endblock %}
