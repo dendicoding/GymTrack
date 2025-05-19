@@ -15,9 +15,13 @@
         <textarea class="form-control" id="notes" name="notes">{{ request.args.get('notes', '') }}</textarea>
     </div>
     <div class="mb-3">
-        <label for="date_time" class="form-label">Data e Ora</label>
+        <label for="date_time" class="form-label">Data e Ora di Inizio</label>
         <input type="datetime-local" class="form-control" id="date_time" name="date_time" 
                value="{{ prefilled_date_time }}" required>
+    </div>
+    <div class="mb-3">
+        <label for="duration" class="form-label">Durata (minuti)</label>
+        <input type="number" class="form-control" id="duration" name="duration" min="1" placeholder="Inserisci durata in minuti">
     </div>
     <div class="mb-3">
         <label for="end_date_time" class="form-label">Data e Ora di Fine</label>
@@ -83,7 +87,11 @@
     <div class="mb-3" id="package-selection" style="display: none;">
         <label for="package_id" class="form-label">Seleziona Pacchetto</label>
         <select class="form-select" id="package_id" name="package_id">
-            <!-- I pacchetti verranno caricati dinamicamente -->
+            {% for pacchetto in pacchetti %}
+            <option value="{{ pacchetto.id }}" {% if request.args.get('pacchetto_id') == pacchetto.id|string %}selected{% endif %}>
+                {{ pacchetto.nome }}
+            </option>
+            {% endfor %}
         </select>
     </div>
     <button type="submit" class="btn btn-success mt-3">Aggiungi</button>
@@ -95,6 +103,60 @@
     const titleInput = document.getElementById('title');
     const packageSelect = document.getElementById('package_id');
     const packageSelection = document.getElementById('package-selection');
+    const isRecurringCheckbox = document.getElementById('is_recurring');
+    const recurringOptions = document.getElementById('recurring-options');
+    const dateTimeInput = document.getElementById('date_time');
+    const dayOfWeekInput = document.getElementById('day_of_week');
+    const durationInput = document.getElementById('duration');
+    const endDateTimeInput = document.getElementById('end_date_time');
+
+    // Funzione per calcolare la data di fine
+    function updateEndDateTime() {
+        const startDateValue = dateTimeInput.value;
+        const durationValue = parseInt(durationInput.value, 10);
+
+        if (startDateValue && !isNaN(durationValue)) {
+            const startDate = new Date(startDateValue);
+            const endDate = new Date(startDate.getTime() + durationValue * 60000); // Aggiungi i minuti
+
+            // Formatta la data di fine tenendo conto del fuso orario
+            const offset = endDate.getTimezoneOffset() * 60000; // Offset in millisecondi
+            const localEndDate = new Date(endDate.getTime() - offset);
+            endDateTimeInput.value = localEndDate.toISOString().slice(0, 16); // Formatta come datetime-local
+        } else {
+            endDateTimeInput.value = ''; // Svuota il campo se i valori non sono validi
+        }
+    }
+    // Aggiungi listener per aggiornare la data di fine
+    dateTimeInput.addEventListener('change', updateEndDateTime);
+    durationInput.addEventListener('input', updateEndDateTime);
+
+    // Funzione per calcolare il giorno della settimana
+    function updateDayOfWeek() {
+        const dateValue = dateTimeInput.value;
+        if (dateValue) {
+            const date = new Date(dateValue);
+            const daysOfWeek = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
+            dayOfWeekInput.value = daysOfWeek[date.getDay()];
+        } else {
+            dayOfWeekInput.value = ''; // Svuota il campo se la data non è valida
+        }
+    }
+
+    // Aggiungi un listener per aggiornare il giorno della settimana quando cambia la data
+    dateTimeInput.addEventListener('change', updateDayOfWeek);
+
+    // Funzione per mostrare o nascondere i campi aggiuntivi
+    function toggleRecurringOptions() {
+        if (isRecurringCheckbox.checked) {
+            recurringOptions.style.display = 'block';
+        } else {
+            recurringOptions.style.display = 'none';
+        }
+    }
+
+    // Aggiungi un listener per il checkbox "Ripetuto"
+    isRecurringCheckbox.addEventListener('change', toggleRecurringOptions);
 
     // Funzione per aggiornare il titolo in base al cliente selezionato
     function updateTitle() {
@@ -155,6 +217,10 @@
         } else {
             packageSelection.style.display = 'none';
         }
+        updateDayOfWeek();
+        toggleRecurringOptions();
+        updateEndDateTime();
+
     });
 </script>
 {% endblock %}

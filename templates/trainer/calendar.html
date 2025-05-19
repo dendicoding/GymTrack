@@ -94,6 +94,7 @@
                     <p><strong>Orario:</strong> <span id="modal-time"></span></p>
                     <p><strong>Tipo:</strong> <span id="modal-type"></span></p>
                     <p><strong>Stato:</strong> <span id="modal-status"></span></p>
+                    <p><strong>Pacchetto:</strong> <span id="modal-package"></span></p>
                     <p><strong>Note:</strong> <span id="modal-notes"></span></p>
                 </div>
             </div>
@@ -300,18 +301,24 @@ document.addEventListener('DOMContentLoaded', function() {
         {% for appointment in appointments %}
             events.push({
                 id: {{ appointment.id }},
-                title: '{{ appointment.client_name }}{% if appointment.numero_lezioni %} {{ appointment.lezioni_utilizzate }}/{{ appointment.numero_lezioni }}{% endif %}',
+                title: '{% if appointment.appointment_type == "Blocco Agenda" %}Blocco Agenda{% else %}{{ appointment.client_name }}{% if appointment.lezione_numero %} {{ appointment.lezione_numero }}/{{ appointment.numero_lezioni }}{% endif %}{% endif %}',
                 start: '{{ appointment.date_time.isoformat() }}',
                 end: '{{ appointment.end_date_time.isoformat() }}',
                 type: '{{ appointment.appointment_type|default("") }}',
                 status: '{{ appointment.status|default("") }}',
                 client_name: '{{ appointment.client_name }}',
                 trainer_name: '{{ appointment.trainer_name|default("") }}',
+                package_name: '{{ appointment.pacchetto_id|default("Nessun pacchetto") }}',
                 notes: '{{ appointment.notes|default("")|e }}',
                 backgroundColor: getAppointmentColor('{{ appointment.appointment_type|default("default")|lower|replace(" ", "_") }}'),
                 borderColor: getAppointmentColor('{{ appointment.appointment_type|default("default")|lower|replace(" ", "_") }}'),
                 textColor: '#333',
                 extendedProps: {
+                    client_id: '{{ appointment.client_id }}',
+                    package_id: '{{ appointment.package_id }}',
+                    status: '{{ appointment.status|default("") }}',
+                    trainer_name: '{{ appointment.trainer_name|default("") }}',
+                    client_name: '{{ appointment.client_name }}',
                     status_icon: getStatusIcon('{{ appointment.status|default("scheduled")|lower|replace(" ", "_") }}')
                 }
             });
@@ -346,22 +353,24 @@ document.addEventListener('DOMContentLoaded', function() {
         eventContent: function(arg) {
             // Personalizza il contenuto degli eventi
             const statusIcon = arg.event.extendedProps.status_icon;
-            const timeText = arg.timeText;
             const title = arg.event.title;
             
-            // Crea il contenuto dell'evento con l'icona di stato
+            // Crea il contenitore principale
             const contentEl = document.createElement('div');
             contentEl.classList.add('fc-event-content');
+            contentEl.style.display = 'flex'; // Allinea gli elementi sulla stessa riga
+            contentEl.style.alignItems = 'center'; // Centra verticalmente gli elementi
             
             // Aggiungi l'icona dello stato se disponibile
+                
             if (statusIcon) {
                 const iconEl = document.createElement('span');
                 iconEl.classList.add('event-icon');
                 iconEl.innerHTML = statusIcon;
+                iconEl.style.marginRight = '5px'; // Spazio tra l'icona e il titolo
                 contentEl.appendChild(iconEl);
             }
-            
-            // Titolo con orario
+            // Titolo senza orario
             const titleEl = document.createElement('div');
             titleEl.classList.add('event-title');
             titleEl.innerHTML = `${title}`;
@@ -396,10 +405,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
             document.getElementById('modal-type').textContent = event.extendedProps.type || '-';
             document.getElementById('modal-status').textContent = event.extendedProps.status || '-';
+            document.getElementById('modal-package').textContent = event.extendedProps.package_name || 'Nessun pacchetto';
             document.getElementById('modal-notes').textContent = event.extendedProps.notes || '-';
 
             // Aggiorna il link per modificare l'appuntamento
             document.getElementById('edit-appointment').href = `/edit_appointment/${event.id}`;
+
+            // Configura il pulsante "Duplica"
+            const duplicateButton = document.getElementById('duplicate-appointment');
+            const duplicateUrl = `/trainer/appointment/new?title=${encodeURIComponent(event.title)}&notes=${encodeURIComponent(event.extendedProps.notes || '')}&date_time=${encodeURIComponent(convertToLocal(event.start))}&end_date_time=${encodeURIComponent(convertToLocal(event.end))}&appointment_type=${encodeURIComponent(event.extendedProps.type || '')}&status=${encodeURIComponent(event.extendedProps.status || '')}&client_id=${encodeURIComponent(event.extendedProps.client_id || '')}&package_id=${encodeURIComponent(event.extendedProps.package_id || '')}`;
+            duplicateButton.href = duplicateUrl;
 
             // Salva l'ID dell'appuntamento corrente per l'eliminazione
             window.currentAppointmentId = event.id;
@@ -519,6 +534,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Funzione per convertire una data in formato locale
     function convertToLocal(date) {
+        if (!date || !(date instanceof Date)) {
+            console.error('convertToLocal: il valore passato non è una data valida.', date);
+            return ''; // Restituisci una stringa vuota se il valore non è valido
+        }
         const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
         return localDate.toISOString().slice(0, 16); // Rimuove il fuso orario e i secondi
     }

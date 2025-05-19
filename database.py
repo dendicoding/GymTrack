@@ -1813,13 +1813,14 @@ def get_appointments_by_users(user_ids, start_date):
 
         # Query to fetch appointments
         query = '''
-            SELECT a.*, c.nome || ' ' || c.cognome AS client_name, u.nome || ' ' || u.cognome AS trainer_name,
+            SELECT DISTINCT a.*, c.nome || ' ' || c.cognome AS client_name, u.nome || ' ' || u.cognome AS trainer_name,
             ab.numero_lezioni,
-            ab.lezioni_utilizzate
+            ab.lezioni_utilizzate,
+            ab.pacchetto_id
             FROM appointments a
             JOIN clienti c ON a.client_id = c.id
             JOIN utenti u ON a.trainer_id = u.id
-            LEFT JOIN abbonamenti ab ON a.client_id = ab.cliente_id
+            LEFT JOIN abbonamenti ab ON a.client_id = ab.cliente_id AND a.package_id = ab.id
             WHERE a.trainer_id IN ({})
             AND a.date_time BETWEEN ? AND ?
             ORDER BY a.date_time ASC
@@ -1831,8 +1832,19 @@ def get_appointments_by_users(user_ids, start_date):
 
         # Parse date_time and end_date_time into datetime objects
         parsed_appointments = []
+        lesson_counter = {}  # Dizionario per tracciare il numero progressivo delle lezioni per ogni abbonamento
+
         for appointment in appointments:
             appointment = dict(appointment)
+            package_id = appointment.get('package_id')
+            if package_id:
+                if package_id not in lesson_counter:
+                    # Inizializza il contatore con il numero di lezioni già registrate
+                    lesson_counter[package_id] = appointment['lezioni_utilizzate']
+                lesson_counter[package_id] += 1
+                appointment['lezione_numero'] = lesson_counter[package_id]
+            else:
+                appointment['lezione_numero'] = None
             try:
                 appointment['date_time'] = datetime.strptime(appointment['date_time'], '%Y-%m-%d %H:%M:%S')
             except ValueError:
@@ -1851,11 +1863,14 @@ def get_appointments_by_users(user_ids, start_date):
 def add_appointment(trainer_id, client_id, title, notes, date_time, end_date_time, appointment_type, status, is_trial, is_recovery, is_lesson_zero, package_id):
     conn = get_db_connection()
     try:
+        cursor = conn.cursor()
         conn.execute('''
             INSERT INTO appointments (trainer_id, client_id, title, notes, date_time, end_date_time, appointment_type, status, is_trial, is_recovery, is_lesson_zero, package_id)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (trainer_id, client_id, title, notes, date_time, end_date_time, appointment_type, status, is_trial, is_recovery, is_lesson_zero, package_id))
         conn.commit()
+        appointment_id = cursor.lastrowid  # Ottieni l'ID dell'appuntamento appena creato
+        return appointment_id
     except Exception as e:
         print(f"Errore durante l'aggiunta dell'appuntamento: {e}")
         conn.rollback()

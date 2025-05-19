@@ -469,11 +469,13 @@ def modifica_cliente(cliente_id):
 @app.route('/clienti/<int:cliente_id>/elimina', methods=['POST'])
 def elimina_cliente(cliente_id):
     cliente = db.get_cliente(cliente_id)
+    nome = cliente['nome']
+    cognome = cliente['cognome']
     if not cliente:
         abort(404)
     
     db.delete_cliente(cliente_id)
-    db.log_event(session.get('user_id'), session.get('user_email'), 'Eliminato cliente', f'Cliente ID: {cliente_id}')
+    db.log_event(session.get('user_id'), session.get('user_email'), 'Eliminato cliente', f'Cliente: {nome} {cognome}')
     flash(f'Cliente {cliente["nome"]} {cliente["cognome"]} eliminato con successo!', 'success')
     return redirect(url_for('lista_clienti'))
 
@@ -1373,7 +1375,7 @@ def add_appointment():
         flash('Non è stata trovata una sede associata al trainer.', 'error')
         return redirect(url_for('index'))
 
-    clienti = db.get_clienti_effettivi([sede['id']])
+    clienti = db.get_all_clienti([sede['id']])
 
     # Precompila la data e ora se fornita nella query string
     prefilled_date_time = request.args.get('date_time', '')
@@ -1390,8 +1392,8 @@ def add_appointment():
     if request.method == 'POST':
         title = request.form['title']
         notes = request.form['notes']
-        date_time = request.form['date_time']
-        end_date_time = request.form['end_date_time']
+        date_time = datetime.strptime(request.form['date_time'], '%Y-%m-%dT%H:%M')
+        end_date_time = datetime.strptime(request.form['end_date_time'], '%Y-%m-%dT%H:%M')
         appointment_type = request.form['appointment_type']
         status = request.form['status']
         client_id = request.form['client_id']
@@ -1400,18 +1402,35 @@ def add_appointment():
         is_lesson_zero = 'is_lesson_zero' in request.form
         package_id = request.form.get('package_id')  # Pacchetto selezionato
 
+        # Logica per appuntamenti ricorrenti
+        is_recurring = 'is_recurring' in request.form
+        duration = int(request.form['duration']) if 'duration' in request.form and request.form['duration'] else None
 
-        # Salva l'appuntamento nel database
-        appointment_id = db.add_appointment(
-            trainer_id, client_id, title, notes, date_time, end_date_time,
-            appointment_type, status, is_trial, is_recovery, is_lesson_zero, package_id
-        )
-
-        if appointment_id:
-            flash('Appuntamento aggiunto con successo!', 'success')
-            return redirect(url_for('trainer_calendar'))
+        if is_recurring and duration:
+            # Calcola il giorno della settimana
+            day_of_week = date_time.weekday()  # 0 = Lunedì, 6 = Domenica
+            current_date = date_time
+            while current_date <= end_date_time:
+                if current_date.weekday() == day_of_week:
+                    recurring_end_time = current_date + timedelta(minutes=duration)
+                    db.add_appointment(
+                        trainer_id, client_id, title, notes, current_date, recurring_end_time,
+                        appointment_type, status, is_trial, is_recovery, is_lesson_zero, package_id
+                    )
+                current_date += timedelta(days=1)
+            flash('Appuntamenti ripetuti creati con successo!', 'success')
         else:
-            flash('Errore durante l\'aggiunta dell\'appuntamento.', 'error')
+            # Salva l'appuntamento singolo nel database
+            appointment_id = db.add_appointment(
+                trainer_id, client_id, title, notes, date_time, end_date_time,
+                appointment_type, status, is_trial, is_recovery, is_lesson_zero, package_id
+            )
+
+            if appointment_id:
+                flash('Appuntamento aggiunto con successo!', 'success')
+                return redirect(url_for('trainer_calendar'))
+            else:
+                flash('Errore durante l\'aggiunta dell\'appuntamento.', 'error')
 
     return render_template(
         'trainer/add_appointment.html',
