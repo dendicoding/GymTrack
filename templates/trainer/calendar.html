@@ -46,6 +46,9 @@
             <li class="list-inline-item d-flex align-items-center me-3">
                 <span class="legend-color" style="background-color: var(--allenamento_ems-color);"></span> Allenamento EMS
             </li>
+            <li class="list-inline-item d-flex align-items-center me-3">
+                <span class="legend-color" style="background-color: var(--allenamento_vaculab-color);"></span> Allenamento VacuLab
+            </li>
         </ul>
 
         <h5>Legenda Stati di Appuntamento</h5>
@@ -54,22 +57,16 @@
                 <i class="fas fa-check-circle" style="color: var(--confermato-color);"></i> Confermato
             </li>
             <li class="list-inline-item d-flex align-items-center me-3">
-                <i class="fas fa-times-circle" style="color: var(--spostato-color);"></i> Spostato
+                <i class="fas fa-times-circle" style="color: var(--confermato-color);"></i> Riprogrammata
             </li>
             <li class="list-inline-item d-flex align-items-center me-3">
-                <i class="fas fa-user-slash" style="color: var(--saltato-color);"></i> Saltato
-            </li>
-            <li class="list-inline-item d-flex align-items-center me-3">
-                <i class="fas fa-calendar-check" style="color: var(--completed-color);"></i> Completato
+                <i class="fas fa-times-circle" style="color: var(--spostato-color);"></i> Lezione Saltata
             </li>
             <li class="list-inline-item d-flex align-items-center me-3">
                 <i class="fas fa-calendar-plus" style="color: var(--prova_fissata-color);"></i> Prova Fissata
             </li>
             <li class="list-inline-item d-flex align-items-center me-3">
-                <i class="fas fa-phone" style="color: var(--prova_in_chiamata-color);"></i> Prova in Chiamata
-            </li>
-            <li class="list-inline-item d-flex align-items-center me-3">
-                <i class="fas fa-exclamation-circle" style="color: var(--appuntamento_non_svolto-color);"></i> Appuntamento Non Svolto
+                <i class="fas fa-times-circle" style="color: var(--spostato-color);"></i> Prova Annullata
             </li>
         </ul>
     </div>
@@ -133,10 +130,11 @@
 <style>
     :root {
         /* Colori per i tipi di appuntamento */
-        --allenamento_funzionale-color: #d1e7ff;
-        --chiamata-color: #ffd1d1;
-        --blocco_agenda-color: #fff3d1;
-        --allenamento_ems-color: #d1ffed;
+        --allenamento_funzionale-color: #b766f9;
+        --chiamata-color: #ffa435;
+        --blocco_agenda-color: #fcff67;
+        --allenamento_ems-color: #52b4ff;
+        --allenamento_vaculab-color: #52ffb4;
         
         /* Colori per gli stati */
         --scheduled-color: #4caf50;
@@ -544,12 +542,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Funzione per segnare un appuntamento come completato
     function markAppointmentAsCompleted(appointmentId) {
+
+        const note = prompt("Inserisci eventuali note per la lezione completata:", "");
+        if (note === null) return; // Utente ha annullato
+
         fetch(`/mark_appointment_completed/${appointmentId}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': getCsrfToken()
-            }
+            },
+            body: JSON.stringify({ note: note })
         })
         .then(response => response.json())
         .then(data => {

@@ -90,6 +90,9 @@ def register():
     
     return render_template('auth/register.html')
 
+
+
+#GERARCHIA
 @app.route('/gestione-gerarchia')
 @login_required
 def gestione_gerarchia():
@@ -115,6 +118,8 @@ def gestione_gerarchia():
     else:
         flash('Non hai i permessi per accedere a questa pagina', 'error')
         return redirect(url_for('index'))
+
+#GERARCHIA
 
 @app.route('/add-area-manager', methods=['GET', 'POST'])
 @login_required
@@ -143,6 +148,7 @@ def add_area_manager():
     
     return render_template('auth/add_area_manager.html')
 
+#GERARCHIA
 @app.route('/add-societa', methods=['GET', 'POST'])
 @login_required
 def add_societa():
@@ -165,6 +171,7 @@ def add_societa():
     
     return render_template('auth/add_societa.html')
 
+#GERARCHIA
 @app.route('/add-sede', methods=['GET', 'POST'])
 @login_required
 def add_sede():
@@ -531,7 +538,13 @@ def dettaglio_pacchetto(pacchetto_id):
                          oggi=oggi)
 
 @app.route('/pacchetti/nuovo', methods=['GET', 'POST'])
+@login_required
 def nuovo_pacchetto():
+    # Consenti solo ai franchisor
+    if session.get('user_role') != 'franchisor':
+        flash('Non hai i permessi per creare nuovi pacchetti.', 'danger')
+        return redirect(url_for('lista_pacchetti'))
+
     if request.method == 'POST':
         # Recupera i dati dal form
         nome = request.form.get('nome')
@@ -1275,6 +1288,11 @@ def trainer_calendar():
 
         for company in societa:
             sedi.extend(db.get_sedi_by_societa(company['id']))
+    elif user_role == 'societa':
+        societa = db.get_societa_by_email(user_email)
+        if societa:
+            sedi = db.get_sedi_by_societa(societa['id'])
+            #sedi.extend([sede['id'] for sede in sedi])
     elif user_role == 'franchisor':
         area_managers = db.get_area_managers_by_franchisor_email(user_email)
         for manager in area_managers:
@@ -1338,7 +1356,11 @@ def mark_appointment_completed(appointment_id):
     
     
     if request.method == 'POST':
-        note = request.form.get('note', '')
+        note = ''
+        if request.is_json:
+            note = request.json.get('note', '')
+        else:
+            note = request.form.get('note', '')
         user_id = session.get('user_id')
         
         # Registra la lezione
