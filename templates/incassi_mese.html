@@ -3,7 +3,15 @@
 {% block title %}Rate incassate questo mese{% endblock %}
 
 {% block content %}
+<nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Home</a></li>
+            <li class="breadcrumb-item active">Incassi Mese</a></li>
+            
+        </ol>
+</nav>
 <div class="card">
+    
     <div class="card-header bg-primary text-white">
         <h5 class="card-title mb-0">
             <i class="fas fa-calendar-alt me-2"></i>Rate incassate questo mese
@@ -28,7 +36,7 @@
                             <tr class="{{ 'table-danger' if rata.data_scadenza|to_date < oggi }}">
                                 <td>{{ rata.data_scadenza|format_date }}</td>
                                 <td>
-                                    <a href="{{ url_for('dettaglio_cliente', cliente_id=rata.cliente_id) }}">
+                                    <a href="{{ url_for('clienti.dettaglio_cliente', cliente_id=rata.cliente_id) }}">
                                         {{ rata.nome_cliente }}
                                     </a>
                                 </td>
@@ -46,7 +54,7 @@
                                     {% endif %}
                                 </td>
                                 <td>
-                                    <a href="{{ url_for('dettaglio_abbonamento', abbonamento_id=rata.abbonamento_id) }}" 
+                                    <a href="{{ url_for('abbonamenti.dettaglio_abbonamento', abbonamento_id=rata.abbonamento_id) }}" 
                                        class="btn btn-sm btn-info" title="Dettagli">
                                         <i class="fas fa-eye"></i>
                                     </a>

@@ -8,12 +8,34 @@
         <h1>Calendario Settimanale</h1>
         
         <div class="d-flex justify-content-between align-items-center mt-3 mb-4">
-            <a href="{{ url_for('add_appointment') }}" class="btn btn-primary">
+            <a href="{{ url_for('appuntamenti.add_appointment') }}" class="btn btn-primary">
                 <i class="fas fa-plus"></i> Nuovo Appuntamento
             </a>
+            <!-- Filtro per società -->
+            <form method="GET" action="{{ url_for('appuntamenti.trainer_calendar') }}" id="societa-filter-form" class="ms-2">
+                <div class="row">
+                    <div class="col-md-12">
+                        <select name="societa_id" class="form-select" onchange="this.form.submit()">
+                            <option value="">Tutte le società</option>
+                            {% for soc in societa %}
+                            <option value="{{ soc.id }}" {% if soc.id == selected_societa_id %}selected{% endif %}>
+                                {{ soc.nome }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                {% if selected_sede_id %}
+                <input type="hidden" name="sede_id" value="{{ selected_sede_id }}">
+                {% endif %}
+                {% if selected_client_id %}
+                <input type="hidden" name="client_id" value="{{ selected_client_id }}">
+                {% endif %}
+                <input type="hidden" name="start_date" id="current-start-date-societa" value="{{ current_date.strftime('%Y-%m-%d') }}">
+            </form>
             
             <!-- Menu a tendina per filtrare gli eventi -->
-            <form method="GET" action="{{ url_for('trainer_calendar') }}" id="sede-filter-form" class="ml-auto">
+            <form method="GET" action="{{ url_for('appuntamenti.trainer_calendar') }}" id="sede-filter-form" class="ml-auto">
                 <div class="row">
                     <div class="col-md-12">
                         <select name="sede_id" class="form-select" onchange="this.form.submit()">
@@ -28,6 +50,27 @@
                 </div>
                 <input type="hidden" name="start_date" id="current-start-date" value="{{ current_date.strftime('%Y-%m-%d') }}">
             </form>
+
+            <!-- Menu a tendina per filtrare per cliente -->
+            <form method="GET" action="{{ url_for('appuntamenti.trainer_calendar') }}" id="client-filter-form" class="ml-auto">
+                <div class="row">
+                    <div class="col-md-12">
+                        <select name="client_id" class="form-select" onchange="this.form.submit()">
+                            <option value="">Tutti i clienti</option>
+                            {% for cliente in clienti %}
+                            <option value="{{ cliente.id }}" {% if cliente.id == selected_client_id %}selected{% endif %}>
+                                {{ cliente.nome }} {{ cliente.cognome }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <input type="hidden" name="start_date" id="current-start-date-client" value="{{ current_date.strftime('%Y-%m-%d') }}">
+                {% if selected_sede_id %}
+                <input type="hidden" name="sede_id" value="{{ selected_sede_id }}">
+                {% endif %}
+            </form>
+
         </div>
     </div>
     
@@ -519,8 +562,8 @@ document.addEventListener('DOMContentLoaded', function() {
     function getStatusIcon(status) {
         const iconMap = {
             'confermato': '<i class="fas fa-check-circle status-confermato-icon"></i>',
-            'spostato': '<i class="fas fa-times-circle status-spostato-icon"></i>',
-            'saltato': '<i class="fas fa-user-slash status-saltato-icon"></i>',
+            'riprogrammata': '<i class="fas fa-times-circle status-spostato-icon"></i>',
+            'saltata': '<i class="fas fa-user-slash status-saltato-icon"></i>',
             'completato': '<i class="fas fa-calendar-check status-completato-icon"></i>',
             'prova_fissata': '<i class="fas fa-calendar-plus status-prova_fissata-icon"></i>',
             'prova_in_chiamata': '<i class="fas fa-phone status-prova_in_chiamata-icon"></i>',

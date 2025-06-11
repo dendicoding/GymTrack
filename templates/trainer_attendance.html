@@ -8,12 +8,12 @@
     <p class="lead">Benvenuto, {{ session.user_name }}</p>
     <div class="mt-4">
         {% if not is_present %}
-            <form method="POST" action="{{ url_for('trainer_entrata') }}">
+            <form method="POST" action="{{ url_for('trainers.trainer_entrata') }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn btn-success btn-lg">Entra</button>
             </form>
         {% else %}
-            <form method="POST" action="{{ url_for('trainer_uscita') }}">
+            <form method="POST" action="{{ url_for('trainers.trainer_uscita') }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn btn-danger btn-lg">Esci</button>
             </form>

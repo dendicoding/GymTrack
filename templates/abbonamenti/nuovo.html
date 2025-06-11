@@ -6,8 +6,8 @@
 <nav aria-label="breadcrumb">
     <ol class="breadcrumb">
         <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Home</a></li>
-        <li class="breadcrumb-item"><a href="{{ url_for('lista_clienti') }}">Clienti</a></li>
-        <li class="breadcrumb-item"><a href="{{ url_for('dettaglio_cliente', cliente_id=cliente.id) }}">{{ cliente.nome }} {{ cliente.cognome }}</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('clienti.lista_clienti') }}">Clienti</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('clienti.dettaglio_cliente', cliente_id=cliente.id) }}">{{ cliente.nome }} {{ cliente.cognome }}</a></li>
         <li class="breadcrumb-item active">Nuovo Pacchetto</li>
     </ol>
 </nav>
@@ -76,7 +76,7 @@
                     </div>
 
                     <div class="d-flex justify-content-between">
-                        <a href="{{ url_for('dettaglio_cliente', cliente_id=cliente.id) }}" 
+                        <a href="{{ url_for('clienti.dettaglio_cliente', cliente_id=cliente.id) }}" 
                            class="btn btn-secondary">
                             <i class="fas fa-times me-1"></i>Annulla
                         </a>

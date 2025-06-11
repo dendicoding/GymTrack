@@ -6,8 +6,8 @@
 <nav aria-label="breadcrumb">
     <ol class="breadcrumb">
         <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Home</a></li>
-        <li class="breadcrumb-item"><a href="{{ url_for('lista_pacchetti') }}">Pacchetti</a></li>
-        <li class="breadcrumb-item"><a href="{{ url_for('dettaglio_pacchetto', pacchetto_id=pacchetto.id) }}">{{ pacchetto.nome }}</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('pacchetti.lista_pacchetti') }}">Pacchetti</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('pacchetti.dettaglio_pacchetto', pacchetto_id=pacchetto.id) }}">{{ pacchetto.nome }}</a></li>
         <li class="breadcrumb-item active">Modifica</li>
     </ol>
 </nav>
@@ -145,7 +145,7 @@
                     </div>
 
                     <div class="d-flex justify-content-between">
-                        <a href="{{ url_for('dettaglio_pacchetto', pacchetto_id=pacchetto.id) }}" 
+                        <a href="{{ url_for('pacchetti.dettaglio_pacchetto', pacchetto_id=pacchetto.id) }}" 
                            class="btn btn-secondary">
                             <i class="fas fa-arrow-left me-1"></i>Annulla
                         </a>

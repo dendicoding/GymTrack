@@ -289,7 +289,7 @@
                                                                                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                                                                         </div>
                                                                                         <div class="modal-body">
-                                                                                            <form action="{{ url_for('add_societa') }}" method="POST">
+                                                                                            <form action="{{ url_for('gerarchie.add_societa') }}" method="POST">
                                                                                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                                                                 <input type="hidden" name="area_manager_id" value="{{ area_manager.id }}">
                                                                                                 <div class="mb-3">
@@ -349,7 +349,7 @@
                                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                 </div>
                                 <div class="modal-body">
-                                    <form action="{{ url_for('update_franchisor_route', franchisor_id=franchisor.id) }}" method="POST">
+                                    <form action="{{ url_for('gerarchie.update_franchisor_route', franchisor_id=franchisor.id) }}" method="POST">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                         <div class="mb-3">
                                             <label for="franchisorName{{ franchisor.id }}" class="form-label">Nome</label>
@@ -381,7 +381,7 @@
                                     <p>Sei sicuro di voler eliminare questo franchisor?</p>
                                 </div>
                                 <div class="modal-footer">
-                                    <form action="{{ url_for('delete_franchisor_route', franchisor_id=franchisor.id) }}" method="POST">
+                                    <form action="{{ url_for('gerarchie.delete_franchisor_route', franchisor_id=franchisor.id) }}" method="POST">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
                                         <button type="submit" class="btn btn-danger">Elimina</button>
@@ -409,7 +409,7 @@
                                 <p>Sei sicuro di voler eliminare questo area manager?</p>
                             </div>
                             <div class="modal-footer">
-                                <form action="{{ url_for('delete_area_manager_route', area_manager_id=area_manager.id) }}" method="POST">
+                                <form action="{{ url_for('gerarchie.delete_area_manager_route', area_manager_id=area_manager.id) }}" method="POST">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
                                     <button type="submit" class="btn btn-danger">Elimina</button>
@@ -427,7 +427,7 @@
                                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                             </div>
                             <div class="modal-body">
-                                <form action="{{ url_for('update_area_manager_route', area_manager_id=area_manager.id) }}" method="POST">
+                                <form action="{{ url_for('gerarchie.update_area_manager_route', area_manager_id=area_manager.id) }}" method="POST">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <div class="mb-3">
                                         <label for="areaManagerName{{ area_manager.id }}" class="form-label">Nome</label>
@@ -464,7 +464,7 @@
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
-                            <form action="{{ url_for('add_area_manager') }}" method="POST">
+                            <form action="{{ url_for('gerarchie.add_area_manager') }}" method="POST">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <input type="hidden" name="franchisor_id" value="{{ franchisor.id }}">
                                 <div class="mb-3">
@@ -505,7 +505,7 @@
                                     <p>Sei sicuro di voler eliminare questa società?</p>
                                 </div>
                                 <div class="modal-footer">
-                                    <form action="{{ url_for('delete_company_route', company_id=company.id) }}" method="POST">
+                                    <form action="{{ url_for('gerarchie.delete_company_route', company_id=company.id) }}" method="POST">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
                                         <button type="submit" class="btn btn-danger">Elimina</button>
@@ -523,7 +523,7 @@
                                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                 </div>
                                 <div class="modal-body">
-                                    <form action="{{ url_for('update_company_route', company_id=company.id) }}" method="POST">
+                                    <form action="{{ url_for('gerarchie.update_company_route', company_id=company.id) }}" method="POST">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                         <div class="mb-3">
                                             <label for="companyName{{ company.id }}" class="form-label">Nome</label>
@@ -564,7 +564,7 @@
                                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                 </div>
                                 <div class="modal-body">
-                                    <form action="{{ url_for('add_sede') }}" method="POST">
+                                    <form action="{{ url_for('gerarchie.add_sede') }}" method="POST">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                         <input type="hidden" name="societa_id" value="{{ company.id }}">
                                         <div class="mb-3">
@@ -616,7 +616,7 @@
                                         <p>Sei sicuro di voler eliminare questa sede?</p>
                                     </div>
                                     <div class="modal-footer">
-                                        <form action="{{ url_for('delete_sede_route', sede_id=sede.id) }}" method="POST">
+                                        <form action="{{ url_for('gerarchie.delete_sede_route', sede_id=sede.id) }}" method="POST">
                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
                                             <button type="submit" class="btn btn-danger">Elimina</button>
@@ -634,7 +634,7 @@
                                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                     </div>
                                     <div class="modal-body">
-                                        <form action="{{ url_for('update_sede_route', sede_id=sede.id) }}" method="POST">
+                                        <form action="{{ url_for('gerarchie.update_sede_route', sede_id=sede.id) }}" method="POST">
                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                             <div class="mb-3">
                                                 <label for="sedeNameEdit{{ sede.id }}" class="form-label">Nome</label>
@@ -663,7 +663,7 @@
                                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                     </div>
                                     <div class="modal-body">
-                                        <form action="{{ url_for('add_trainer') }}" method="POST">
+                                        <form action="{{ url_for('gerarchie.add_trainer') }}" method="POST">
                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                             <input type="hidden" name="sede_id" value="{{ sede.id }}">
                                             <div class="mb-3">
@@ -698,7 +698,7 @@
                                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                         </div>
                                         <div class="modal-body">
-                                            <form action="{{ url_for('update_trainer_route', trainer_id=trainer.id) }}" method="POST">
+                                            <form action="{{ url_for('gerarchie.update_trainer_route', trainer_id=trainer.id) }}" method="POST">
                                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                 <div class="mb-3">
                                                     <label for="trainerName{{ trainer.id }}" class="form-label">Nome</label>
@@ -734,7 +734,7 @@
                                             <p>Sei sicuro di voler eliminare questo trainer?</p>
                                         </div>
                                         <div class="modal-footer">
-                                            <form action="{{ url_for('delete_trainer_route', trainer_id=trainer.id) }}" method="POST">
+                                            <form action="{{ url_for('gerarchie.delete_trainer_route', trainer_id=trainer.id) }}" method="POST">
                                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
                                                 <button type="submit" class="btn btn-danger">Elimina</button>

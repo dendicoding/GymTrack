@@ -11,12 +11,32 @@
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/it.js"></script>
     <!--<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">-->
     {% block extra_css %}{% endblock %}
+        <style>
+        .navbar .nav-link,
+        .navbar .dropdown-item,
+        .navbar .navbar-brand,
+        .navbar .navbar-text,
+        .navbar .btn-outline-primary {
+            color: #00388E !important;
+            border-color: #00388E !important;
+        }
+        .navbar .nav-link.active,
+        .navbar .dropdown-item.active {
+            color: rgb(40, 55, 115) !important;
+        }
+        .navbar .btn-outline-primary:hover,
+        .navbar .btn-outline-primary:focus {
+            background-color: #00388E !important;
+            color: #fff !important;
+            border-color: #00388E !important;
+        }
+    </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <nav class="navbar navbar-expand-lg navbar-light" style="background-color: #e3f0ff;">
         <div class="container-fluid">
             <a class="navbar-brand" href="{{ url_for('index') }}">
-                <i class="fas fa-dumbbell me-2"></i>GymTrack
+                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="GymTrack" style="height:42px; width:auto; margin-right:8px; vertical-align:middle;">
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
@@ -24,35 +44,40 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav">
                     <li class="nav-item">
-                        <a class="nav-link {% if request.path == url_for('index') %}active{% endif %}" href="{{ url_for('index') }}">
+                        <a class="nav-link text-primary fw-bold {% if request.path == url_for('index') %}active{% endif %}" href="{{ url_for('index') }}">
                             <i class="fas fa-tachometer-alt me-1"></i>Dashboard
                         </a>
                     </li>
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle {% if '/clienti' in request.path %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown">
+                        <a class="nav-link text-primary fw-bold dropdown-toggle {% if '/clienti' in request.path %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown">
                             <i class="fas fa-users me-1"></i>Clienti
                         </a>
                         <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{{ url_for('lista_clienti') }}">Tutti i Clienti</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('lista_clienti', tipo='lead') }}">Clienti Lead</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('lista_clienti', tipo='effettivo') }}">Clienti Effettivi</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('clienti.lista_clienti') }}">Tutti i Clienti</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('clienti.lista_clienti', tipo='lead') }}">Clienti Lead</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('clienti.lista_clienti', tipo='effettivo') }}">Clienti Effettivi</a></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="{{ url_for('nuovo_cliente') }}">Nuovo Cliente</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('clienti.nuovo_cliente') }}">Nuovo Cliente</a></li>
                         </ul>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if request.path == url_for('trainer_calendar') %}active{% endif %}" href="{{ url_for('trainer_calendar') }}">
+                        <a class="nav-link text-primary fw-bold {% if request.path == url_for('appuntamenti.trainer_calendar') %}active{% endif %}" href="{{ url_for('appuntamenti.trainer_calendar') }}">
                             <i class="fas fa-calendar-alt me-1"></i>Calendario 
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if '/pacchetti' in request.path %}active{% endif %}" href="{{ url_for('lista_pacchetti') }}">
+                        <a class="nav-link text-primary fw-bold {% if '/pacchetti' in request.path %}active{% endif %}" href="{{ url_for('pacchetti.lista_pacchetti') }}">
                             <i class="fas fa-box me-1"></i>Pacchetti
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link text-primary fw-bold {% if '/statistiche' in request.path %}active{% endif %}" href="{{ url_for('stats.statistiche') }}">
+                            <i class="fas fa-box me-1"></i>Statistiche
                         </a>
                     </li>
                     
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle {% if request.path == url_for('calendario') or request.path == url_for('scadenziario') %}active{% endif %}" 
+                        <a class="nav-link text-primary fw-bold dropdown-toggle {% if request.path == url_for('rate.calendario') or request.path == url_for('rate.scadenziario') %}active{% endif %}" 
                            href="#" 
                            role="button" 
                            data-bs-toggle="dropdown">
@@ -60,12 +85,12 @@
                         </a>
                         <ul class="dropdown-menu">
                             <li>
-                                <a class="dropdown-item {% if request.path == url_for('calendario') %}active{% endif %}" href="{{ url_for('calendario') }}">
+                                <a class="dropdown-item {% if request.path == url_for('rate.calendario') %}active{% endif %}" href="{{ url_for('rate.calendario') }}">
                                     <i class="fas fa-calendar-alt me-1"></i>Calendario Rate
                                 </a>
                             </li>
                             <li>
-                                <a class="dropdown-item {% if request.path == url_for('scadenziario') %}active{% endif %}" href="{{ url_for('scadenziario') }}">
+                                <a class="dropdown-item {% if request.path == url_for('rate.scadenziario') %}active{% endif %}" href="{{ url_for('rate.scadenziario') }}">
                                     <i class="fas fa-clock me-1"></i>Scadenziario Rate
                                 </a>
                             </li>
@@ -73,7 +98,7 @@
                     </li>
                     
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle {% if request.path == url_for('hierarchy') or request.path == url_for('all_utenti') %}active{% endif %}" 
+                        <a class="nav-link text-primary fw-bold dropdown-toggle {% if request.path == url_for('gerarchie.hierarchy') or request.path == url_for('gerarchie.all_utenti') %}active{% endif %}" 
                            href="#" 
                            role="button" 
                            data-bs-toggle="dropdown">
@@ -81,12 +106,12 @@
                         </a>
                         <ul class="dropdown-menu">
                             <li>
-                                <a class="dropdown-item {% if request.path == url_for('hierarchy') %}active{% endif %}" href="{{ url_for('hierarchy') }}">
+                                <a class="dropdown-item {% if request.path == url_for('gerarchie.hierarchy') %}active{% endif %}" href="{{ url_for('gerarchie.hierarchy') }}">
                                     <i class="fas fa-sitemap me-1"></i>Gerarchia
                                 </a>
                             </li>
                             <li>
-                                <a class="dropdown-item {% if request.path == url_for('all_utenti') %}active{% endif %}" href="{{ url_for('all_utenti') }}">
+                                <a class="dropdown-item {% if request.path == url_for('gerarchie.all_utenti') %}active{% endif %}" href="{{ url_for('gerarchie.all_utenti') }}">
                                     <i class="fa-solid fa-users-gear me-1"></i>Utenti
                                 </a>
                             </li>
@@ -100,30 +125,30 @@
                     
                     
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle {% if '/trainer' in request.path %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown">
+                        <a class="nav-link text-primary fw-bold dropdown-toggle {% if '/trainer' in request.path %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown">
                             <i class="fas fa-user-tie me-1"></i>Trainer
                         </a>
                         <ul class="dropdown-menu">
                             <li>
-                                <a class="dropdown-item {% if request.path == url_for('trainer_status') %}active{% endif %}" href="{{ url_for('trainer_status') }}">
+                                <a class="dropdown-item {% if request.path == url_for('trainers.trainer_status') %}active{% endif %}" href="{{ url_for('trainers.trainer_status') }}">
                                     <i class="fas fa-user-check me-1"></i>Stato Trainer
                                 </a>
                             </li>
                             {% if session.user_role == 'trainer' %}
                             <li>
-                                <a class="dropdown-item {% if request.path == url_for('trainer_attendance') %}active{% endif %}" href="{{ url_for('trainer_attendance') }}">
+                                <a class="dropdown-item {% if request.path == url_for('trainers.trainer_attendance') %}active{% endif %}" href="{{ url_for('trainers.trainer_attendance') }}">
                                     <i class="fas fa-calendar-check me-1"></i>Presenze Trainer
                                 </a>
                             </li>
                             <li>
-                                <a class="dropdown-item {% if request.path == url_for('trainer_resoconto') %}active{% endif %}" href="{{ url_for('trainer_resoconto') }}">
+                                <a class="dropdown-item {% if request.path == url_for('trainers.trainer_resoconto') %}active{% endif %}" href="{{ url_for('trainers.trainer_resoconto') }}">
                                     <i class="fas fa-file-alt me-1"></i>Dichiarazione Resoconto
                                 </a>
                             </li>
                             {% endif %}
                             {% if session.user_role != 'trainer' %}
                             <li>
-                                <a class="dropdown-item {% if request.path == url_for('view_trainers') %}active{% endif %}" href="{{ url_for('view_trainers') }}">
+                                <a class="dropdown-item {% if request.path == url_for('trainers.view_trainers') %}active{% endif %}" href="{{ url_for('trainers.view_trainers') }}">
                                     <i class="fa-solid fa-users-viewfinder me-1"></i>Visualizza Trainer
                                 </a>
                             </li>
@@ -131,12 +156,12 @@
                         </ul>
                     </li>
                 </ul>
-                <div class="ms-auto">
+                <div class="ms-auto d-flex align-items-center">
                     {% if session.user_name %}
-                        <span class="navbar-text text-white me-3">
+                        <span class="navbar-text text-primary fw-bold me-3">
                             {{ session.user_name }} ({{ session.user_role }})
                         </span>
-                        <a href="{{ url_for('logout') }}" class="btn btn-outline-light">Logout</a>
+                        <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-primary">Logout</a>
                     {% endif %}
                 </div>
             </div>
@@ -160,7 +185,7 @@
 
     <footer class="footer mt-auto py-3 bg-light fixed-bottom">
         <div class="container text-center">
-            <span class="text-muted">© 2025 GymTrack - DGB, V: 0.1.12</span>
+            <span class="text-muted">© 2025 GymTrack - DGB, V: 0.1.13R</span>
         </div>
     </footer>
 

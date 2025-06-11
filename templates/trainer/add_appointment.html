@@ -30,10 +30,7 @@
         <input type="datetime-local" class="form-control" id="date_time" name="date_time" 
                value="{{ prefilled_date_time }}" required>
     </div>
-    <div class="mb-3">
-        <label for="duration" class="form-label">Durata (minuti)</label>
-        <input type="number" class="form-control" id="duration" name="duration" min="1" placeholder="Inserisci durata in minuti">
-    </div>
+    <input type="hidden" id="duration" name="duration" value="30">
     <div class="mb-3">
         <label for="end_date_time" class="form-label">Data e Ora di Fine</label>
         <input type="datetime-local" class="form-control" id="end_date_time" name="end_date_time" 

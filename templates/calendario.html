@@ -9,14 +9,14 @@
             <i class="fas fa-calendar me-2"></i>Calendario Rate
         </h5>
         <div class="btn-group">
-            <a href="{{ url_for('calendario', mese=mese_precedente.month, anno=mese_precedente.year) }}" 
+            <a href="{{ url_for('rate.calendario', mese=mese_precedente.month, anno=mese_precedente.year) }}" 
                class="btn btn-light btn-sm">
                 <i class="fas fa-chevron-left"></i>
             </a>
             <span class="btn btn-light btn-sm">
                 {{ mese_corrente|month_name }} {{ anno_corrente }}
             </span>
-            <a href="{{ url_for('calendario', mese=mese_successivo.month, anno=mese_successivo.year) }}" 
+            <a href="{{ url_for('rate.calendario', mese=mese_successivo.month, anno=mese_successivo.year) }}" 
                class="btn btn-light btn-sm">
                 <i class="fas fa-chevron-right"></i>
             </a>
@@ -54,7 +54,7 @@
                                     {% if giorno.scadenze %}
                                         <div class="rate-info">
                                             {% for cliente in giorno.scadenze.clienti[:3] %}
-                                                <a href="{{ url_for('dettaglio_cliente', cliente_id=giorno.scadenze.clienti_ids[loop.index0]) }}" 
+                                                <a href="{{ url_for('clienti.dettaglio_cliente', cliente_id=giorno.scadenze.clienti_ids[loop.index0]) }}" 
                                                    class="badge bg-danger text-white mb-1 d-inline-flex align-items-center text-decoration-none" 
                                                    title="Vai al dettaglio cliente">
                                                     <i class="fas fa-user-clock me-1"></i>{{ cliente }}

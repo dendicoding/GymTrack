@@ -103,7 +103,7 @@
                     <div class="col-md-6">
                         <div class="form-floating mb-3">
                             <input type="text" class="form-control" id="codice_fiscale" name="codice_fiscale" 
-                                   value="{{ cliente['codice_fiscale'] }}" required>
+                                   value="{{ cliente['codice_fiscale'] }}">
                             <label for="codice_fiscale">Codice Fiscale *</label>
                         </div>
                     </div>
@@ -160,7 +160,7 @@
 
                     <!-- Pulsanti -->
                     <div class="col-12 text-end">
-                        <a href="{{ url_for('dettaglio_cliente', cliente_id=cliente['id']) }}" 
+                        <a href="{{ url_for('clienti.dettaglio_cliente', cliente_id=cliente['id']) }}" 
                            class="btn btn-secondary">
                             <i class="fas fa-times me-2"></i>Annulla
                         </a>

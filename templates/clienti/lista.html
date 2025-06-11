@@ -10,7 +10,7 @@
         </h1>
     </div>
     <div>
-        <a href="{{ url_for('nuovo_cliente') }}" class="btn btn-primary">
+        <a href="{{ url_for('clienti.nuovo_cliente') }}" class="btn btn-primary">
             <i class="fas fa-plus-circle me-1"></i>Nuovo Cliente
         </a>
     </div>
@@ -23,15 +23,15 @@
                 <ul class="nav nav-pills nav-pills-white">
                     <li class="nav-item">
                         <a class="nav-link {% if tipo_attivo == 'tutti' %}active{% endif %}" 
-                           href="{{ url_for('lista_clienti') }}">Tutti</a>
+                           href="{{ url_for('clienti.lista_clienti') }}">Tutti</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link {% if tipo_attivo == 'lead' %}active{% endif %}" 
-                           href="{{ url_for('lista_clienti', tipo='lead') }}">Leads</a>
+                           href="{{ url_for('clienti.lista_clienti', tipo='lead') }}">Leads</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link {% if tipo_attivo == 'effettivo' %}active{% endif %}" 
-                           href="{{ url_for('lista_clienti', tipo='effettivo') }}">Effettivi</a>
+                           href="{{ url_for('clienti.lista_clienti', tipo='effettivo') }}">Effettivi</a>
                     </li>
                 </ul>
             </div>
@@ -59,7 +59,7 @@
                 <tbody id="tabellaClienti">
                     {% if clienti|length > 0 %}
                         {% for cliente in clienti %}
-                            <tr>
+                            <tr {% if cliente.id in clienti_senza_appuntamenti %}class="table-danger"{% endif %}>
                                 <td>{{ cliente.nome }}</td>
                                 <td>{{ cliente.cognome }}</td>
                                 <td>{{ cliente.email }}</td>
@@ -75,14 +75,14 @@
                                 <td>{{ cliente.data_registrazione }}</td>
                                 <td>{{ cliente.sede_id }}</td>
                                 <td>
-                                    <a href="{{ url_for('dettaglio_cliente', cliente_id=cliente.id) }}" class="btn btn-sm btn-primary">
+                                    <a href="{{ url_for('clienti.dettaglio_cliente', cliente_id=cliente.id) }}" class="btn btn-sm btn-primary">
                                         <i class="fas fa-eye me-1"></i>Dettagli
                                     </a>
-                                    <a href="{{ url_for('modifica_cliente', cliente_id=cliente.id) }}" class="btn btn-sm btn-warning">
+                                    <a href="{{ url_for('clienti.modifica_cliente', cliente_id=cliente.id) }}" class="btn btn-sm btn-warning">
                                         <i class="fas fa-edit me-1"></i>Modifica
                                     </a>
                                     {% if cliente.tipo == 'lead' %}
-                                        <a href="{{ url_for('promuovi_cliente', cliente_id=cliente.id) }}" class="btn btn-sm btn-success">
+                                        <a href="{{ url_for('clienti.promuovi_cliente', cliente_id=cliente.id) }}" class="btn btn-sm btn-success">
                                             <i class="fas fa-user-check me-1"></i>Promuovi
                                         </a>
                                     {% endif %}

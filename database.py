@@ -201,15 +201,15 @@ def get_clienti_effettivi(sede_ids=None):
     conn.close()
     return clienti
 
-def add_cliente(nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo, codice_fiscale, tipologia, taglia_giubotto, taglia_cintura, taglia_braccia, taglia_gambe, obiettivo_cliente, sede_id):
+def add_cliente(nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo, codice_fiscale, tipologia, provenienza, taglia_giubotto, taglia_cintura, taglia_braccia, taglia_gambe, obiettivo_cliente, sede_id):
     conn = get_db_connection()
     cursor = conn.cursor()
     data_registrazione = datetime.now().strftime("%Y-%m-%d")
     
     cursor.execute(''' 
-    INSERT INTO clienti (nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo, codice_fiscale, data_registrazione, tipologia, taglia_giubotto, taglia_cintura, taglia_braccia, taglia_gambe, obiettivo_cliente, sede_id)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ''', (nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo, codice_fiscale, data_registrazione, tipologia, taglia_giubotto, taglia_cintura, taglia_braccia, taglia_gambe, obiettivo_cliente, sede_id))
+    INSERT INTO clienti (nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo, codice_fiscale, data_registrazione, tipologia, provenienza, taglia_giubotto, taglia_cintura, taglia_braccia, taglia_gambe, obiettivo_cliente, sede_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo, codice_fiscale, data_registrazione, tipologia, provenienza, taglia_giubotto, taglia_cintura, taglia_braccia, taglia_gambe, obiettivo_cliente, sede_id))
     
     conn.commit()
     cliente_id = cursor.lastrowid
@@ -958,7 +958,8 @@ def migrate_database():
     try:
         # Aggiungi il campo data_scadenza alla tabella pacchetti
         cursor.execute('''
-        ALTER TABLE pacchetti ADD COLUMN data_scadenza DATE
+        
+        ALTER TABLE clienti ADD COLUMN provenienza TEXT;
         ''')
     except Exception as e:
         print(f"Errore durante la migrazione del database: {e}")
@@ -1839,8 +1840,9 @@ def get_appointments_by_users(user_ids, start_date):
             package_id = appointment.get('package_id')
             if package_id:
                 if package_id not in lesson_counter:
-                    # Inizializza il contatore con il numero di lezioni già registrate
-                    lesson_counter[package_id] = appointment['lezioni_utilizzate']
+                    # Se lezioni_utilizzate è None, parti da 0
+                    lezioni_utilizzate = appointment['lezioni_utilizzate'] if appointment['lezioni_utilizzate'] is not None else 0
+                    lesson_counter[package_id] = lezioni_utilizzate
                 lesson_counter[package_id] += 1
                 appointment['lezione_numero'] = lesson_counter[package_id]
             else:
@@ -1859,12 +1861,48 @@ def get_appointments_by_users(user_ids, start_date):
     finally:
         conn.close()
 
+def get_appointments_by_clienti(clienti_ids, start_date):
+    """
+    Recupera gli appuntamenti per una lista di clienti a partire da una data specifica.
+    :param clienti_ids: Lista di ID dei clienti.
+    :param start_date: Data di inizio (stringa in formato 'YYYY-MM-DD').
+    :return: Lista di appuntamenti.
+    """
+    conn = get_db_connection()
+    try:
+        end_date = (datetime.strptime(start_date, '%Y-%m-%d') + timedelta(days=60)).strftime('%Y-%m-%d')
+        placeholders = ','.join('?' for _ in clienti_ids)
+        query = f'''
+            SELECT a.*, c.nome || ' ' || c.cognome AS client_name
+            FROM appointments a
+            JOIN clienti c ON a.client_id = c.id
+            WHERE a.client_id IN ({placeholders})
+            AND a.date_time >= ?
+            ORDER BY a.date_time ASC
+        '''
+        params = clienti_ids + [start_date]
+        appointments = conn.execute(query, params).fetchall()
+        # Parsing date_time
+        parsed_appointments = []
+        for appointment in appointments:
+            appointment = dict(appointment)
+            try:
+                appointment['date_time'] = datetime.strptime(appointment['date_time'], '%Y-%m-%d %H:%M:%S')
+            except ValueError:
+                appointment['date_time'] = datetime.strptime(appointment['date_time'], '%Y-%m-%dT%H:%M')
+            parsed_appointments.append(appointment)
+        return parsed_appointments
+    finally:
+        conn.close()
+
+
+
 
 def add_appointment(trainer_id, client_id, title, notes, date_time, end_date_time, appointment_type, status, is_trial, is_recovery, is_lesson_zero, package_id):
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
-        conn.execute('''
+        cursor.execute('''
             INSERT INTO appointments (trainer_id, client_id, title, notes, date_time, end_date_time, appointment_type, status, is_trial, is_recovery, is_lesson_zero, package_id)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (trainer_id, client_id, title, notes, date_time, end_date_time, appointment_type, status, is_trial, is_recovery, is_lesson_zero, package_id))

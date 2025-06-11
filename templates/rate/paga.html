@@ -6,9 +6,9 @@
 <nav aria-label="breadcrumb">
     <ol class="breadcrumb">
         <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Home</a></li>
-        <li class="breadcrumb-item"><a href="{{ url_for('lista_clienti') }}">Clienti</a></li>
-        <li class="breadcrumb-item"><a href="{{ url_for('dettaglio_cliente', cliente_id=rata.cliente_id) }}">{{ rata.nome_cliente }}</a></li>
-        <li class="breadcrumb-item"><a href="{{ url_for('dettaglio_abbonamento', abbonamento_id=rata.abbonamento_id) }}">Abbonamento</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('clienti.lista_clienti') }}">Clienti</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('clienti.dettaglio_cliente', cliente_id=rata.cliente_id) }}">{{ rata.nome_cliente }}</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('abbonamenti.dettaglio_abbonamento', abbonamento_id=rata.abbonamento_id) }}">Abbonamento</a></li>
         <li class="breadcrumb-item active">Registra Pagamento</li>
     </ol>
 </nav>
@@ -79,7 +79,7 @@
                     </div>
 
                     <div class="d-flex justify-content-between">
-                        <a href="{{ url_for('dettaglio_abbonamento', abbonamento_id=rata.abbonamento_id) }}" 
+                        <a href="{{ url_for('abbonamenti.dettaglio_abbonamento', abbonamento_id=rata.abbonamento_id) }}" 
                            class="btn btn-secondary">
                             <i class="fas fa-arrow-left me-1"></i>Annulla
                         </a>

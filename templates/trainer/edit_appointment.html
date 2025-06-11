@@ -11,7 +11,7 @@
                     <h4 class="mb-0">Modifica Appuntamento</h4>
                 </div>
                 <div class="card-body">
-                    <form method="POST" action="{{ url_for('edit_appointment', appointment_id=appointment.id) }}">
+                    <form method="POST" action="{{ url_for('appuntamenti.edit_appointment', appointment_id=appointment.id) }}">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                         <!-- Title -->
@@ -64,6 +64,7 @@
                                 <option value="Chiamata" {% if appointment.appointment_type == 'Chiamata' %}selected{% endif %}>Chiamata</option>
                                 <option value="Blocco Agenda" {% if appointment.appointment_type == 'Blocco Agenda' %}selected{% endif %}>Blocco Agenda</option>
                                 <option value="Allenamento EMS" {% if appointment.appointment_type == 'Allenamento EMS' %}selected{% endif %}>Allenamento EMS</option>
+                                <option value="Allenamento VacuLab" {% if appointment.appointment_type == 'Allenamento VacuLab' %}selected{% endif %}>Allenamento VacuLab</option>
                             </select>
                         </div>
 
@@ -72,11 +73,10 @@
                             <label for="status" class="form-label">Stato dell'appuntamento</label>
                             <select class="form-select" id="status" name="status" required>
                                 <option value="Confermato" {% if appointment.status == 'Confermato' %}selected{% endif %}>Confermato</option>
-                                <option value="Spostato" {% if appointment.status == 'Spostato' %}selected{% endif %}>Spostato</option>
-                                <option value="Saltato" {% if appointment.status == 'Saltato' %}selected{% endif %}>Saltato</option>
+                                <option value="Riprogrammata" {% if appointment.status == 'Riprogrammata' %}selected{% endif %}>Riprogrammata</option>
+                                <option value="Lezione Saltata" {% if appointment.status == 'Lezione Saltata' %}selected{% endif %}>Lezione Saltata</option>
                                 <option value="Prova Fissata" {% if appointment.status == 'Prova Fissata' %}selected{% endif %}>Prova Fissata</option>
-                                <option value="Prova in Chiamata" {% if appointment.status == 'Prova in Chiamata' %}selected{% endif %}>Prova in Chiamata</option>
-                                <option value="Appuntamento Non Svolto" {% if appointment.status == 'Appuntamento Non Svolto' %}selected{% endif %}>Appuntamento Non Svolto</option>
+                                <option value="Prova Annullata" {% if appointment.status == 'Prova Annullata' %}selected{% endif %}>Prova Annullata</option>     
                             </select>
                         </div>
 
@@ -103,7 +103,7 @@
 
                         <!-- Submit Button -->
                         <div class="d-flex justify-content-between mt-4">
-                            <a href="{{ url_for('trainer_calendar') }}" class="btn btn-secondary">Annulla</a>
+                            <a href="{{ url_for('appuntamenti.trainer_calendar') }}" class="btn btn-secondary">Annulla</a>
                             <button type="submit" class="btn btn-primary">Salva modifiche</button>
                         </div>
                     </form>

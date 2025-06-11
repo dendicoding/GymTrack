@@ -3,6 +3,14 @@
 {% block title %}Resoconti Trainer{% endblock %}
 
 {% block content %}
+<nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('trainers.view_trainers') }}">Visualizza Trainers</a></li>
+            <li class="breadcrumb-item active">Resoconti Trainer</a></li>
+            
+        </ol>
+</nav>
 <div class="container mt-4">
     <h1 class="text-center mb-4">Resoconti del Trainer</h1>
 
@@ -40,7 +48,7 @@
     <ul class="list-group">
         {% for resoconto in resoconti %}
         <li class="list-group-item d-flex justify-content-between align-items-center">
-            <a href="{{ url_for('view_resoconto', resoconto_id=resoconto.id) }}">
+            <a href="{{ url_for('trainers.view_resoconto', resoconto_id=resoconto.id) }}">
                 <strong>{{ resoconto.data }}</strong> - {{ resoconto.ore_lavoro }} ore lavoro
             </a>
             <span class="badge bg-primary rounded-pill">{{ resoconto.ore_buca }} ore buca</span>
