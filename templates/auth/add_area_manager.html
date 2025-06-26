@@ -16,13 +16,13 @@
                         <a class="nav-link" href="{{ url_for('index') }}">Dashboard</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('gestione_gerarchia') }}">Gestione Gerarchia</a>
+                        <a class="nav-link" href="{{ url_for('gerarchie.gestione_gerarchia') }}">Gestione Gerarchia</a>
                     </li>
                 </ul>
                 <div class="navbar-text text-white me-3">
                     Benvenuto, {{ session.get('user_name') }} ({{ session.get('user_role') }})
                 </div>
-                <a href="{{ url_for('logout') }}" class="btn btn-outline-light">Logout</a>
+                <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-light">Logout</a>
             </div>
         </div>
     </nav>

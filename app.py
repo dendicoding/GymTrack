@@ -8,6 +8,7 @@ from flask_wtf.csrf import CSRFProtect
 from functools import wraps
 from routes import blueprints
 from utils.auth import login_required
+from waitress import serve
 
 app = Flask(__name__)
 app.secret_key = 'sviluppo_palestra_2025'  # Chiave necessaria per flash messages
@@ -15,7 +16,7 @@ app.secret_key = 'sviluppo_palestra_2025'  # Chiave necessaria per flash message
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)
 
 # Inizializzazione del database
-db.init_db()
+#db.init_db()
 
 csrf = CSRFProtect(app)
 
@@ -27,9 +28,10 @@ locale.setlocale(locale.LC_ALL, 'it_IT.UTF-8')  # Adjust as needed
 # Aggiungi alla funzione init_db
 @app.before_request
 def setup():
-    db.init_db()
-    db.create_user_tables()
+    #db.init_db()
+    #db.create_user_tables()
     g.hierarchy = db.build_hierarchy(session.get('user_role'), session.get('user_email'))
+    print("HIERARCHY:", g.hierarchy)
 
 
 
@@ -135,8 +137,11 @@ for bp in blueprints:
     app.register_blueprint(bp)
 
 if __name__ == '__main__':
+    with app.app_context():
+    #with app.app_context():
     #db.migrate_database()
     #db.create_user_tables
     #db.init_db()
     #db.migrate_appointments_table()
-    app.run(debug=True)
+        
+        app.run(host='0.0.0.0', port=5000)

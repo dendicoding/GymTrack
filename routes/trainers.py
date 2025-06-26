@@ -141,7 +141,12 @@ def trainer_resoconto():
         ore_lavoro = request.form['ore_lavoro']
         ore_buca = request.form['ore_buca']
         attivita_buca = request.form['attivita_buca']
-        trainer_id = session.get('user_id')
+        user_email = session.get('user_email')
+        trainer = db.get_trainer_by_email(user_email)
+        if not trainer:
+            flash('Trainer non trovato.', 'error')
+            return redirect(url_for('index'))
+        trainer_id = trainer['id']
         
         db.add_resoconto(trainer_id, data, ore_lavoro, ore_buca, attivita_buca)
         flash('Resoconto dichiarato con successo!', 'success')

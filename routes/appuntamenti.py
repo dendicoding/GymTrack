@@ -10,17 +10,45 @@ appuntamenti_bp = Blueprint('appuntamenti', __name__)
 @appuntamenti_bp.route('/trainer/appointment/new', methods=['GET', 'POST'])
 @login_required
 def add_appointment():
-    if session.get('user_role') != 'trainer':
-        flash('Non hai i permessi per aggiungere appuntamenti.', 'error')
-        return redirect(url_for('index'))
+    
 
-    trainer_id = session.get('user_id')
-    sede = db.get_sede_by_trainer_email(session.get('user_email'))
-    if not sede:
-        flash('Non è stata trovata una sede associata al trainer.', 'error')
-        return redirect(url_for('index'))
+    # Step 1: Ottieni il ruolo e l'email dell'utente loggato
+    user_role = session.get('user_role')
+    user_email = session.get('user_email')
+    user_id = session.get('user_id')
+    print(f"Ruolo ed email {user_role}: {user_email}")
 
-    clienti = db.get_all_clienti([sede['id']])
+    # Step 2: Determina le sedi sotto la gerarchia dell'utente
+    societa = []
+    sedi = []
+    if user_role == 'trainer':
+        sede = db.get_sede_by_trainer_email(user_email)
+        if sede:
+            sedi.append(sede)
+    elif user_role == 'sede':
+        sede = db.get_sede_by_email(user_email)
+        if sede:
+            sedi.append(sede)
+    elif user_role == 'area manager':
+        societa = db.get_societa_by_area_manager_email(user_email)
+        print(f"Società sotto l'area manager {user_email}: {societa}")
+
+        for company in societa:
+            sedi.extend(db.get_sedi_by_societa(company['id']))
+    elif user_role == 'societa':
+        societa = db.get_societa_by_email(user_email)
+        if societa:
+            sedi = db.get_sedi_by_societa(societa['id'])
+            #sedi.extend([sede['id'] for sede in sedi])
+    elif user_role == 'franchisor':
+        area_managers = db.get_area_managers_by_franchisor_email(user_email)
+        for manager in area_managers:
+            societa = db.get_societa_by_area_manager(manager['id'])
+            
+            for company in societa:
+                sedi.extend(db.get_sedi_by_societa(company['id']))
+
+    clienti = db.get_clienti_effettivi([s['id'] for s in sedi if 'id' in s])
 
     # Precompila la data e ora se fornita nella query string
     prefilled_date_time = request.args.get('date_time', '')
@@ -59,7 +87,7 @@ def add_appointment():
                 if current_date.weekday() == day_of_week:
                     recurring_end_time = current_date + timedelta(minutes=duration)
                     db.add_appointment(
-                        trainer_id, client_id, title, notes, current_date, recurring_end_time,
+                        user_id, client_id, title, notes, current_date, recurring_end_time,
                         appointment_type, status, is_trial, is_recovery, is_lesson_zero, package_id
                     )
                 current_date += timedelta(days=1)
@@ -67,7 +95,7 @@ def add_appointment():
         else:
             # Salva l'appuntamento singolo nel database
             appointment_id = db.add_appointment(
-                trainer_id, client_id, title, notes, date_time, end_date_time,
+                user_id, client_id, title, notes, date_time, end_date_time,
                 appointment_type, status, is_trial, is_recovery, is_lesson_zero, package_id
             )
 
@@ -217,7 +245,9 @@ def trainer_calendar():
             user_ids.extend([db.get_user_by_email(trainer['email'])['id'] for trainer in trainers_in_sede])
 
     # Step 4: Ottieni gli appuntamenti per gli utenti trovati
+    print(f"User IDs per gli appuntamenti: {user_ids}")
     start_date = (date.today() - timedelta(days=30)).strftime('%Y-%m-%d')
+    print(f"Data di inizio per gli appuntamenti: {start_date}")
     appointments = db.get_appointments_by_users(user_ids, start_date)
 
     # Raggruppa gli appuntamenti per data

@@ -52,10 +52,10 @@ def add_area_manager():
 
             # Create the user in the utenti table
 
-        area_manager_id = db.register_area_manager(franchisor_id, nome, cognome, email, password)
+        area_manager_id = db.register_area_manager(nome, cognome, email, password, franchisor_id)
         if area_manager_id:
             flash('Utente ed Area Manager aggiunti con successo!', 'success')
-            return redirect(url_for('gerarchie.gestione_gerarchia'))
+            return redirect(url_for('gerarchie.gerarchia'))
         else:
             flash('Errore durante la creazione dell\'utente Area Manager', 'error')
   
@@ -66,9 +66,7 @@ def add_area_manager():
 @gerarchie_bp.route('/add-societa', methods=['GET', 'POST'])
 @login_required
 def add_societa():
-    #if session.get('user_role') != 'area_manager':
-        #flash('Non hai i permessi per aggiungere società', 'error')
-        #return redirect(url_for('index'))
+    
     
     if request.method == 'POST':
         nome = request.form['nome']
@@ -155,6 +153,7 @@ def update_area_manager_route(area_manager_id):
 @login_required
 def delete_area_manager_route(area_manager_id):
     db.delete_area_manager(area_manager_id)
+    #db.delete_user(area_manager_id)  # Assuming you want to delete the user as well
     flash('Area Manager deleted successfully!', 'success')
     return redirect(url_for('gerarchie.hierarchy'))
 

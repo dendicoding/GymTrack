@@ -1,17 +1,28 @@
 import sqlite3
 import os
 from datetime import datetime, timedelta
+import pyodbc
+#DATABASE_PATH = "gym_manager.db"
 
-DATABASE_PATH = "gym_manager.db"
-
+#def get_db_connection():
+ #   """Crea una connessione al database"""
+  #  conn = sqlite3.connect(DATABASE_PATH)
+   # conn.row_factory = sqlite3.Row
+    #return conn 
 def get_db_connection():
-    """Crea una connessione al database"""
-    conn = sqlite3.connect(DATABASE_PATH)
-    conn.row_factory = sqlite3.Row
+    """Crea una connessione a SQL Server"""
+    conn = pyodbc.connect(
+        r'DRIVER={ODBC Driver 17 for SQL Server};'
+        r'SERVER=DESKTOP-RKK4UG9\SQLEXPRESS;'
+        r'DATABASE=GYMTRACK;'
+        r'UID=gymtrack;'
+        r'PWD=gymtrack;'
+        r'Trusted_Connection=no;'
+    )
     return conn
-
+""" 
 def init_db():
-    """Inizializza il database con le tabelle necessarie"""
+    #Inizializza il database con le tabelle necessarie
     if os.path.exists(DATABASE_PATH):
         return
     
@@ -139,7 +150,7 @@ def init_db():
     conn.close()
     
     print("Database inizializzato con successo!")
-
+"""
 # Funzioni di utilità per i clienti
 def get_all_clienti(sede_ids=None):
     conn = get_db_connection()
@@ -205,28 +216,38 @@ def add_cliente(nome, cognome, email, telefono, data_nascita, indirizzo, citta, 
     conn = get_db_connection()
     cursor = conn.cursor()
     data_registrazione = datetime.now().strftime("%Y-%m-%d")
-    
+
     cursor.execute(''' 
-    INSERT INTO clienti (nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo, codice_fiscale, data_registrazione, tipologia, provenienza, taglia_giubotto, taglia_cintura, taglia_braccia, taglia_gambe, obiettivo_cliente, sede_id)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ''', (nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo, codice_fiscale, data_registrazione, tipologia, provenienza, taglia_giubotto, taglia_cintura, taglia_braccia, taglia_gambe, obiettivo_cliente, sede_id))
-    
+        INSERT INTO clienti (
+            nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo, codice_fiscale, data_registrazione, tipologia, provenienza, taglia_giubotto, taglia_cintura, taglia_braccia, taglia_gambe, obiettivo_cliente, sede_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (
+        nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo, codice_fiscale, data_registrazione, tipologia, provenienza, taglia_giubotto, taglia_cintura, taglia_braccia, taglia_gambe, obiettivo_cliente, sede_id
+    ))
+
+    # Recupera l'ID appena inserito in SQL Server
+    cursor.execute("SELECT SCOPE_IDENTITY()")
+    cliente_id = cursor.fetchone()[0]
     conn.commit()
-    cliente_id = cursor.lastrowid
     conn.close()
     return cliente_id
 
 def update_cliente(cliente_id, nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo, codice_fiscale, tipologia, taglia_giubotto, taglia_cintura, taglia_braccia, taglia_gambe, obiettivo_cliente):
     conn = get_db_connection()
+    cursor = conn.cursor()
     try:
-        conn.execute(''' 
-        UPDATE clienti 
-        SET nome = ?, cognome = ?, email = ?, telefono = ?, data_nascita = ?, 
-            indirizzo = ?, citta = ?, cap = ?, note = ?, tipo = ?, codice_fiscale = ?, 
-            tipologia = ?, taglia_giubotto = ?, taglia_cintura = ?, taglia_braccia = ?, 
-            taglia_gambe = ?, obiettivo_cliente = ?
-        WHERE id = ?
-        ''', (nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo, codice_fiscale, tipologia, taglia_giubotto, taglia_cintura, taglia_braccia, taglia_gambe, obiettivo_cliente, cliente_id))
+        cursor.execute(''' 
+            UPDATE clienti 
+            SET nome = ?, cognome = ?, email = ?, telefono = ?, data_nascita = ?, 
+                indirizzo = ?, citta = ?, cap = ?, note = ?, tipo = ?, codice_fiscale = ?, 
+                tipologia = ?, taglia_giubotto = ?, taglia_cintura = ?, taglia_braccia = ?, 
+                taglia_gambe = ?, obiettivo_cliente = ?
+            WHERE id = ?
+        ''', (
+            nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo,
+            codice_fiscale, tipologia, taglia_giubotto, taglia_cintura, taglia_braccia, taglia_gambe,
+            obiettivo_cliente, cliente_id
+        ))
         conn.commit()
     except Exception as e:
         print(f"Errore durante l'aggiornamento del cliente: {e}")
@@ -237,7 +258,8 @@ def update_cliente(cliente_id, nome, cognome, email, telefono, data_nascita, ind
 
 def delete_cliente(cliente_id):
     conn = get_db_connection()
-    conn.execute('DELETE FROM clienti WHERE id = ?', (cliente_id,))
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM clienti WHERE id = ?', (cliente_id,))
     conn.commit()
     conn.close()
 
@@ -281,11 +303,12 @@ def add_pacchetto(nome, descrizione, prezzo, numero_lezioni, durata_giorni, atti
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute('''
-    INSERT INTO pacchetti (nome, descrizione, prezzo, numero_lezioni, durata_giorni, attivo, pagamento_unico, data_scadenza)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO pacchetti (nome, descrizione, prezzo, numero_lezioni, durata_giorni, attivo, pagamento_unico, data_scadenza)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     ''', (nome, descrizione, prezzo, numero_lezioni, durata_giorni, attivo, pagamento_unico, data_scadenza))
+    cursor.execute("SELECT SCOPE_IDENTITY()")
+    pacchetto_id = cursor.fetchone()[0]
     conn.commit()
-    pacchetto_id = cursor.lastrowid
     conn.close()
     return pacchetto_id
 
@@ -373,7 +396,7 @@ def get_rate_scadenza(sede_ids):
     query = f'''
         SELECT 
             r.*,
-            c.nome || ' ' || c.cognome as nome_cliente,
+            c.nome + ' ' + c.cognome as nome_cliente,
             c.id as cliente_id,
             p.nome as tipo_pacchetto,
             a.id as abbonamento_id
@@ -384,9 +407,13 @@ def get_rate_scadenza(sede_ids):
         WHERE r.pagato = 0 AND c.sede_id IN ({placeholders})
         ORDER BY r.data_scadenza ASC
     '''
-    rate = conn.execute(query, sede_ids).fetchall()
+    cursor = conn.cursor()
+    cursor.execute(query, sede_ids)
+    rows = cursor.fetchall()
+    columns = [column[0] for column in cursor.description]
+    rate = [dict(zip(columns, row)) for row in rows]
     conn.close()
-    return rate
+    return
 
 def get_rate_incassate_mese(sede_ids=None):
     mese_inizio = datetime.now().replace(day=1).strftime("%Y-%m-%d")
@@ -394,12 +421,13 @@ def get_rate_incassate_mese(sede_ids=None):
     mese_fine = mese_fine.strftime("%Y-%m-%d")
     conn = get_db_connection()
     try:
+        cursor = conn.cursor()
         if sede_ids:
             placeholders = ','.join('?' for _ in sede_ids)
             query = f'''
                 SELECT 
                     r.*,
-                    c.nome || ' ' || c.cognome AS nome_cliente,
+                    c.nome + ' ' + c.cognome AS nome_cliente,
                     c.id AS cliente_id,
                     p.nome AS tipo_pacchetto,
                     a.id AS abbonamento_id
@@ -412,12 +440,13 @@ def get_rate_incassate_mese(sede_ids=None):
                 AND c.sede_id IN ({placeholders})
                 ORDER BY r.data_pagamento ASC;
             '''
-            rate = conn.execute(query, [mese_inizio, mese_fine] + sede_ids).fetchall()
+            params = [mese_inizio, mese_fine] + sede_ids
+            cursor.execute(query, params)
         else:
-            rate = conn.execute('''
+            query = '''
                 SELECT 
                     r.*,
-                    c.nome || ' ' || c.cognome AS nome_cliente,
+                    c.nome + ' ' + c.cognome AS nome_cliente,
                     c.id AS cliente_id,
                     p.nome AS tipo_pacchetto,
                     a.id AS abbonamento_id
@@ -428,7 +457,11 @@ def get_rate_incassate_mese(sede_ids=None):
                 WHERE r.data_pagamento BETWEEN ? AND ? 
                 AND r.pagato = 1
                 ORDER BY r.data_pagamento ASC;
-            ''', (mese_inizio, mese_fine)).fetchall()
+            '''
+            cursor.execute(query, (mese_inizio, mese_fine))
+        rows = cursor.fetchall()
+        columns = [column[0] for column in cursor.description]
+        rate = [dict(zip(columns, row)) for row in rows]
         return rate
     finally:
         conn.close()
@@ -444,28 +477,32 @@ def get_rate_calendario(mese=None, anno=None, sede_ids=None):
             SELECT 
                 r.data_scadenza,
                 COUNT(r.id) as rate_da_pagare,
-                GROUP_CONCAT(c.nome || ' ' || c.cognome) as clienti,
-                GROUP_CONCAT(c.id) as clienti_ids
+                STRING_AGG(c.nome + ' ' + c.cognome, ', ') as clienti,
+                STRING_AGG(CAST(c.id AS VARCHAR), ',') as clienti_ids
             FROM rate r
             JOIN abbonamenti a ON r.abbonamento_id = a.id
             JOIN clienti c ON a.cliente_id = c.id
             WHERE r.pagato = 0 AND c.sede_id IN ({placeholders})
         '''
-        params = sede_ids
-        
+        params = sede_ids.copy()
+
         if mese and anno:
             query += ''' 
-                AND strftime('%Y-%m', r.data_scadenza) = ?
+                AND FORMAT(r.data_scadenza, 'yyyy-MM') = ?
             '''
             params.append(f"{anno:04d}-{mese:02d}")
-        
+
         query += '''
             GROUP BY r.data_scadenza
             ORDER BY r.data_scadenza ASC
         '''
-        
-        scadenze = conn.execute(query, params).fetchall()
-        return [dict(row) for row in scadenze]
+
+        cursor = conn.cursor()
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+        columns = [column[0] for column in cursor.description]
+        scadenze = [dict(zip(columns, row)) for row in rows]
+        return scadenze
     finally:
         conn.close()
 
@@ -1118,41 +1155,68 @@ def authenticate_user(email, password):
         FROM utenti 
         WHERE email = ? AND password = ? AND attivo = 1
         '''
-        user = conn.execute(query, (email, password)).fetchone()
-        return dict(user) if user else None
+        cursor = conn.cursor()
+        cursor.execute(query, (email, password))
+        user = cursor.fetchone()
+        if user:
+            # Crea un dizionario dai risultati
+            columns = [column[0] for column in cursor.description]
+            return dict(zip(columns, user))
+        else:
+            return None
     finally:
         conn.close()
 
 def get_franchisor(franchisor_id):
     conn = get_db_connection()
-    franchisor = conn.execute('SELECT * FROM franchisor WHERE id = ?', (franchisor_id,)).fetchone()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM franchisor WHERE id = ?', (franchisor_id,))
+    row = cursor.fetchone()
+    columns = [column[0] for column in cursor.description]
     conn.close()
-    return franchisor
+    if row:
+        return dict(zip(columns, row))
+    return None
 
 def get_area_managers_by_franchisor(franchisor_id):
     conn = get_db_connection()
-    managers = conn.execute('SELECT * FROM area_manager WHERE franchisor_id = ?', (franchisor_id,)).fetchall()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM area_manager WHERE franchisor_id = ?', (franchisor_id,))
+    rows = cursor.fetchall()
+    columns = [column[0] for column in cursor.description]
+    area_managers = [dict(zip(columns, row)) for row in rows]
     conn.close()
-    return managers
+    return area_managers
 
 def get_societa_by_area_manager(area_manager_id):
     conn = get_db_connection()
-    societa = conn.execute('SELECT * FROM societa WHERE area_manager_id = ?', (area_manager_id,)).fetchall()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM societa WHERE area_manager_id = ?', (area_manager_id,))
+    rows = cursor.fetchall()
+    columns = [column[0] for column in cursor.description]
+    societa = [dict(zip(columns, row)) for row in rows]
     conn.close()
     return societa
 
 def get_sedi_by_societa(societa_id):
     conn = get_db_connection()
-    sedi = conn.execute('SELECT * FROM sede WHERE societa_id = ?', (societa_id,)).fetchall()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM sede WHERE societa_id = ?', (societa_id,))
+    rows = cursor.fetchall()
+    columns = [column[0] for column in cursor.description]
+    sedi = [dict(zip(columns, row)) for row in rows]
     conn.close()
     return sedi
 
 def get_franchisors():
     conn = get_db_connection()
-    try:
-        return conn.execute('SELECT * FROM franchisor').fetchall()
-    finally:
-        conn.close()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM franchisor')
+    rows = cursor.fetchall()
+    columns = [column[0] for column in cursor.description]
+    franchisors = [dict(zip(columns, row)) for row in rows]
+    conn.close()
+    return franchisors
 
 def get_all_data():
     """Retrieve all franchisors, area managers, companies, and locations."""
@@ -1187,48 +1251,81 @@ def build_hierarchy(user_role=None, user_email=None):
     elif user_role == 'area manager':
         conn = get_db_connection()
         try:
-            area_manager = conn.execute('SELECT * FROM area_manager WHERE email = ?', (user_email,)).fetchone()
-            if area_manager:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM area_manager WHERE email = ?', (user_email,))
+            row = cursor.fetchone()
+            if row:
+                columns = [column[0] for column in cursor.description]
+                area_manager = dict(zip(columns, row))
                 franchisor_id = area_manager['franchisor_id']
         finally:
             conn.close()
     elif user_role == 'societa':
         conn = get_db_connection()
         try:
-            societa = conn.execute('SELECT * FROM societa WHERE email = ?', (user_email,)).fetchone()
-            if societa:
-                area_manager = conn.execute('SELECT * FROM area_manager WHERE id = ?', (societa['area_manager_id'],)).fetchone()
-                if area_manager:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM societa WHERE email = ?', (user_email,))
+            row = cursor.fetchone()
+            if row:
+                columns = [column[0] for column in cursor.description]
+                societa = dict(zip(columns, row))
+                cursor.execute('SELECT * FROM area_manager WHERE id = ?', (societa['area_manager_id'],))
+                row_am = cursor.fetchone()
+                if row_am:
+                    columns_am = [column[0] for column in cursor.description]
+                    area_manager = dict(zip(columns_am, row_am))
                     franchisor_id = area_manager['franchisor_id']
         finally:
             conn.close()
     elif user_role == 'sede':
         conn = get_db_connection()
         try:
-            sede = conn.execute('SELECT * FROM sede WHERE email = ?', (user_email,)).fetchone()
-            if sede:
-                societa = conn.execute('SELECT * FROM societa WHERE id = ?', (sede['societa_id'],)).fetchone()
-                if societa:
-                    area_manager = conn.execute('SELECT * FROM area_manager WHERE id = ?', (societa['area_manager_id'],)).fetchone()
-                    if area_manager:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM sede WHERE email = ?', (user_email,))
+            row = cursor.fetchone()
+            if row:
+                columns = [column[0] for column in cursor.description]
+                sede = dict(zip(columns, row))
+                cursor.execute('SELECT * FROM societa WHERE id = ?', (sede['societa_id'],))
+                row_soc = cursor.fetchone()
+                if row_soc:
+                    columns_soc = [column[0] for column in cursor.description]
+                    societa = dict(zip(columns_soc, row_soc))
+                    cursor.execute('SELECT * FROM area_manager WHERE id = ?', (societa['area_manager_id'],))
+                    row_am = cursor.fetchone()
+                    if row_am:
+                        columns_am = [column[0] for column in cursor.description]
+                        area_manager = dict(zip(columns_am, row_am))
                         franchisor_id = area_manager['franchisor_id']
         finally:
             conn.close()
     elif user_role == 'trainer':
         conn = get_db_connection()
         try:
-            trainer = conn.execute('SELECT * FROM trainer WHERE email = ?', (user_email,)).fetchone()
-            if trainer:
-                sede = conn.execute('SELECT * FROM sede WHERE id = ?', (trainer['sede_id'],)).fetchone()
-                if sede:
-                    societa = conn.execute('SELECT * FROM societa WHERE id = ?', (sede['societa_id'],)).fetchone()
-                    if societa:
-                        area_manager = conn.execute('SELECT * FROM area_manager WHERE id = ?', (societa['area_manager_id'],)).fetchone()
-                        if area_manager:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM trainer WHERE email = ?', (user_email,))
+            row = cursor.fetchone()
+            if row:
+                columns = [column[0] for column in cursor.description]
+                trainer = dict(zip(columns, row))
+                cursor.execute('SELECT * FROM sede WHERE id = ?', (trainer['sede_id'],))
+                row_sede = cursor.fetchone()
+                if row_sede:
+                    columns_sede = [column[0] for column in cursor.description]
+                    sede = dict(zip(columns_sede, row_sede))
+                    cursor.execute('SELECT * FROM societa WHERE id = ?', (sede['societa_id'],))
+                    row_soc = cursor.fetchone()
+                    if row_soc:
+                        columns_soc = [column[0] for column in cursor.description]
+                        societa = dict(zip(columns_soc, row_soc))
+                        cursor.execute('SELECT * FROM area_manager WHERE id = ?', (societa['area_manager_id'],))
+                        row_am = cursor.fetchone()
+                        if row_am:
+                            columns_am = [column[0] for column in cursor.description]
+                            area_manager = dict(zip(columns_am, row_am))
                             franchisor_id = area_manager['franchisor_id']
         finally:
             conn.close()
-
     # Build the hierarchy for the determined franchisor
     if franchisor_id:
         franchisor = get_franchisor(franchisor_id)
@@ -1278,15 +1375,19 @@ def build_hierarchy(user_role=None, user_email=None):
 
     return hierarchy
 
-
-
 def get_user_by_email(email):
     """Retrieve a user by their email."""
     conn = get_db_connection()
     try:
         query = 'SELECT * FROM utenti WHERE email = ?'
-        user = conn.execute(query, (email,)).fetchone()
-        return dict(user) if user else None
+        cursor = conn.cursor()
+        cursor.execute(query, (email,))
+        user = cursor.fetchone()
+        if user:
+            columns = [column[0] for column in cursor.description]
+            return dict(zip(columns, user))
+        else:
+            return None
     finally:
         conn.close()
 
@@ -1458,42 +1559,73 @@ def update_trainer(trainer_id, nome, cognome, email, password):
         conn.close()
     return True
 
-def register_franchisor(nome, email, password):
+def register_franchisor(nome_franchisor,email, password):
+    """
+    Registra un nuovo franchisor e crea l'utente associato.
+    Restituisce True se tutto ok, False altrimenti.
+    """
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        # Insert the franchisor into the franchisor table
-        cursor.execute('INSERT INTO franchisor (nome, email, password) VALUES (?, ?, ?)', 
-                       (nome, email, password))
-        franchisor_id = cursor.lastrowid
-        
-        # Create a new user with the provided credentials using the same connection
-        user_created = create_user(cursor, nome, '', email, password, 'franchisor')  # Pass cursor instead of creating a new connection
-        
+        # Inserisci il franchisor
+        cursor.execute(
+            "INSERT INTO franchisor (nome, email, password) VALUES (?, ?, ?)",
+            (nome_franchisor,email, password)
+        )
+        # Ottieni l'ID del franchisor appena inserito
+        cursor.execute("SELECT SCOPE_IDENTITY()")
+        franchisor_id = cursor.fetchone()[0]
+
+        # Inserisci l'utente associato
+        cursor.execute(
+            """
+            INSERT INTO utenti (nome, cognome, email, password, ruolo)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (nome_franchisor, '', email, password, 'franchisor')
+        )
+
         conn.commit()
-        return franchisor_id if user_created else None
+        return True
     except Exception as e:
+        print("Errore durante la registrazione del franchisor:", e)
         conn.rollback()
-        print(f"Errore durante la registrazione del franchisor: {e}")
-        return None
+        return False
     finally:
         conn.close()
 
-def register_area_manager(franchisor_id, nome, cognome, email, password):
+def register_area_manager(nome, cognome, email, password, franchisor_id):
+    """
+    Registra un nuovo area manager e crea l'utente associato.
+    Restituisce True se tutto ok, False altrimenti.
+    """
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        cursor.execute('INSERT INTO area_manager (franchisor_id, nome, cognome, email, password) VALUES (?, ?, ?, ?, ?)', 
-                      (franchisor_id, nome, cognome, email, password))
-        area_manager_id = cursor.lastrowid
-        user_created = create_user(cursor, nome, cognome, email, password, 'area manager')  # Pass cursor instead of creating a new connection
+        # Inserisci l'area manager
+        cursor.execute(
+            "INSERT INTO area_manager (nome, cognome, email, password, franchisor_id) VALUES (?, ?, ?, ?, ?)",
+            (nome, cognome, email, password, franchisor_id)
+        )
+        # Ottieni l'ID appena inserito
+        cursor.execute("SELECT SCOPE_IDENTITY()")
+        area_manager_id = cursor.fetchone()[0]
+
+        # Inserisci l'utente associato
+        cursor.execute(
+            """
+            INSERT INTO utenti (nome, cognome, email, password, ruolo)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (nome, cognome, email, password, 'area manager')
+        )
 
         conn.commit()
-        return area_manager_id if user_created else None
+        return True
     except Exception as e:
-        print(f"Errore durante la registrazione dell'area manager: {e}")
+        print("Errore durante la registrazione dell'area manager:", e)
         conn.rollback()
-        return None
+        return False
     finally:
         conn.close()
 
@@ -1523,14 +1655,15 @@ def register_sede(societa_id, nome, indirizzo, citta, cap, email, password):
         INSERT INTO sede (societa_id, nome, indirizzo, citta, cap, email, password) 
         VALUES (?, ?, ?, ?, ?, ?, ?)
         ''', (societa_id, nome, indirizzo, citta, cap, email, password))
-        sede_id = cursor.lastrowid
+        # Ottieni l'ID appena inserito in SQL Server
+        cursor.execute("SELECT SCOPE_IDENTITY()")
+        sede_id = cursor.fetchone()[0]
         user_created = create_user(cursor, nome, '', email, password, 'sede')  # Pass cursor instead of creating a new connection
 
         conn.commit()
         return sede_id if user_created else None
     except Exception as e:
         print(f"Errore durante la registrazione della sede: {e}")
-
         conn.rollback()
         return None
     finally:
@@ -1546,7 +1679,9 @@ def register_trainer(sede_id, nome, cognome, email, password):
         VALUES (?, ?, ?, ?, ?)
         ''', (sede_id, nome, cognome, email, password))
         
-        trainer_id = cursor.lastrowid
+        # Ottieni l'ID appena inserito in SQL Server
+        cursor.execute("SELECT SCOPE_IDENTITY()")
+        trainer_id = cursor.fetchone()[0]
         
         # Create a new user with the provided credentials using the same connection
         user_created = create_user(cursor, nome, cognome, email, password, 'trainer')  # Pass cursor instead of creating a new connection
@@ -1572,13 +1707,26 @@ def create_user(cursor, nome, cognome, email, password, role):
         print(f"Errore durante la creazione dell'utente: {e}")
         return False
 
+def get_trainer_by_email(email):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM trainer WHERE email = ?', (email,))
+    row = cursor.fetchone()
+    columns = [column[0] for column in cursor.description]
+    conn.close()
+    if row:
+        return dict(zip(columns, row))
+    return None
+
 def get_trainers_by_sede(sede_id):
     conn = get_db_connection()
-    try:
-        trainers = conn.execute('SELECT * FROM trainer WHERE sede_id = ?', (sede_id,)).fetchall()
-        return trainers
-    finally:
-        conn.close()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM trainer WHERE sede_id = ?', (sede_id,))
+    rows = cursor.fetchall()
+    columns = [column[0] for column in cursor.description]
+    trainers = [dict(zip(columns, row)) for row in rows]
+    conn.close()
+    return trainers
 
 def crea_nuova_rata(abbonamento_id, importo, data_scadenza):
     conn = get_db_connection()
@@ -1596,16 +1744,26 @@ def crea_nuova_rata(abbonamento_id, importo, data_scadenza):
 
 def get_franchisor_by_email(email):
     conn = get_db_connection()
-    franchisor = conn.execute('SELECT * FROM franchisor WHERE email = ?', (email,)).fetchone()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM franchisor WHERE email = ?", (email,))
+    row = cursor.fetchone()
     conn.close()
-    return franchisor
+    if row:
+        columns = [column[0] for column in cursor.description]
+        return dict(zip(columns, row))
+    return None
 
 def get_sede_by_email(email):
     """Fetch the sede details by email."""
     conn = get_db_connection()
-    sede = conn.execute('SELECT * FROM sede WHERE email = ?', (email,)).fetchone()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM sede WHERE email = ?', (email,))
+    row = cursor.fetchone()
+    columns = [column[0] for column in cursor.description]
     conn.close()
-    return sede
+    if row:
+        return dict(zip(columns, row))
+    return None
 
 def get_sedi_by_societa_email(email):
     """Fetch all sedi under a societa by the societa's email."""
@@ -1621,22 +1779,40 @@ def get_sedi_by_societa_email(email):
 def get_societa_by_area_manager_email(email):
     """Fetch all societa under an area manager by the area manager's email."""
     conn = get_db_connection()
-    area_manager = conn.execute('SELECT * FROM area_manager WHERE email = ?', (email,)).fetchone()
-    if area_manager:
-        societa = conn.execute('SELECT * FROM societa WHERE area_manager_id = ?', (area_manager['id'],)).fetchall()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM area_manager WHERE email = ?', (email,))
+    row = cursor.fetchone()
+    if row:
+        columns = [column[0] for column in cursor.description]
+        area_manager = dict(zip(columns, row))
+        cursor.execute('SELECT * FROM societa WHERE area_manager_id = ?', (area_manager['id'],))
+        societa_rows = cursor.fetchall()
+        societa_columns = [column[0] for column in cursor.description]
+        societa = [dict(zip(societa_columns, r)) for r in societa_rows]
     else:
         societa = []
     conn.close()
     return societa
 
 def get_area_managers_by_franchisor_email(email):
-    """Fetch all area managers under a franchisor by the franchisor's email."""
+    """
+    Restituisce una lista di area manager associati al franchisor identificato dall'email.
+    Ogni area manager è restituito come dizionario.
+    """
     conn = get_db_connection()
-    franchisor = conn.execute('SELECT * FROM franchisor WHERE email = ?', (email,)).fetchone()
-    if franchisor:
-        area_managers = conn.execute('SELECT * FROM area_manager WHERE franchisor_id = ?', (franchisor['id'],)).fetchall()
-    else:
-        area_managers = []
+    cursor = conn.cursor()
+    # Recupera il franchisor tramite email
+    cursor.execute('SELECT id FROM franchisor WHERE email = ?', (email,))
+    franchisor_row = cursor.fetchone()
+    if not franchisor_row:
+        conn.close()
+        return []
+    franchisor_id = franchisor_row[0]
+    # Recupera gli area manager associati
+    cursor.execute('SELECT * FROM area_manager WHERE franchisor_id = ?', (franchisor_id,))
+    rows = cursor.fetchall()
+    columns = [column[0] for column in cursor.description]
+    area_managers = [dict(zip(columns, row)) for row in rows]
     conn.close()
     return area_managers
 
@@ -1670,20 +1846,34 @@ def get_area_manager_by_email(email):
 def get_sede_by_trainer_email(email):
     """Fetch the sede associated with a trainer by their email."""
     conn = get_db_connection()
-    trainer = conn.execute('SELECT * FROM trainer WHERE email = ?', (email,)).fetchone()
-    if trainer:
-        sede = conn.execute('SELECT * FROM sede WHERE id = ?', (trainer['sede_id'],)).fetchone()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM trainer WHERE email = ?', (email,))
+    trainer_row = cursor.fetchone()
+    if trainer_row:
+        columns_trainer = [column[0] for column in cursor.description]
+        trainer = dict(zip(columns_trainer, trainer_row))
+        cursor.execute('SELECT * FROM sede WHERE id = ?', (trainer['sede_id'],))
+        sede_row = cursor.fetchone()
+        if sede_row:
+            columns_sede = [column[0] for column in cursor.description]
+            sede = dict(zip(columns_sede, sede_row))
+        else:
+            sede = None
     else:
         sede = None
     conn.close()
     return sede
 
 def get_societa_by_email(email):
-    """Fetch the societa details by email."""
     conn = get_db_connection()
-    societa = conn.execute('SELECT * FROM societa WHERE email = ?', (email,)).fetchone()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM societa WHERE email = ?', (email,))
+    row = cursor.fetchone()
+    columns = [column[0] for column in cursor.description]
     conn.close()
-    return societa
+    if row:
+        return dict(zip(columns, row))
+    return None
 
 def get_user_email_by_id(user_id):
     """
@@ -1719,12 +1909,18 @@ def is_trainer_present(trainer_id):
     """Check if the trainer's last action was 'entra'."""
     conn = get_db_connection()
     try:
-        last_event = conn.execute('''
-        SELECT azione FROM eventi
-        WHERE utente_id = ? AND (azione = 'entra' OR azione = 'esci')
-        ORDER BY data_evento DESC LIMIT 1
-        ''', (trainer_id,)).fetchone()
-        return last_event and last_event['azione'] == 'entra'
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT TOP 1 azione FROM eventi
+            WHERE utente_id = ? AND (azione = 'entra' OR azione = 'esci')
+            ORDER BY data_evento DESC
+        ''', (trainer_id,))
+        row = cursor.fetchone()
+        if row:
+            columns = [column[0] for column in cursor.description]
+            last_event = dict(zip(columns, row))
+            return last_event['azione'] == 'entra'
+        return False
     finally:
         conn.close()
 
@@ -1740,23 +1936,28 @@ def get_trainers_with_status(sede_ids):
                 t.cognome, 
                 t.email,
                 COALESCE((
-                    SELECT e.azione 
+                    SELECT TOP 1 e.azione 
                     FROM eventi e 
                     WHERE e.email = t.email AND (e.azione = 'entra' OR e.azione = 'esci') 
-                    ORDER BY e.data_evento DESC LIMIT 1
+                    ORDER BY e.data_evento DESC
                 ), 'esci') AS stato
             FROM trainer t
             WHERE t.sede_id IN ({placeholders})
             ORDER BY t.cognome, t.nome
         '''
-        trainers = conn.execute(query, sede_ids).fetchall()
-        return [dict(trainer) for trainer in trainers]
+        cursor = conn.cursor()
+        cursor.execute(query, sede_ids)
+        rows = cursor.fetchall()
+        columns = [column[0] for column in cursor.description]
+        trainers = [dict(zip(columns, row)) for row in rows]
+        return trainers
     finally:
         conn.close()
 
 def add_resoconto(trainer_id, data, ore_lavoro, ore_buca, attivita_buca):
     conn = get_db_connection()
-    conn.execute('''
+    cursor = conn.cursor()
+    cursor.execute('''
         INSERT INTO resoconti (trainer_id, data, ore_lavoro, ore_buca, attivita_buca)
         VALUES (?, ?, ?, ?, ?)
     ''', (trainer_id, data, ore_lavoro, ore_buca, attivita_buca))
@@ -1807,17 +2008,21 @@ from dateutil.parser import parse  # Importa il parser per gestire i formati ISO
 
 def get_appointments_by_users(user_ids, start_date):
     """Retrieve appointments for multiple users starting from a specific date."""
+    if not user_ids:
+        return []
     conn = get_db_connection()
     try:
-        # Calculate the end date (7 days from the start date)
-        end_date = (datetime.strptime(start_date, '%Y-%m-%d') + timedelta(days=60)).strftime('%Y-%m-%d')
+        # Usa oggetti datetime Python per i parametri
+        start_date_dt = datetime.strptime(start_date, '%Y-%m-%d')
+        end_date_dt = start_date_dt + timedelta(days=60)
 
-        # Query to fetch appointments
         query = '''
-            SELECT DISTINCT a.*, c.nome || ' ' || c.cognome AS client_name, u.nome || ' ' || u.cognome AS trainer_name,
-            ab.numero_lezioni,
-            ab.lezioni_utilizzate,
-            ab.pacchetto_id
+            SELECT DISTINCT a.*, 
+                c.nome + ' ' + c.cognome AS client_name, 
+                u.nome + ' ' + u.cognome AS trainer_name,
+                ab.numero_lezioni,
+                ab.lezioni_utilizzate,
+                ab.pacchetto_id
             FROM appointments a
             JOIN clienti c ON a.client_id = c.id
             JOIN utenti u ON a.trainer_id = u.id
@@ -1826,21 +2031,19 @@ def get_appointments_by_users(user_ids, start_date):
             AND a.date_time BETWEEN ? AND ?
             ORDER BY a.date_time ASC
         '''.format(','.join('?' for _ in user_ids))
-        params = user_ids + [start_date, end_date]
-        appointments = conn.execute(query, params).fetchall()
-        print("SECONDA-------------")
-        print(appointments)
+        params = user_ids + [start_date_dt, end_date_dt]
+        cursor = conn.cursor()
+        cursor.execute(query, params)
+        appointments = cursor.fetchall()
+        columns = [column[0] for column in cursor.description]
 
-        # Parse date_time and end_date_time into datetime objects
         parsed_appointments = []
-        lesson_counter = {}  # Dizionario per tracciare il numero progressivo delle lezioni per ogni abbonamento
-
-        for appointment in appointments:
-            appointment = dict(appointment)
-            package_id = appointment.get('package_id')
+        lesson_counter = {}
+        for row in appointments:
+            appointment = dict(zip(columns, row))
+            package_id = appointment.get('pacchetto_id')
             if package_id:
                 if package_id not in lesson_counter:
-                    # Se lezioni_utilizzate è None, parti da 0
                     lezioni_utilizzate = appointment['lezioni_utilizzate'] if appointment['lezioni_utilizzate'] is not None else 0
                     lesson_counter[package_id] = lezioni_utilizzate
                 lesson_counter[package_id] += 1
@@ -1848,13 +2051,13 @@ def get_appointments_by_users(user_ids, start_date):
             else:
                 appointment['lezione_numero'] = None
             try:
-                appointment['date_time'] = datetime.strptime(appointment['date_time'], '%Y-%m-%d %H:%M:%S')
+                appointment['date_time'] = datetime.strptime(str(appointment['date_time']), '%Y-%m-%d %H:%M:%S')
             except ValueError:
-                appointment['date_time'] = datetime.strptime(appointment['date_time'], '%Y-%m-%dT%H:%M')
+                appointment['date_time'] = datetime.strptime(str(appointment['date_time']), '%Y-%m-%dT%H:%M')
             try:
-                appointment['end_date_time'] = datetime.strptime(appointment['end_date_time'], '%Y-%m-%d %H:%M:%S')
+                appointment['end_date_time'] = datetime.strptime(str(appointment['end_date_time']), '%Y-%m-%d %H:%M:%S')
             except ValueError:
-                appointment['end_date_time'] = datetime.strptime(appointment['end_date_time'], '%Y-%m-%dT%H:%M')
+                appointment['end_date_time'] = datetime.strptime(str(appointment['end_date_time']), '%Y-%m-%dT%H:%M')
             parsed_appointments.append(appointment)
 
         return parsed_appointments
