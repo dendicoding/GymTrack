@@ -168,8 +168,7 @@
     </div>
 </div>
 
-<input type="hidden" name="csrf_token" value="{{ csrf }}">
-
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <style>
     :root {
         /* Colori per i tipi di appuntamento */
@@ -510,12 +509,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     'X-CSRFToken': getCsrfToken()
                 }
             })
-            .then(response => {
+            .then(async response => {
                 if (response.ok) {
-                    // Ricarica la pagina dopo l'eliminazione
                     window.location.reload();
                 } else {
-                    alert('Errore durante l\'eliminazione dell\'appuntamento');
+                    const errorText = await response.text();
+                    alert('Errore durante l\'eliminazione dell\'appuntamento:\n' + errorText);
+                    console.error('Dettaglio errore:', errorText);
                 }
             })
             .catch(error => {

@@ -277,13 +277,13 @@ def get_pacchetto(pacchetto_id):
     conn.close()
     return pacchetto
 
-def add_pacchetto(nome, descrizione, prezzo, numero_lezioni, durata_giorni, attivo, pagamento_unico, data_scadenza=None):
+def add_pacchetto(nome, descrizione, prezzo, numero_lezioni, attivo, pagamento_unico, data_scadenza=None):
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute('''
-    INSERT INTO pacchetti (nome, descrizione, prezzo, numero_lezioni, durata_giorni, attivo, pagamento_unico, data_scadenza)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    ''', (nome, descrizione, prezzo, numero_lezioni, durata_giorni, attivo, pagamento_unico, data_scadenza))
+    INSERT INTO pacchetti (nome, descrizione, prezzo, numero_lezioni, attivo, pagamento_unico, data_scadenza)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+    ''', (nome, descrizione, prezzo, numero_lezioni, attivo, pagamento_unico, data_scadenza))
     conn.commit()
     pacchetto_id = cursor.lastrowid
     conn.close()
@@ -956,10 +956,9 @@ def migrate_database():
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        # Aggiungi il campo data_scadenza alla tabella pacchetti
         cursor.execute('''
-        
-        ALTER TABLE clienti ADD COLUMN provenienza TEXT;
+ALTER TABLE pacchetti ADD data_scadenza DATE DEFAULT NULL;
+
         ''')
     except Exception as e:
         print(f"Errore durante la migrazione del database: {e}")
@@ -1175,63 +1174,14 @@ def get_all_data():
         conn.close()
 
 def build_hierarchy(user_role=None, user_email=None):
-    """Build a filtered hierarchy based on the user's role and email."""
+    """
+    Build a filtered hierarchy based on the user's role and email.
+    L'utente vede solo la propria "sotto-gerarchia".
+    """
     hierarchy = []
 
-    # Determine the franchisor ID for the logged-in user
-    franchisor_id = None
     if user_role == 'franchisor':
         franchisor = get_franchisor_by_email(user_email)
-        if franchisor:
-            franchisor_id = franchisor['id']
-    elif user_role == 'area manager':
-        conn = get_db_connection()
-        try:
-            area_manager = conn.execute('SELECT * FROM area_manager WHERE email = ?', (user_email,)).fetchone()
-            if area_manager:
-                franchisor_id = area_manager['franchisor_id']
-        finally:
-            conn.close()
-    elif user_role == 'societa':
-        conn = get_db_connection()
-        try:
-            societa = conn.execute('SELECT * FROM societa WHERE email = ?', (user_email,)).fetchone()
-            if societa:
-                area_manager = conn.execute('SELECT * FROM area_manager WHERE id = ?', (societa['area_manager_id'],)).fetchone()
-                if area_manager:
-                    franchisor_id = area_manager['franchisor_id']
-        finally:
-            conn.close()
-    elif user_role == 'sede':
-        conn = get_db_connection()
-        try:
-            sede = conn.execute('SELECT * FROM sede WHERE email = ?', (user_email,)).fetchone()
-            if sede:
-                societa = conn.execute('SELECT * FROM societa WHERE id = ?', (sede['societa_id'],)).fetchone()
-                if societa:
-                    area_manager = conn.execute('SELECT * FROM area_manager WHERE id = ?', (societa['area_manager_id'],)).fetchone()
-                    if area_manager:
-                        franchisor_id = area_manager['franchisor_id']
-        finally:
-            conn.close()
-    elif user_role == 'trainer':
-        conn = get_db_connection()
-        try:
-            trainer = conn.execute('SELECT * FROM trainer WHERE email = ?', (user_email,)).fetchone()
-            if trainer:
-                sede = conn.execute('SELECT * FROM sede WHERE id = ?', (trainer['sede_id'],)).fetchone()
-                if sede:
-                    societa = conn.execute('SELECT * FROM societa WHERE id = ?', (sede['societa_id'],)).fetchone()
-                    if societa:
-                        area_manager = conn.execute('SELECT * FROM area_manager WHERE id = ?', (societa['area_manager_id'],)).fetchone()
-                        if area_manager:
-                            franchisor_id = area_manager['franchisor_id']
-        finally:
-            conn.close()
-
-    # Build the hierarchy for the determined franchisor
-    if franchisor_id:
-        franchisor = get_franchisor(franchisor_id)
         if franchisor:
             franchisor_dict = {
                 'id': franchisor['id'],
@@ -1273,8 +1223,88 @@ def build_hierarchy(user_role=None, user_email=None):
                     area_manager_dict['societa'].append(company_dict)
                 franchisor_dict['area_managers'].append(area_manager_dict)
             hierarchy.append(franchisor_dict)
-        else:
-            hierarchy.append({'area_managers': []})  # Ensure consistent structure for franchisor
+
+    elif user_role == 'area manager':
+        area_manager = get_area_manager_by_email(user_email)
+        if area_manager:
+            area_manager_dict = {
+                'id': area_manager['id'],
+                'nome': area_manager['nome'],
+                'cognome': area_manager['cognome'],
+                'email': area_manager['email'],
+                'type': 'area_manager',
+                'societa': []
+            }
+            societa = get_societa_by_area_manager(area_manager['id'])
+            for company in societa:
+                company_dict = {
+                    'id': company['id'],
+                    'nome': company['nome'],
+                    'type': 'societa',
+                    'sedi': []
+                }
+                sedi = get_sedi_by_societa(company['id'])
+                for sede in sedi:
+                    sede_dict = {
+                        'id': sede['id'],
+                        'nome': sede['nome'],
+                        'indirizzo': sede['indirizzo'],
+                        'citta': sede['citta'],
+                        'cap': sede['cap'],
+                        'type': 'sede',
+                        'trainers': get_trainers_by_sede(sede['id'])
+                    }
+                    company_dict['sedi'].append(sede_dict)
+                area_manager_dict['societa'].append(company_dict)
+            hierarchy.append(area_manager_dict)
+
+    elif user_role == 'societa':
+        societa = get_societa_by_email(user_email)
+        if societa:
+            company_dict = {
+                'id': societa['id'],
+                'nome': societa['nome'],
+                'type': 'societa',
+                'sedi': []
+            }
+            sedi = get_sedi_by_societa(societa['id'])
+            for sede in sedi:
+                sede_dict = {
+                    'id': sede['id'],
+                    'nome': sede['nome'],
+                    'indirizzo': sede['indirizzo'],
+                    'citta': sede['citta'],
+                    'cap': sede['cap'],
+                    'type': 'sede',
+                    'trainers': get_trainers_by_sede(sede['id'])
+                }
+                company_dict['sedi'].append(sede_dict)
+            hierarchy.append(company_dict)
+
+    elif user_role == 'sede':
+        sede = get_sede_by_email(user_email)
+        if sede:
+            sede_dict = {
+                'id': sede['id'],
+                'nome': sede['nome'],
+                'indirizzo': sede['indirizzo'],
+                'citta': sede['citta'],
+                'cap': sede['cap'],
+                'type': 'sede',
+                'trainers': get_trainers_by_sede(sede['id'])
+            }
+            hierarchy.append(sede_dict)
+
+    elif user_role == 'trainer':
+        trainer = get_user_by_email(user_email)
+        if trainer:
+            hierarchy.append({
+                'id': trainer['id'],
+                'nome': trainer['nome'],
+                'cognome': trainer['cognome'],
+                'email': trainer['email'],
+                'type': 'trainer'
+            })
 
     return hierarchy
 

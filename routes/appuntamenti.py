@@ -139,26 +139,30 @@ def edit_appointment(appointment_id):
 @login_required
 def delete_appointment(appointment_id):
     print("CSRF Token ricevuto:", request.headers.get('X-CSRFToken'))
-
-    if session.get('user_role') != 'trainer':
-        flash('Non hai i permessi per eliminare questo appuntamento.', 'error')
-        return redirect(url_for('appuntamenti.trainer_calendar'))
-
-    appointment = db.get_appointment_by_id(appointment_id)
-    print(appointment)
-    if not appointment:
-        flash('Appuntamento non trovato.', 'error')
-        return redirect(url_for('appuntamenti.trainer_calendar'))
+    print("Headers:", dict(request.headers))
+    print("Form:", request.form)
+    print("JSON:", request.get_json(silent=True))
+    print("Method:", request.method)
 
 
 
-    if db.delete_appointment(appointment_id):
-        flash('Appuntamento eliminato con successo.', 'success')
-    else:
-        flash('Errore durante l\'eliminazione dell\'appuntamento.', 'error')
+    try:
+        appointment = db.get_appointment_by_id(appointment_id)
+        print("Appuntamento trovato:", appointment)
+        if not appointment:
+            print("Appuntamento non trovato")
+            return "Appuntamento non trovato.", 400
 
-    return redirect(url_for('appuntamenti.trainer_calendar'))
-
+        result = db.delete_appointment(appointment_id)
+        print("Risultato eliminazione:", result)
+        if result:
+            return "Appuntamento eliminato con successo.", 200
+        else:
+            print("Errore durante l'eliminazione")
+            return "Errore durante l'eliminazione dell'appuntamento.", 400
+    except Exception as e:
+        print(f"Eccezione: {e}")
+        return f"Errore durante la cancellazione: {e}", 400
 
 @appuntamenti_bp.route('/trainer/calendar', methods=['GET'])
 @login_required

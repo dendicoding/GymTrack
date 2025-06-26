@@ -22,18 +22,12 @@ csrf = CSRFProtect(app)
 # Set locale for currency formatting (use 'it_IT' for Italian format)
 locale.setlocale(locale.LC_ALL, 'it_IT.UTF-8')  # Adjust as needed
 
-
-
 # Aggiungi alla funzione init_db
 @app.before_request
 def setup():
     db.init_db()
     db.create_user_tables()
     g.hierarchy = db.build_hierarchy(session.get('user_role'), session.get('user_email'))
-
-
-
-
 
 # Route principale e dashboard
 @app.route('/')
@@ -78,14 +72,11 @@ def index():
     return render_template('dashboard.html', stats=stats, oggi=oggi)
 
 
-
-
 @app.route('/eventi')
 @login_required
 def lista_eventi():
     eventi = db.get_all_eventi()
     return render_template('eventi/lista.html', eventi=eventi)
-
 
 
 @app.template_filter('month_name')
@@ -129,13 +120,12 @@ def format_date_filter(date):
     except AttributeError:
         return date  # Ritorna il valore originale se non può essere formattato
 
-
 # Registra tutti i blueprint
 for bp in blueprints:
     app.register_blueprint(bp)
 
 if __name__ == '__main__':
-    #db.migrate_database()
+    db.migrate_database()
     #db.create_user_tables
     #db.init_db()
     #db.migrate_appointments_table()

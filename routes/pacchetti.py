@@ -46,14 +46,13 @@ def nuovo_pacchetto():
         descrizione = request.form.get('descrizione')
         prezzo = request.form.get('prezzo', type=float)
         numero_lezioni = request.form.get('numero_lezioni', type=int)
-        durata_giorni = request.form.get('durata_giorni', type=int)
         attivo = 'attivo' in request.form
         pagamento_unico = 'pagamento_unico' in request.form
         data_scadenza = request.form.get('data_scadenza')
 
         # Aggiungi il pacchetto al database
         try:
-            db.add_pacchetto(nome, descrizione, prezzo, numero_lezioni, durata_giorni, attivo, pagamento_unico, data_scadenza)
+            db.add_pacchetto(nome, descrizione, prezzo, numero_lezioni, attivo, pagamento_unico, data_scadenza)
             flash('Pacchetto aggiunto con successo!', 'success')
             return redirect(url_for('pacchetti.lista_pacchetti'))
         except Exception as e:
