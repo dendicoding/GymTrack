@@ -4,7 +4,7 @@
 
 {% block content %}
 <h1>Modifica Rata</h1>
-<form method="POST" action="{{ url_for('modifica_rata', rata_id=rata.id) }}">
+<form method="POST" action="{{ url_for('rate.modifica_rata', rata_id=rata.id) }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
     {% if rata.pagato %}
@@ -34,6 +34,6 @@
     {% endif %}
 
     <button type="submit" class="btn btn-primary">Salva Modifiche</button>
-    <a href="{{ url_for('dettaglio_abbonamento', abbonamento_id=rata.abbonamento_id) }}" class="btn btn-secondary">Annulla</a>
+    <a href="{{ url_for('abbonamenti.dettaglio_abbonamento', abbonamento_id=rata.abbonamento_id) }}" class="btn btn-secondary">Annulla</a>
 </form>
 {% endblock %}

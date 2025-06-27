@@ -31,7 +31,7 @@ def setup():
     #db.init_db()
     #db.create_user_tables()
     g.hierarchy = db.build_hierarchy(session.get('user_role'), session.get('user_email'))
-    print("HIERARCHY:", g.hierarchy)
+    #print("HIERARCHY:", g.hierarchy)
 
 
 
@@ -111,9 +111,11 @@ def format_currency_filter(value):
 
 @app.template_filter('to_date')
 def to_date_filter(date_str):
-    if not date_str:
-        return None
-    return datetime.strptime(date_str, '%Y-%m-%d').date()
+    if isinstance(date_str, datetime):
+        return date_str.date()
+    if isinstance(date_str, date):
+        return date_str
+    return datetime.strptime(str(date_str), '%Y-%m-%d').date()
 
 # Custom Jinja2 filters
 @app.template_filter('format_date')

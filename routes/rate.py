@@ -48,15 +48,19 @@ def paga_rata(rata_id):
         return redirect(url_for('abbonamenti.dettaglio_abbonamento', abbonamento_id=rata['abbonamento_id']))
     
     if request.method == 'POST':
+        from decimal import Decimal
         data_pagamento = request.form.get('data_pagamento', datetime.now().strftime('%Y-%m-%d'))
         metodo_pagamento = request.form.get('metodo_pagamento')
-        importo_pagato = float(request.form.get('importo_pagato'))
+        importo_pagato = Decimal(request.form.get('importo_pagato'))
         pagamento_parziale = 'pagamento_parziale' in request.form
         
         if importo_pagato < rata['importo'] and pagamento_parziale:
             importo_rimanente = rata['importo'] - importo_pagato
-            nuova_data_scadenza = (datetime.strptime(rata['data_scadenza'], '%Y-%m-%d') + timedelta(days=7)).strftime('%Y-%m-%d')
-            
+            if isinstance(rata['data_scadenza'], str):
+                data_scadenza = datetime.strptime(rata['data_scadenza'], '%Y-%m-%d').date()
+            else:
+                data_scadenza = rata['data_scadenza']
+            nuova_data_scadenza = (data_scadenza + timedelta(days=7)).strftime('%Y-%m-%d')            
             if db.paga_rata(rata_id, metodo_pagamento, importo_pagato):
                 db.crea_nuova_rata(rata['abbonamento_id'], importo_rimanente, nuova_data_scadenza)
                 db.log_event(session.get('user_id'), session.get('user_email'), 'Pagamento parziale rata', f'Rata ID: {rata_id}')

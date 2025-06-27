@@ -20,7 +20,7 @@ def nuovo_abbonamento(cliente_id):
         
         if db.create_abbonamento(cliente_id, pacchetto_id, data_inizio, prezzo_totale, numero_rate):
             flash('Abbonamento creato con successo', 'success')
-            return redirect(url_for('dettaglio_cliente', cliente_id=cliente_id))
+            return redirect(url_for('clienti.dettaglio_cliente', cliente_id=cliente_id))
         else:
             flash('Errore durante la creazione dell\'abbonamento', 'error')
     

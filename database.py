@@ -154,12 +154,16 @@ def init_db():
 # Funzioni di utilità per i clienti
 def get_all_clienti(sede_ids=None):
     conn = get_db_connection()
+    cursor = conn.cursor()
     if sede_ids:
         placeholders = ','.join('?' for _ in sede_ids)
         query = f'SELECT * FROM clienti WHERE sede_id IN ({placeholders}) ORDER BY cognome, nome'
-        clienti = conn.execute(query, sede_ids).fetchall()
+        cursor.execute(query, sede_ids)
     else:
-        clienti = conn.execute('SELECT * FROM clienti ORDER BY cognome, nome').fetchall()
+        cursor.execute('SELECT * FROM clienti ORDER BY cognome, nome')
+    rows = cursor.fetchall()
+    columns = [column[0] for column in cursor.description]
+    clienti = [dict(zip(columns, row)) for row in rows]
     conn.close()
     return clienti
 
@@ -186,29 +190,42 @@ def delete_user(user_id):
 
 def get_cliente(cliente_id):
     conn = get_db_connection()
-    cliente = conn.execute('SELECT * FROM clienti WHERE id = ?', (cliente_id,)).fetchone()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM clienti WHERE id = ?', (cliente_id,))
+    row = cursor.fetchone()
+    columns = [column[0] for column in cursor.description]
     conn.close()
-    return cliente
+    if row:
+        return dict(zip(columns, row))
+    return None
 
 def get_leads(sede_ids=None):
     conn = get_db_connection()
+    cursor = conn.cursor()
     if sede_ids:
         placeholders = ','.join('?' for _ in sede_ids)
         query = f"SELECT * FROM clienti WHERE tipo = 'lead' AND sede_id IN ({placeholders}) ORDER BY cognome, nome"
-        leads = conn.execute(query, sede_ids).fetchall()
+        cursor.execute(query, sede_ids)
     else:
-        leads = conn.execute("SELECT * FROM clienti WHERE tipo = 'lead' ORDER BY cognome, nome").fetchall()
+        cursor.execute("SELECT * FROM clienti WHERE tipo = 'lead' ORDER BY cognome, nome")
+    rows = cursor.fetchall()
+    columns = [column[0] for column in cursor.description]
+    leads = [dict(zip(columns, row)) for row in rows]
     conn.close()
     return leads
 
 def get_clienti_effettivi(sede_ids=None):
     conn = get_db_connection()
+    cursor = conn.cursor()
     if sede_ids:
         placeholders = ','.join('?' for _ in sede_ids)
         query = f"SELECT * FROM clienti WHERE tipo = 'effettivo' AND sede_id IN ({placeholders}) ORDER BY cognome, nome"
-        clienti = conn.execute(query, sede_ids).fetchall()
+        cursor.execute(query, sede_ids)
     else:
-        clienti = conn.execute("SELECT * FROM clienti WHERE tipo = 'effettivo' ORDER BY cognome, nome").fetchall()
+        cursor.execute("SELECT * FROM clienti WHERE tipo = 'effettivo' ORDER BY cognome, nome")
+    rows = cursor.fetchall()
+    columns = [column[0] for column in cursor.description]
+    clienti = [dict(zip(columns, row)) for row in rows]
     conn.close()
     return clienti
 
@@ -216,21 +233,24 @@ def add_cliente(nome, cognome, email, telefono, data_nascita, indirizzo, citta, 
     conn = get_db_connection()
     cursor = conn.cursor()
     data_registrazione = datetime.now().strftime("%Y-%m-%d")
-
-    cursor.execute(''' 
-        INSERT INTO clienti (
+    try:
+        cursor.execute(''' 
+            INSERT INTO clienti (
+                nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo, codice_fiscale, data_registrazione, tipologia, provenienza, taglia_giubotto, taglia_cintura, taglia_braccia, taglia_gambe, obiettivo_cliente, sede_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
             nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo, codice_fiscale, data_registrazione, tipologia, provenienza, taglia_giubotto, taglia_cintura, taglia_braccia, taglia_gambe, obiettivo_cliente, sede_id
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ''', (
-        nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo, codice_fiscale, data_registrazione, tipologia, provenienza, taglia_giubotto, taglia_cintura, taglia_braccia, taglia_gambe, obiettivo_cliente, sede_id
-    ))
-
-    # Recupera l'ID appena inserito in SQL Server
-    cursor.execute("SELECT SCOPE_IDENTITY()")
-    cliente_id = cursor.fetchone()[0]
-    conn.commit()
-    conn.close()
-    return cliente_id
+        ))
+        cursor.execute("SELECT SCOPE_IDENTITY()")
+        cliente_id = cursor.fetchone()[0]
+        conn.commit()
+        return cliente_id
+    except Exception as e:
+        print(f"Errore durante l'inserimento del cliente: {e}")
+        conn.rollback()
+        return None
+    finally:
+        conn.close()
 
 def update_cliente(cliente_id, nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo, codice_fiscale, tipologia, taglia_giubotto, taglia_cintura, taglia_braccia, taglia_gambe, obiettivo_cliente):
     conn = get_db_connection()
@@ -259,9 +279,16 @@ def update_cliente(cliente_id, nome, cognome, email, telefono, data_nascita, ind
 def delete_cliente(cliente_id):
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('DELETE FROM clienti WHERE id = ?', (cliente_id,))
-    conn.commit()
-    conn.close()
+    try:
+        cursor.execute('DELETE FROM clienti WHERE id = ?', (cliente_id,))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Errore durante l'eliminazione del cliente: {e}")
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
 
 # Funzioni di utilità per i pacchetti
 def get_all_pacchetti():
@@ -273,11 +300,15 @@ def get_all_pacchetti():
 def get_all_pacchetti_validi():
     conn = get_db_connection()
     oggi = datetime.now().strftime('%Y-%m-%d')
-    pacchetti = conn.execute('''
-    SELECT * FROM pacchetti
-    WHERE data_scadenza IS NULL OR data_scadenza >= ?
-    ORDER BY nome
-    ''', (oggi,)).fetchall()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT * FROM pacchetti
+        WHERE data_scadenza IS NULL OR data_scadenza >= ?
+        ORDER BY nome
+    ''', (oggi,))
+    rows = cursor.fetchall()
+    columns = [column[0] for column in cursor.description]
+    pacchetti = [dict(zip(columns, row)) for row in rows]
     conn.close()
     return pacchetti
 
@@ -295,9 +326,14 @@ def delete_pacchetto(pacchetto_id):
 
 def get_pacchetto(pacchetto_id):
     conn = get_db_connection()
-    pacchetto = conn.execute('SELECT * FROM pacchetti WHERE id = ?', (pacchetto_id,)).fetchone()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM pacchetti WHERE id = ?', (pacchetto_id,))
+    row = cursor.fetchone()
+    columns = [column[0] for column in cursor.description]
     conn.close()
-    return pacchetto
+    if row:
+        return dict(zip(columns, row))
+    return None
 
 def add_pacchetto(nome, descrizione, prezzo, numero_lezioni, durata_giorni, attivo, pagamento_unico, data_scadenza=None):
     conn = get_db_connection()
@@ -324,16 +360,43 @@ def update_pacchetto(pacchetto_id, nome, descrizione, prezzo, numero_lezioni, du
     conn.close()
     return pacchetto_id
 # Funzioni per gli abbonamenti
+from datetime import datetime, date
 def create_abbonamento(cliente_id, pacchetto_id, data_inizio, prezzo_totale, numero_rate=1):
     conn = get_db_connection()
     try:
-        # Ottieni informazioni sul pacchetto
         pacchetto = get_pacchetto(pacchetto_id)
         if not pacchetto:
             return False
-        
-        # Inserisci l'abbonamento
-        cursor = conn.execute('''
+
+        cliente = get_cliente(cliente_id)
+        sede_id = cliente['sede_id'] if cliente and 'sede_id' in cliente else None
+
+        cursor = conn.cursor()
+
+        # Assicurati che data_inizio sia un oggetto date
+        if isinstance(data_inizio, str):
+            data_inizio = datetime.strptime(data_inizio, '%Y-%m-%d').date()
+        elif isinstance(data_inizio, datetime):
+            data_inizio = data_inizio.date()
+
+        data_fine = data_inizio + timedelta(days=pacchetto['durata_giorni'])
+
+        # Converti le date in stringhe 'YYYY-MM-DD'
+        data_inizio_sql = data_inizio.strftime('%Y-%m-%d')
+        data_fine_sql = data_fine.strftime('%Y-%m-%d')
+
+        print("DEBUG create_abbonamento params:", {
+            "cliente_id": cliente_id,
+            "pacchetto_id": pacchetto_id,
+            "data_inizio": data_inizio_sql,
+            "data_fine": data_fine_sql,
+            "numero_lezioni": pacchetto['numero_lezioni'],
+            "prezzo_totale": prezzo_totale,
+            "numero_rate": numero_rate,
+            "sede_id": sede_id
+        })
+
+        cursor.execute('''
             INSERT INTO abbonamenti (
                 cliente_id, 
                 pacchetto_id, 
@@ -342,32 +405,31 @@ def create_abbonamento(cliente_id, pacchetto_id, data_inizio, prezzo_totale, num
                 numero_lezioni,
                 lezioni_utilizzate,
                 prezzo_totale,
-                numero_rate
-            ) VALUES (?, ?, ?, date(?, '+' || ? || ' days'), ?, 0, ?, ?)
+                numero_rate,
+                sede_id
+            ) OUTPUT INSERTED.id
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             cliente_id, 
             pacchetto_id, 
-            data_inizio, 
-            data_inizio,
-            pacchetto['durata_giorni'],
+            data_inizio_sql, 
+            data_fine_sql,
             pacchetto['numero_lezioni'],
+            0,  # lezioni_utilizzate
             prezzo_totale,
-            numero_rate
+            numero_rate,
+            sede_id
         ))
-        
-        abbonamento_id = cursor.lastrowid
-        
-        # Crea le rate
+        abbonamento_id = cursor.fetchone()[0]
+        print("DEBUG abbonamento_id:", abbonamento_id)
+        #if not abbonamento_id:
+            #raise Exception("Errore: abbonamento_id non ottenuto dopo l'inserimento!")
+
         importo_rata = prezzo_totale / numero_rate
         for i in range(numero_rate):
-            # Calcola la data di scadenza della rata (ogni 30 giorni)
-            data_scadenza = conn.execute(
-                "SELECT date(?, '+' || ? || ' days')",
-                (data_inizio, (i + 1) * 30)
-            ).fetchone()[0]
-            
-            # Inserisci la rata
-            conn.execute('''
+            data_scadenza = data_inizio + timedelta(days=(i + 1) * 30)
+            data_scadenza_sql = data_scadenza.strftime('%Y-%m-%d')
+            cursor.execute('''
                 INSERT INTO rate (
                     abbonamento_id,
                     importo,
@@ -375,13 +437,15 @@ def create_abbonamento(cliente_id, pacchetto_id, data_inizio, prezzo_totale, num
                     pagato,
                     numero_rata
                 ) VALUES (?, ?, ?, 0, ?)
-            ''', (abbonamento_id, importo_rata, data_scadenza, i + 1))
-        
+            ''', (abbonamento_id, importo_rata, data_scadenza_sql, i + 1))
+
         conn.commit()
         return True
-        
+
     except Exception as e:
+        import traceback
         print(f"Errore durante la creazione dell'abbonamento: {e}")
+        traceback.print_exc()
         conn.rollback()
         return False
     finally:
@@ -600,10 +664,11 @@ def add_lezione(abbonamento_id, data, note, registrata_da):
 def modifica_rata_pagata(rata_id, data_pagamento, metodo_pagamento):
     conn = get_db_connection()
     try:
-        conn.execute('''
-        UPDATE rate
-        SET data_pagamento = ?, metodo_pagamento = ?
-        WHERE id = ?
+        cursor = conn.cursor()
+        cursor.execute('''
+            UPDATE rate
+            SET data_pagamento = ?, metodo_pagamento = ?
+            WHERE id = ?
         ''', (data_pagamento, metodo_pagamento, rata_id))
         conn.commit()
         return True
@@ -617,10 +682,11 @@ def modifica_rata_pagata(rata_id, data_pagamento, metodo_pagamento):
 def modifica_rata_non_pagata(rata_id, importo, data_scadenza):
     conn = get_db_connection()
     try:
-        conn.execute('''
-        UPDATE rate
-        SET importo = ?, data_scadenza = ?
-        WHERE id = ?
+        cursor = conn.cursor()
+        cursor.execute('''
+            UPDATE rate
+            SET importo = ?, data_scadenza = ?
+            WHERE id = ?
         ''', (importo, data_scadenza, rata_id))
         conn.commit()
         return True
@@ -628,7 +694,7 @@ def modifica_rata_non_pagata(rata_id, importo, data_scadenza):
         print(f"Errore durante la modifica della rata non pagata: {e}")
         conn.rollback()
         return False
-    finally:
+    finally:    
         conn.close()
 
 def completa_lezione(lezione_id):
@@ -730,20 +796,24 @@ def get_scadenze_calendario():
 def get_abbonamento(abbonamento_id):
     conn = get_db_connection()
     try:
-        abbonamento = conn.execute('''
+        cursor = conn.cursor()
+        cursor.execute('''
             SELECT 
                 a.*,
                 p.nome as tipo,
                 p.descrizione as descrizione_pacchetto,
                 p.numero_lezioni as numero_lezioni_pacchetto,
                 p.durata_giorni,
-                date(a.data_inizio, '+' || p.durata_giorni || ' days') as data_fine
+                DATEADD(DAY, p.durata_giorni, a.data_inizio) as data_fine
             FROM abbonamenti a
             JOIN pacchetti p ON a.pacchetto_id = p.id
             WHERE a.id = ?
-        ''', (abbonamento_id,)).fetchone()
-        
-        return abbonamento
+        ''', (abbonamento_id,))
+        row = cursor.fetchone()
+        if row:
+            columns = [column[0] for column in cursor.description]
+            return dict(zip(columns, row))
+        return None
     finally:
         conn.close()
 
@@ -765,15 +835,19 @@ def get_lezioni_by_cliente(cliente_id):
 def get_lezioni_by_abbonamento(abbonamento_id):
     conn = get_db_connection()
     try:
-        lezioni = conn.execute('''
+        cursor = conn.cursor()
+        cursor.execute('''
             SELECT 
                 l.*,
-                COALESCE(u.nome || ' ' || u.cognome, 'Sistema') as registrata_da_nome
+                COALESCE(u.nome + ' ' + u.cognome, 'Sistema') as registrata_da_nome
             FROM lezioni l
             LEFT JOIN utenti u ON l.registrata_da = u.id
             WHERE l.abbonamento_id = ?
             ORDER BY l.data DESC
-        ''', (abbonamento_id,)).fetchall()
+        ''', (abbonamento_id,))
+        rows = cursor.fetchall()
+        columns = [column[0] for column in cursor.description]
+        lezioni = [dict(zip(columns, row)) for row in rows]
         return lezioni
     finally:
         conn.close()
@@ -785,28 +859,30 @@ def registra_lezione(abbonamento_id, data, note):
         abbonamento = get_abbonamento(abbonamento_id)
         if not abbonamento:
             return False
-        
+
         if (abbonamento['lezioni_utilizzate'] >= abbonamento['numero_lezioni']):
             return False
-        
-        # Inserisci la nuova lezione con il campo registrata_da
-        cursor = conn.execute('''
+
+        cursor = conn.cursor()
+        # Inserisci la nuova lezione con il campo registrata_da = 1
+        cursor.execute('''
             INSERT INTO lezioni (abbonamento_id, data, note, registrata_da)
             VALUES (?, ?, ?, 1)
         ''', (abbonamento_id, data, note))
-        
+
         # Aggiorna il conteggio delle lezioni utilizzate
-        conn.execute('''
+        cursor.execute('''
             UPDATE abbonamenti
             SET lezioni_utilizzate = lezioni_utilizzate + 1
             WHERE id = ?
         ''', (abbonamento_id,))
-        
+
         conn.commit()
         return True
-        
+
     except Exception as e:
         print(f"Errore durante la registrazione della lezione: {e}")
+        conn.rollback()
         return False
     finally:
         conn.close()
@@ -848,26 +924,30 @@ def migrate_lezioni_table():
 def get_statistiche_pacchetto(pacchetto_id):
     conn = get_db_connection()
     try:
+        cursor = conn.cursor()
         # Ottieni il numero di abbonamenti attivi
-        abbonamenti_attivi = conn.execute('''
+        cursor.execute('''
             SELECT COUNT(*) as count
             FROM abbonamenti
-            WHERE pacchetto_id = ? AND data_fine >= date('now')
-        ''', (pacchetto_id,)).fetchone()['count']
+            WHERE pacchetto_id = ? AND data_fine >= CAST(GETDATE() AS DATE)
+        ''', (pacchetto_id,))
+        abbonamenti_attivi = cursor.fetchone()[0]
 
         # Ottieni il numero totale di abbonamenti
-        totale_abbonamenti = conn.execute('''
+        cursor.execute('''
             SELECT COUNT(*) as count
             FROM abbonamenti
             WHERE pacchetto_id = ?
-        ''', (pacchetto_id,)).fetchone()['count']
+        ''', (pacchetto_id,))
+        totale_abbonamenti = cursor.fetchone()[0]
 
         # Calcola l'incasso totale
-        incasso_totale = conn.execute('''
+        cursor.execute('''
             SELECT COALESCE(SUM(prezzo_totale), 0) as total
             FROM abbonamenti
             WHERE pacchetto_id = ?
-        ''', (pacchetto_id,)).fetchone()['total']
+        ''', (pacchetto_id,))
+        incasso_totale = cursor.fetchone()[0]
 
         return {
             'abbonamenti_attivi': abbonamenti_attivi,
@@ -881,23 +961,23 @@ def get_statistiche_pacchetto(pacchetto_id):
 def get_vendite_mensili_pacchetto(pacchetto_id):
     conn = get_db_connection()
     try:
-        # Ottieni le vendite degli ultimi 6 mesi
-        vendite = conn.execute('''
+        cursor = conn.cursor()
+        cursor.execute('''
             SELECT 
-                strftime('%Y-%m', data_inizio) as mese,
+                FORMAT(data_inizio, 'yyyy-MM') as mese,
                 COUNT(*) as vendite
             FROM abbonamenti
             WHERE pacchetto_id = ?
-            AND data_inizio >= date('now', '-6 months')
-            GROUP BY mese
+            AND data_inizio >= DATEADD(MONTH, -6, GETDATE())
+            GROUP BY FORMAT(data_inizio, 'yyyy-MM')
             ORDER BY mese ASC
-        ''', (pacchetto_id,)).fetchall()
+        ''', (pacchetto_id,))
+        vendite = cursor.fetchall()
+        columns = [column[0] for column in cursor.description]
 
-        # Prepara i dati per il grafico
         mesi = []
         vendite_mensili = []
-        
-        # Converti i nomi dei mesi in italiano
+
         mesi_ita = {
             '01': 'Gennaio', '02': 'Febbraio', '03': 'Marzo',
             '04': 'Aprile', '05': 'Maggio', '06': 'Giugno',
@@ -906,52 +986,53 @@ def get_vendite_mensili_pacchetto(pacchetto_id):
         }
 
         for v in vendite:
-            anno, mese = v['mese'].split('-')
+            row = dict(zip(columns, v))
+            anno, mese = row['mese'].split('-')
             mesi.append(f"{mesi_ita[mese]} {anno}")
-            vendite_mensili.append(v['vendite'])
+            vendite_mensili.append(row['vendite'])
 
         return mesi, vendite_mensili
-
     finally:
         conn.close()
 
 def get_abbonamenti_by_pacchetto(pacchetto_id):
     conn = get_db_connection()
     try:
-        abbonamenti = conn.execute('''
-            SELECT 
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT TOP 10
                 a.id,
                 a.cliente_id,
                 a.data_inizio,
                 a.data_fine,
-                c.nome || ' ' || c.cognome as nome_cliente
+                c.nome + ' ' + c.cognome as nome_cliente
             FROM abbonamenti a
             JOIN clienti c ON a.cliente_id = c.id
             WHERE a.pacchetto_id = ?
             ORDER BY a.data_inizio DESC
-            LIMIT 10
-        ''', (pacchetto_id,)).fetchall()
-        
+        ''', (pacchetto_id,))
+        rows = cursor.fetchall()
+        columns = [column[0] for column in cursor.description]
+        abbonamenti = [dict(zip(columns, row)) for row in rows]
         return abbonamenti
-
     finally:
         conn.close()
 
 def registra_pagamento_rata(rata_id, data_pagamento):
     conn = get_db_connection()
     try:
-        # Aggiorna lo stato della rata
-        conn.execute('''
+        cursor = conn.cursor()
+        cursor.execute('''
             UPDATE rate 
             SET pagato = 1,
                 data_pagamento = ?
             WHERE id = ?
         ''', (data_pagamento, rata_id))
-        
         conn.commit()
         return True
     except Exception as e:
         print(f"Errore durante la registrazione del pagamento: {e}")
+        conn.rollback()
         return False
     finally:
         conn.close()
@@ -959,18 +1040,23 @@ def registra_pagamento_rata(rata_id, data_pagamento):
 def get_rata(rata_id):
     conn = get_db_connection()
     try:
-        rata = conn.execute('''
+        cursor = conn.cursor()
+        cursor.execute('''
             SELECT r.*,
                    a.cliente_id,
-                   c.nome || ' ' || c.cognome as nome_cliente,
+                   c.nome + ' ' + c.cognome as nome_cliente,
                    p.nome as tipo_pacchetto
             FROM rate r
             JOIN abbonamenti a ON r.abbonamento_id = a.id
             JOIN clienti c ON a.cliente_id = c.id
             JOIN pacchetti p ON a.pacchetto_id = p.id
             WHERE r.id = ?
-        ''', (rata_id,)).fetchone()
-        return rata
+        ''', (rata_id,))
+        row = cursor.fetchone()
+        if row:
+            columns = [column[0] for column in cursor.description]
+            return dict(zip(columns, row))
+        return None
     finally:
         conn.close()
 
@@ -1029,12 +1115,18 @@ def promuovi_cliente(cliente_id):
     conn = get_db_connection()
     try:
         # Verifichiamo prima che il cliente sia effettivamente un lead
-        cliente = conn.execute('SELECT tipo FROM clienti WHERE id = ?', (cliente_id,)).fetchone()
-        if not cliente or cliente['tipo'] != 'lead':
-            return False, "Il cliente non è un lead o non esiste"
+        cursor = conn.cursor()
+        cursor.execute('SELECT tipo FROM clienti WHERE id = ?', (cliente_id,))
+        row = cursor.fetchone()
+        if not row:
+            return False, "Il cliente non esiste"
+        columns = [column[0] for column in cursor.description]
+        cliente = dict(zip(columns, row))
+        if cliente['tipo'] != 'lead':
+            return False, "Il cliente non è un lead"
         
         # Aggiorniamo il tipo del cliente
-        conn.execute('''
+        cursor.execute('''
             UPDATE clienti 
             SET tipo = 'effettivo'
             WHERE id = ?
@@ -2071,28 +2163,33 @@ def get_appointments_by_clienti(clienti_ids, start_date):
     :param start_date: Data di inizio (stringa in formato 'YYYY-MM-DD').
     :return: Lista di appuntamenti.
     """
+    if not clienti_ids:
+        return []
     conn = get_db_connection()
     try:
-        end_date = (datetime.strptime(start_date, '%Y-%m-%d') + timedelta(days=60)).strftime('%Y-%m-%d')
+        start_date_dt = datetime.strptime(start_date, '%Y-%m-%d')
+        end_date_dt = start_date_dt + timedelta(days=60)
         placeholders = ','.join('?' for _ in clienti_ids)
         query = f'''
-            SELECT a.*, c.nome || ' ' || c.cognome AS client_name
+            SELECT a.*, c.nome + ' ' + c.cognome AS client_name
             FROM appointments a
             JOIN clienti c ON a.client_id = c.id
             WHERE a.client_id IN ({placeholders})
             AND a.date_time >= ?
             ORDER BY a.date_time ASC
         '''
-        params = clienti_ids + [start_date]
-        appointments = conn.execute(query, params).fetchall()
-        # Parsing date_time
+        params = clienti_ids + [start_date_dt]
+        cursor = conn.cursor()
+        cursor.execute(query, params)
+        appointments = cursor.fetchall()
+        columns = [column[0] for column in cursor.description]
         parsed_appointments = []
-        for appointment in appointments:
-            appointment = dict(appointment)
+        for row in appointments:
+            appointment = dict(zip(columns, row))
             try:
-                appointment['date_time'] = datetime.strptime(appointment['date_time'], '%Y-%m-%d %H:%M:%S')
+                appointment['date_time'] = datetime.strptime(str(appointment['date_time']), '%Y-%m-%d %H:%M:%S')
             except ValueError:
-                appointment['date_time'] = datetime.strptime(appointment['date_time'], '%Y-%m-%dT%H:%M')
+                appointment['date_time'] = datetime.strptime(str(appointment['date_time']), '%Y-%m-%dT%H:%M')
             parsed_appointments.append(appointment)
         return parsed_appointments
     finally:
