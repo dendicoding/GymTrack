@@ -19,7 +19,7 @@ def get_db_connection():
     
     # Usa ODBC Driver 18 per SQL Server (supporta msodbcsql18)
     conn = pyodbc.connect(
-        f'DRIVER={{ODBC Driver 18 for SQL Server}};'
+        f'DRIVER={{ODBC Driver 17 for SQL Server}};'
         f'SERVER={server};'
         f'DATABASE={database};'
         f'UID={username};'
