@@ -153,7 +153,7 @@ def dettaglio_cliente(cliente_id):
     lezioni = db.get_lezioni_by_cliente(cliente_id)
     
     # Convert rows to dictionaries and fetch the email of the user who registered each lesson
-    lezioni = [dict(lezione) for lezione in lezioni]
+    lezioni = db.get_lezioni_by_cliente(cliente_id)
     for lezione in lezioni:
         print(lezione['registrata_da'])
         lezione['registrata_da'] = db.get_user_email_by_id(lezione['registrata_da'])

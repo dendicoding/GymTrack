@@ -477,7 +477,7 @@ def get_rate_scadenza(sede_ids):
     columns = [column[0] for column in cursor.description]
     rate = [dict(zip(columns, row)) for row in rows]
     conn.close()
-    return
+    return rate
 
 def get_rate_incassate_mese(sede_ids=None):
     mese_inizio = datetime.now().replace(day=1).strftime("%Y-%m-%d")
@@ -590,7 +590,8 @@ def paga_rata(rata_id, metodo_pagamento, importo_pagato):
 def get_abbonamenti_by_cliente(cliente_id):
     conn = get_db_connection()
     try:
-        abbonamenti = conn.execute('''
+        cursor = conn.cursor()
+        cursor.execute('''
             SELECT 
                 a.*,
                 p.nome as nome_pacchetto,
@@ -599,7 +600,10 @@ def get_abbonamenti_by_cliente(cliente_id):
             JOIN pacchetti p ON a.pacchetto_id = p.id
             WHERE a.cliente_id = ?
             ORDER BY a.data_inizio DESC
-        ''', (cliente_id,)).fetchall()
+        ''', (cliente_id,))
+        rows = cursor.fetchall()
+        columns = [column[0] for column in cursor.description]
+        abbonamenti = [dict(zip(columns, row)) for row in rows]
         return abbonamenti
     finally:
         conn.close()
@@ -638,21 +642,22 @@ def add_lezione(abbonamento_id, data, note, registrata_da):
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        # Inserisci la nuova lezione
+        # Inserisci la nuova lezione e ottieni l'id
         cursor.execute('''
-        INSERT INTO lezioni (abbonamento_id, data, note, registrata_da)
-        VALUES (?, ?, ?, ?)
+            INSERT INTO lezioni (abbonamento_id, data, note, registrata_da)
+            OUTPUT INSERTED.id
+            VALUES (?, ?, ?, ?)
         ''', (abbonamento_id, data, note, registrata_da))
-        
+        lezione_id = cursor.fetchone()[0]
+
         # Incrementa il numero di lezioni utilizzate per l'abbonamento
         cursor.execute('''
-        UPDATE abbonamenti
-        SET lezioni_utilizzate = lezioni_utilizzate + 1
-        WHERE id = ?
+            UPDATE abbonamenti
+            SET lezioni_utilizzate = lezioni_utilizzate + 1
+            WHERE id = ?
         ''', (abbonamento_id,))
-        
+
         conn.commit()
-        lezione_id = cursor.lastrowid
         return lezione_id
     except Exception as e:
         print(f"Errore durante l'aggiunta della lezione: {e}")
@@ -819,7 +824,8 @@ def get_abbonamento(abbonamento_id):
 
 def get_lezioni_by_cliente(cliente_id):
     conn = get_db_connection()
-    lezioni = conn.execute('''
+    cursor = conn.cursor()
+    cursor.execute('''
         SELECT l.*,
                p.nome as tipo,
                'Admin' as registrata_da_nome  -- Valore predefinito per ora
@@ -828,7 +834,10 @@ def get_lezioni_by_cliente(cliente_id):
         JOIN pacchetti p ON a.pacchetto_id = p.id
         WHERE a.cliente_id = ?
         ORDER BY l.data DESC
-    ''', (cliente_id,)).fetchall()
+    ''', (cliente_id,))
+    rows = cursor.fetchall()
+    columns = [column[0] for column in cursor.description]
+    lezioni = [dict(zip(columns, row)) for row in rows]
     conn.close()
     return lezioni
 
@@ -1972,9 +1981,14 @@ def get_user_email_by_id(user_id):
     Fetch the email of a user based on their ID.
     """
     conn = get_db_connection()
-    user_email = conn.execute('SELECT email FROM utenti WHERE id = ?', (user_id,)).fetchone()
+    cursor = conn.cursor()
+    cursor.execute('SELECT email FROM utenti WHERE id = ?', (user_id,))
+    row = cursor.fetchone()
     conn.close()
-    return user_email['email'] if user_email else None
+    if row:
+        # pyodbc restituisce una tupla, quindi prendi il primo elemento
+        return row[0]
+    return None
 
 def log_event(utente_id, email, azione, dettagli=None):
     """Inserisce un evento nella tabella eventi."""
@@ -2099,16 +2113,18 @@ def create_appointments_table():
 from dateutil.parser import parse  # Importa il parser per gestire i formati ISO 8601
 
 def get_appointments_by_users(user_ids, start_date):
-    """Retrieve appointments for multiple users starting from a specific date."""
     if not user_ids:
         return []
     conn = get_db_connection()
     try:
-        # Usa oggetti datetime Python per i parametri
         start_date_dt = datetime.strptime(start_date, '%Y-%m-%d')
         end_date_dt = start_date_dt + timedelta(days=60)
+        # Usa formato ISO 8601 senza trattini per SQL Server
+        start_date_str = start_date_dt.strftime('%Y%m%d %H:%M:%S')
+        end_date_str = end_date_dt.strftime('%Y%m%d %H:%M:%S')
 
-        query = '''
+        placeholders = ','.join('?' for _ in user_ids)
+        query = f'''
             SELECT DISTINCT a.*, 
                 c.nome + ' ' + c.cognome AS client_name, 
                 u.nome + ' ' + u.cognome AS trainer_name,
@@ -2117,42 +2133,20 @@ def get_appointments_by_users(user_ids, start_date):
                 ab.pacchetto_id
             FROM appointments a
             JOIN clienti c ON a.client_id = c.id
-            JOIN utenti u ON a.trainer_id = u.id
+            JOIN utenti u ON a.created_by = u.id
             LEFT JOIN abbonamenti ab ON a.client_id = ab.cliente_id AND a.package_id = ab.id
-            WHERE a.trainer_id IN ({})
+            WHERE a.created_by IN ({placeholders})
             AND a.date_time BETWEEN ? AND ?
             ORDER BY a.date_time ASC
-        '''.format(','.join('?' for _ in user_ids))
-        params = user_ids + [start_date_dt, end_date_dt]
+        '''
+        params = user_ids + [start_date_str, end_date_str]
+        print("QUERY:", query)
+        print("PARAMS:", params)
         cursor = conn.cursor()
         cursor.execute(query, params)
         appointments = cursor.fetchall()
         columns = [column[0] for column in cursor.description]
-
-        parsed_appointments = []
-        lesson_counter = {}
-        for row in appointments:
-            appointment = dict(zip(columns, row))
-            package_id = appointment.get('pacchetto_id')
-            if package_id:
-                if package_id not in lesson_counter:
-                    lezioni_utilizzate = appointment['lezioni_utilizzate'] if appointment['lezioni_utilizzate'] is not None else 0
-                    lesson_counter[package_id] = lezioni_utilizzate
-                lesson_counter[package_id] += 1
-                appointment['lezione_numero'] = lesson_counter[package_id]
-            else:
-                appointment['lezione_numero'] = None
-            try:
-                appointment['date_time'] = datetime.strptime(str(appointment['date_time']), '%Y-%m-%d %H:%M:%S')
-            except ValueError:
-                appointment['date_time'] = datetime.strptime(str(appointment['date_time']), '%Y-%m-%dT%H:%M')
-            try:
-                appointment['end_date_time'] = datetime.strptime(str(appointment['end_date_time']), '%Y-%m-%d %H:%M:%S')
-            except ValueError:
-                appointment['end_date_time'] = datetime.strptime(str(appointment['end_date_time']), '%Y-%m-%dT%H:%M')
-            parsed_appointments.append(appointment)
-
-        return parsed_appointments
+        return [dict(zip(columns, row)) for row in appointments]
     finally:
         conn.close()
 
@@ -2196,55 +2190,59 @@ def get_appointments_by_clienti(clienti_ids, start_date):
         conn.close()
 
 
-
-
-def add_appointment(trainer_id, client_id, title, notes, date_time, end_date_time, appointment_type, status, is_trial, is_recovery, is_lesson_zero, package_id):
+def add_appointment(user_id, client_id, title, notes, date_time, end_date_time, appointment_type, status, is_trial, is_recovery, is_lesson_zero, package_id):
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
         cursor.execute('''
-            INSERT INTO appointments (trainer_id, client_id, title, notes, date_time, end_date_time, appointment_type, status, is_trial, is_recovery, is_lesson_zero, package_id)
+            INSERT INTO appointments (
+                created_by, client_id, title, notes, date_time, end_date_time, appointment_type, status, is_trial, is_recovery, is_lesson_zero, package_id
+            )
+            OUTPUT INSERTED.id
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (trainer_id, client_id, title, notes, date_time, end_date_time, appointment_type, status, is_trial, is_recovery, is_lesson_zero, package_id))
+        ''', (user_id, client_id, title, notes, date_time, end_date_time, appointment_type, status, is_trial, is_recovery, is_lesson_zero, package_id))
+        appointment_id = cursor.fetchone()[0]
         conn.commit()
-        appointment_id = cursor.lastrowid  # Ottieni l'ID dell'appuntamento appena creato
         return appointment_id
     except Exception as e:
         print(f"Errore durante l'aggiunta dell'appuntamento: {e}")
         conn.rollback()
+        return None
     finally:
         conn.close()
 
 def get_appointment_by_id(appointment_id):
     conn = get_db_connection()
     try:
-        appointment = conn.execute('''
-        SELECT 
-            a.*, 
-            c.nome || ' ' || c.cognome AS client_name, 
-            u.nome || ' ' || u.cognome AS trainer_name,
-            ab.id AS package_id,
-            ab.numero_lezioni,
-            ab.lezioni_utilizzate
-        FROM appointments a
-        JOIN clienti c ON a.client_id = c.id
-        JOIN utenti u ON a.trainer_id = u.id
-        LEFT JOIN abbonamenti ab ON a.package_id = ab.id
-        WHERE a.id = ?
-        ''', (appointment_id,)).fetchone()
-        
-        if appointment:
-            appointment = dict(appointment)
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT 
+                a.*, 
+                c.nome + ' ' + c.cognome AS client_name, 
+                u.nome + ' ' + u.cognome AS trainer_name,
+                ab.id AS package_id,
+                ab.numero_lezioni,
+                ab.lezioni_utilizzate
+            FROM appointments a
+            JOIN clienti c ON a.client_id = c.id
+            JOIN utenti u ON a.created_by = u.id
+            LEFT JOIN abbonamenti ab ON a.package_id = ab.id
+            WHERE a.id = ?
+        ''', (appointment_id,))
+        row = cursor.fetchone()
+        if row:
+            columns = [column[0] for column in cursor.description]
+            appointment = dict(zip(columns, row))
             try:
-                appointment['date_time'] = datetime.strptime(appointment['date_time'], '%Y-%m-%d %H:%M:%S')
+                appointment['date_time'] = datetime.strptime(str(appointment['date_time']), '%Y-%m-%d %H:%M:%S')
             except ValueError:
-                appointment['date_time'] = datetime.strptime(appointment['date_time'], '%Y-%m-%dT%H:%M')
+                appointment['date_time'] = datetime.strptime(str(appointment['date_time']), '%Y-%m-%dT%H:%M')
             try:
-                appointment['end_date_time'] = datetime.strptime(appointment['end_date_time'], '%Y-%m-%d %H:%M:%S')
+                appointment['end_date_time'] = datetime.strptime(str(appointment['end_date_time']), '%Y-%m-%d %H:%M:%S')
             except ValueError:
-                appointment['end_date_time'] = datetime.strptime(appointment['end_date_time'], '%Y-%m-%dT%H:%M')
-        
-        return appointment
+                appointment['end_date_time'] = datetime.strptime(str(appointment['end_date_time']), '%Y-%m-%dT%H:%M')
+            return appointment
+        return None
     finally:
         conn.close()
 
@@ -2269,34 +2267,39 @@ def get_appointments_by_trainers(trainer_ids, start_date):
         end_date = (datetime.strptime(start_date, '%Y-%m-%d') + timedelta(days=7)).strftime('%Y-%m-%d')
 
         # Query to fetch appointments
-        query = '''
-            SELECT a.*, c.nome || ' ' || c.cognome AS client_name
+        placeholders = ','.join('?' for _ in trainer_ids)
+        query = f'''
+            SELECT a.*, c.nome + ' ' + c.cognome AS client_name
             FROM appointments a
             JOIN clienti c ON a.client_id = c.id
-            WHERE a.trainer_id IN ({})
+            WHERE a.trainer_id IN ({placeholders})
             AND a.date_time BETWEEN ? AND ?
             ORDER BY a.date_time ASC
-        '''.format(','.join('?' for _ in trainer_ids))
+        '''
         params = trainer_ids + [start_date, end_date]
-        appointments = conn.execute(query, params).fetchall()
+        cursor = conn.cursor()
+        cursor.execute(query, params)
+        appointments = cursor.fetchall()
+        columns = [column[0] for column in cursor.description]
 
         # Parse date_time and end_date_time into datetime objects
         parsed_appointments = []
-        for appointment in appointments:
-            appointment = dict(appointment)
+        for row in appointments:
+            appointment = dict(zip(columns, row))
             try:
-                appointment['date_time'] = datetime.strptime(appointment['date_time'], '%Y-%m-%d %H:%M:%S')
+                appointment['date_time'] = datetime.strptime(str(appointment['date_time']), '%Y-%m-%d %H:%M:%S')
             except ValueError:
-                appointment['date_time'] = datetime.strptime(appointment['date_time'], '%Y-%m-%dT%H:%M')
+                appointment['date_time'] = datetime.strptime(str(appointment['date_time']), '%Y-%m-%dT%H:%M')
             try:
-                appointment['end_date_time'] = datetime.strptime(appointment['end_date_time'], '%Y-%m-%d %H:%M:%S')
+                appointment['end_date_time'] = datetime.strptime(str(appointment['end_date_time']), '%Y-%m-%d %H:%M:%S')
             except ValueError:
-                appointment['end_date_time'] = datetime.strptime(appointment['end_date_time'], '%Y-%m-%dT%H:%M')
+                appointment['end_date_time'] = datetime.strptime(str(appointment['end_date_time']), '%Y-%m-%dT%H:%M')
             parsed_appointments.append(appointment)
 
         return parsed_appointments
     finally:
         conn.close()
+
 def migrate_appointments_table():
     conn = get_db_connection()
     try:
@@ -2344,7 +2347,7 @@ def update_appointment(appointment_id, title, client_id, notes, date_time, end_d
 def get_appointments_by_sedi(sede_ids, start_date):
     """
     Recupera gli appuntamenti per un elenco di sedi a partire da una data specifica.
-    
+
     :param sede_ids: Lista di ID delle sedi.
     :param start_date: Data di inizio (stringa in formato 'YYYY-MM-DD').
     :return: Lista di appuntamenti.
@@ -2359,8 +2362,8 @@ def get_appointments_by_sedi(sede_ids, start_date):
         query = f'''
             SELECT 
                 a.*, 
-                c.nome || ' ' || c.cognome AS client_name, 
-                t.nome || ' ' || t.cognome AS trainer_name
+                c.nome + ' ' + c.cognome AS client_name, 
+                t.nome + ' ' + t.cognome AS trainer_name
             FROM appointments a
             JOIN clienti c ON a.client_id = c.id
             JOIN trainer t ON a.trainer_id = t.id
@@ -2369,9 +2372,10 @@ def get_appointments_by_sedi(sede_ids, start_date):
             ORDER BY a.date_time ASC
         '''
         params = sede_ids + [start_date, end_date]
-        appointments = conn.execute(query, params).fetchall()
-
-        # Converte i risultati in un elenco di dizionari
-        return [dict(appointment) for appointment in appointments]
+        cursor = conn.cursor()
+        cursor.execute(query, params)
+        appointments = cursor.fetchall()
+        columns = [column[0] for column in cursor.description]
+        return [dict(zip(columns, row)) for row in appointments]
     finally:
         conn.close()

@@ -16,6 +16,7 @@ def add_appointment():
     user_role = session.get('user_role')
     user_email = session.get('user_email')
     user_id = session.get('user_id')
+    
     print(f"Ruolo ed email {user_role}: {user_email}")
 
     # Step 2: Determina le sedi sotto la gerarchia dell'utente
@@ -231,24 +232,32 @@ def trainer_calendar():
 
     selected_sede_id = request.args.get('sede_id', type=int)
     user_ids = []
+    
     if selected_societa_id:
         sedi = db.get_sedi_by_societa(selected_societa_id)
 
     if selected_sede_id:
-        # Ottieni i trainer associati alla sede selezionata
         trainers_in_sede = db.get_trainers_by_sede(selected_sede_id)
-        user_ids = [db.get_user_by_email(trainer['email'])['id'] for trainer in trainers_in_sede]
+        user_ids = []
+        for trainer in trainers_in_sede:
+            user = db.get_user_by_email(trainer['email'])
+            if user:
+                user_ids.append(user['id'])
     else:
-        # Se nessuna sede è selezionata, ottieni tutti i trainer delle sedi sotto la gerarchia
         for sede in sedi:
             trainers_in_sede = db.get_trainers_by_sede(sede['id'])
-            user_ids.extend([db.get_user_by_email(trainer['email'])['id'] for trainer in trainers_in_sede])
+            for trainer in trainers_in_sede:
+                user = db.get_user_by_email(trainer['email'])
+                if user:
+                    user_ids.append(user['id'])
 
     # Step 4: Ottieni gli appuntamenti per gli utenti trovati
     print(f"User IDs per gli appuntamenti: {user_ids}")
     start_date = (date.today() - timedelta(days=30)).strftime('%Y-%m-%d')
     print(f"Data di inizio per gli appuntamenti: {start_date}")
     appointments = db.get_appointments_by_users(user_ids, start_date)
+    if appointments: print(f"Appuntamenti trovati: {appointments}") 
+    else: print("Nessun appuntamento trovato.")
 
     # Raggruppa gli appuntamenti per data
     grouped_appointments = defaultdict(list)
