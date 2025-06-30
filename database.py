@@ -11,13 +11,21 @@ import pyodbc
     #return conn 
 def get_db_connection():
     """Crea una connessione a SQL Server"""
+    # Usa variabili d'ambiente se disponibili, altrimenti valori predefiniti
+    server = os.environ.get('DATABASE_SERVER', r'DESKTOP-RKK4UG9\SQLEXPRESS')
+    database = os.environ.get('DATABASE_NAME', 'GYMTRACK')
+    username = os.environ.get('DATABASE_USER', 'gymtrack')
+    password = os.environ.get('DATABASE_PASSWORD', 'gymtrack')
+    
+    # Usa ODBC Driver 18 per SQL Server (supporta msodbcsql18)
     conn = pyodbc.connect(
-        r'DRIVER={ODBC Driver 17 for SQL Server};'
-        r'SERVER=DESKTOP-RKK4UG9\SQLEXPRESS;'
-        r'DATABASE=GYMTRACK;'
-        r'UID=gymtrack;'
-        r'PWD=gymtrack;'
-        r'Trusted_Connection=no;'
+        f'DRIVER={{ODBC Driver 18 for SQL Server}};'
+        f'SERVER={server};'
+        f'DATABASE={database};'
+        f'UID={username};'
+        f'PWD={password};'
+        f'TrustServerCertificate=yes;'
+        f'Trusted_Connection=no;'
     )
     return conn
 """ 

@@ -329,7 +329,7 @@ def mark_appointment_completed(appointment_id):
         
         # Registra la lezione
         if db.add_lezione(appointment['package_id'], oggi, note, user_id):
-            db.log_event(session.get('user_id'), session.get('user_email'), 'Registrata lezione', f'Abbonamento ID: {appointment['package_id']}')
+            db.log_event(session.get('user_id'), session.get('user_email'), 'Registrata lezione', f'Abbonamento ID: {appointment["package_id"]}')
             flash('Lezione registrata con successo', 'success')
             return jsonify({'success': True, 'message': 'Lezione registrata con successo'})
         else:

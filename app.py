@@ -21,7 +21,13 @@ app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)
 csrf = CSRFProtect(app)
 
 # Set locale for currency formatting (use 'it_IT' for Italian format)
-locale.setlocale(locale.LC_ALL, 'it_IT.UTF-8')  # Adjust as needed
+try:
+    locale.setlocale(locale.LC_ALL, 'it_IT.UTF-8')
+except locale.Error:
+    try:
+        locale.setlocale(locale.LC_ALL, 'C.UTF-8')
+    except locale.Error:
+        locale.setlocale(locale.LC_ALL, '')
 
 
 

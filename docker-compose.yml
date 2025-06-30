@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  sqlserver:
+    build: .
+    container_name: gymtrack-sqlserver
+    ports:
+      - "1433:1433"
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=StrongPassword123!
+      - MSSQL_PID=Express
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/opt/mssql-tools/bin/sqlcmd", "-S", "localhost", "-U", "sa", "-P", "StrongPassword123!", "-Q", "SELECT 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.app
+    container_name: gymtrack-app
+    ports:
+      - "5000:5000"
+    environment:
+      - DATABASE_SERVER=sqlserver
+      - DATABASE_NAME=GymTrack
+      - DATABASE_USER=sa
+      - DATABASE_PASSWORD=StrongPassword123!
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  sqlserver-data:
