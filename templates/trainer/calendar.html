@@ -342,9 +342,9 @@ document.addEventListener('DOMContentLoaded', function() {
         {% for appointment in appointments %}
             events.push({
                 id: {{ appointment.id }},
-                title: '{% if appointment.appointment_type == "Blocco Agenda" %}Blocco Agenda{% else %}{{ appointment.client_name }}{% if appointment.lezione_numero %} {{ appointment.lezione_numero }}/{{ appointment.numero_lezioni }}{% endif %}{% endif %}',
                 start: '{{ appointment.date_time.isoformat() }}',
                 end: '{{ appointment.end_date_time.isoformat() }}',
+                title: '{% if appointment.appointment_type == "Blocco Agenda" %}Blocco Agenda{% elif appointment.progressivo_lezione and appointment.numero_lezioni %}{{ appointment.client_name }} {{ appointment.progressivo_lezione }}/{{ appointment.numero_lezioni }}{% else %}{{ appointment.client_name }}{% endif %}',
                 type: '{{ appointment.appointment_type|default("") }}',
                 status: '{{ appointment.status|default("") }}',
                 client_name: '{{ appointment.client_name }}',

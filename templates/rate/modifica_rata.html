@@ -16,9 +16,11 @@
         <div class="mb-3">
             <label for="metodo_pagamento" class="form-label">Metodo di Pagamento</label>
             <select class="form-select" id="metodo_pagamento" name="metodo_pagamento" required>
-                <option value="Contanti" {% if rata.metodo_pagamento == "Contanti" %}selected{% endif %}>Contanti</option>
-                <option value="Carta di Credito" {% if rata.metodo_pagamento == "Carta di Credito" %}selected{% endif %}>Carta di Credito</option>
-                <option value="Bonifico" {% if rata.metodo_pagamento == "Bonifico" %}selected{% endif %}>Bonifico</option>
+                <option value="Contanti">Contanti</option>
+                            <option value="POS">POS</option>
+                            <option value="Bonifico">Bonifico</option>
+                            <option value="HeyLight">HeyLight</option>
+                            <option value="Satispay">Satispay</option>
             </select>
         </div>
     {% else %}

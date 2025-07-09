@@ -151,5 +151,5 @@ if __name__ == '__main__':
     #db.create_user_tables
     #db.init_db()
     #db.migrate_appointments_table()
-        
+        db.ensure_minimum_hierarchy()
         app.run(host='0.0.0.0', port=5000)

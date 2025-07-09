@@ -22,14 +22,7 @@ def registra_lezione(abbonamento_id):
     
     # Verifica se l'abbonamento è ancora valido
     oggi = datetime.now().date()
-    if isinstance(abbonamento['data_fine'], str):
-        data_scadenza = datetime.strptime(abbonamento['data_fine'], '%Y-%m-%d').date()
-    else:
-        data_scadenza = abbonamento['data_fine']
     
-    if data_scadenza < oggi:
-        flash('Abbonamento scaduto', 'error')
-        return redirect(url_for('clienti.dettaglio_cliente', cliente_id=cliente['id']))
     
     # Verifica se ci sono ancora lezioni disponibili
     lezioni_rimanenti = abbonamento['numero_lezioni'] - abbonamento['lezioni_utilizzate']

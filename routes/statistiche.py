@@ -1,5 +1,6 @@
 import calendar
 from collections import OrderedDict
+import datetime
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, abort, session, g
 import database as db
 from datetime import date
@@ -127,7 +128,9 @@ def statistiche():
         registrazioni_per_mese[key] = 0
 
     for c in clienti_registrati:
-        data_reg = c['data_registrazione'][:7]  # 'YYYY-MM'
+        if isinstance(c['data_registrazione'], (date, datetime.datetime)):            data_reg = c['data_registrazione'].strftime('%Y-%m')
+        else:
+            data_reg = str(c['data_registrazione'])[:7]
         if data_reg in registrazioni_per_mese:
             registrazioni_per_mese[data_reg] += 1
 

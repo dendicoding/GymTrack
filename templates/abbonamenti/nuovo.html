@@ -28,7 +28,9 @@
                         <select class="form-select" id="pacchetto" name="pacchetto_id" required>
                             <option value="">Seleziona un pacchetto...</option>
                             {% for pacchetto in pacchetti %}
-                                <option value="{{ pacchetto.id }}">
+                                <option value="{{ pacchetto.id }}"
+                                        data-prezzo="{{ pacchetto.prezzo }}"
+                                        data-pagamento-unico="{{ pacchetto.pagamento_unico }}">
                                     {{ pacchetto.nome }} - €{{ pacchetto.prezzo }}
                                 </option>
                             {% endfor %}
@@ -143,5 +145,10 @@ function calcolaRate() {
 document.addEventListener('DOMContentLoaded', function() {
     updatePrezzo();
 });
-</script>
+
+// Inizializza i calcoli al caricamento della pagina
+document.addEventListener('DOMContentLoaded', function() {
+    updatePrezzo();
+    document.getElementById('pacchetto').addEventListener('change', updatePrezzo);
+});</script>
 {% endblock %}

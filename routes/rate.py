@@ -38,6 +38,7 @@ def modifica_rata(rata_id):
 
 @rate_bp.route('/rate/<int:rata_id>/paga', methods=['GET', 'POST'])
 def paga_rata(rata_id):
+    oggi = date.today().strftime('%Y-%m-%d')
     rata = db.get_rata(rata_id)
     if not rata:
         flash('Rata non trovata', 'error')
@@ -76,7 +77,7 @@ def paga_rata(rata_id):
         
         return redirect(url_for('abbonamenti.dettaglio_abbonamento', abbonamento_id=rata['abbonamento_id']))
     
-    return render_template('rate/paga.html', rata=rata)
+    return render_template('rate/paga.html', rata=rata, oggi=oggi)
 
 # --- CALENDARIO E SCADENZIARIO ---
 @rate_bp.route('/calendario')

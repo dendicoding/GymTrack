@@ -281,55 +281,57 @@
                                                                                     </div>
                                                                                 </div>
                                                                             </li>
-                                                                            <div class="modal fade" id="addCompanyModal_{{ area_manager.id }}" tabindex="-1" aria-labelledby="addCompanyModalLabel_{{ area_manager.id }}" aria-hidden="true">
-                                                                                <div class="modal-dialog">
-                                                                                    <div class="modal-content">
-                                                                                        <div class="modal-header">
-                                                                                            <h5 class="modal-title" id="addCompanyModalLabel_{{ area_manager.id }}">Aggiungi Società</h5>
-                                                                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                                                                        </div>
-                                                                                        <div class="modal-body">
-                                                                                            <form action="{{ url_for('gerarchie.add_societa') }}" method="POST">
-                                                                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                                                                <input type="hidden" name="area_manager_id" value="{{ area_manager.id }}">
-                                                                                                <div class="mb-3">
-                                                                                                    <label for="addCompany_companyName_{{ area_manager.id }}" class="form-label">Nome Società</label>
-                                                                                                    <input type="text" class="form-control" id="addCompany_companyName_{{ area_manager.id }}" name="nome" required>
-                                                                                                </div>
-                                                                                                <div class="mb-3">
-                                                                                                    <label for="addCompany_companyEmail_{{ area_manager.id }}" class="form-label">Email</label>
-                                                                                                    <input type="email" class="form-control" id="addCompany_companyEmail_{{ area_manager.id }}" name="email" required>
-                                                                                                </div>
-                                                                                                <div class="mb-3">
-                                                                                                    <label for="addCompany_companyPassword_{{ area_manager.id }}" class="form-label">Password</label>
-                                                                                                    <input type="password" class="form-control" id="addCompany_companyPassword_{{ area_manager.id }}" name="password" required>
-                                                                                                </div>
-                                                                                                <div class="mb-3">
-                                                                                                    <label for="addCompany_companyIndirizzo_{{ area_manager.id }}" class="form-label">Indirizzo</label>
-                                                                                                    <input type="text" class="form-control" id="addCompany_companyIndirizzo_{{ area_manager.id }}" name="indirizzo" required>
-                                                                                                </div>
-                                                                                                <div class="mb-3">
-                                                                                                    <label for="addCompany_companyComune_{{ area_manager.id }}" class="form-label">Comune</label>
-                                                                                                    <input type="text" class="form-control" id="addCompany_companyComune_{{ area_manager.id }}" name="comune" required>
-                                                                                                </div>
-                                                                                                <div class="mb-3">
-                                                                                                    <label for="addCompany_companyProvincia_{{ area_manager.id }}" class="form-label">Provincia</label>
-                                                                                                    <input type="text" class="form-control" id="addCompany_companyProvincia_{{ area_manager.id }}" name="provincia" required>
-                                                                                                </div>
-                                                                                                <button type="submit" class="btn btn-primary">Aggiungi Società</button>
-                                                                                            </form>
-                                                                                        </div>
-                                                                                    </div>
-                                                                                </div>
-                                                                            </div>                                                
                                                                         {% endfor %}
                                                                     {% else %}
-                                                                        <li>Non sono presenti area managers per questo franchisor.</li>
+                                                                        <li class="text-muted p-3">Non sono presenti società per questo area manager.</li>
                                                                     {% endif %}
                                                                 </ul>
                                                             </div>
                                                         </div>
                                                     </div>
+                                                    <!-- MODALE AGGIUNGI SOCIETÀ: deve stare qui, fuori dal ciclo delle società ma dentro quello degli area manager -->
+                                                    <div class="modal fade" id="addCompanyModal_{{ area_manager.id }}" tabindex="-1" aria-labelledby="addCompanyModalLabel_{{ area_manager.id }}" aria-hidden="true">
+                                                        <div class="modal-dialog">
+                                                            <div class="modal-content">
+                                                                <div class="modal-header">
+                                                                    <h5 class="modal-title" id="addCompanyModalLabel_{{ area_manager.id }}">Aggiungi Società</h5>
+                                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                                </div>
+                                                                <div class="modal-body">
+                                                                    <form action="{{ url_for('gerarchie.add_societa') }}" method="POST">
+                                                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                                        <input type="hidden" name="area_manager_id" value="{{ area_manager.id }}">
+                                                                        <div class="mb-3">
+                                                                            <label for="addCompany_companyName_{{ area_manager.id }}" class="form-label">Nome Società</label>
+                                                                            <input type="text" class="form-control" id="addCompany_companyName_{{ area_manager.id }}" name="nome" required>
+                                                                        </div>
+                                                                        <div class="mb-3">
+                                                                            <label for="addCompany_companyEmail_{{ area_manager.id }}" class="form-label">Email</label>
+                                                                            <input type="email" class="form-control" id="addCompany_companyEmail_{{ area_manager.id }}" name="email" required>
+                                                                        </div>
+                                                                        <div class="mb-3">
+                                                                            <label for="addCompany_companyPassword_{{ area_manager.id }}" class="form-label">Password</label>
+                                                                            <input type="password" class="form-control" id="addCompany_companyPassword_{{ area_manager.id }}" name="password" required>
+                                                                        </div>
+                                                                        <div class="mb-3">
+                                                                            <label for="addCompany_companyIndirizzo_{{ area_manager.id }}" class="form-label">Indirizzo</label>
+                                                                            <input type="text" class="form-control" id="addCompany_companyIndirizzo_{{ area_manager.id }}" name="indirizzo" required>
+                                                                        </div>
+                                                                        <div class="mb-3">
+                                                                            <label for="addCompany_companyComune_{{ area_manager.id }}" class="form-label">Comune</label>
+                                                                            <input type="text" class="form-control" id="addCompany_companyComune_{{ area_manager.id }}" name="comune" required>
+                                                                        </div>
+                                                                        <div class="mb-3">
+                                                                            <label for="addCompany_companyProvincia_{{ area_manager.id }}" class="form-label">Provincia</label>
+                                                                            <input type="text" class="form-control" id="addCompany_companyProvincia_{{ area_manager.id }}" name="provincia" required>
+                                                                        </div>
+                                                                        <button type="submit" class="btn btn-primary">Aggiungi Società</button>
+                                                                    </form>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <!-- FINE MODALE -->
                                                 </li>
                                             {% endfor %}
                                         {% else %}
@@ -581,15 +583,15 @@
                                         </div>
                                         <div class="mb-3">
                                             <label for="sedeAddress{{ company.id }}" class="form-label">Indirizzo</label>
-                                            <input type="text" class="form-control" id="sedeAddress{{ company.id }}" name="indirizzo" required>
+                                            <input type="text" class="form-control" id="sedeAddress{{ company.id  | default('') }}" name="indirizzo" required>
                                         </div>
                                         <div class="mb-3">
                                             <label for="sedeCity{{ company.id }}" class="form-label">Città</label>
-                                            <input type="text" class="form-control" id="sedeCity{{ company.id }}" name="citta" required>
+                                            <input type="text" class="form-control" id="sedeCity{{ company.id  | default('')}}" name="citta" required>
                                         </div>
                                         <div class="mb-3">
-                                            <label for="sedeCap{{ company.id }}" class="form-label">cap</label>
-                                            <input type="text" class="form-control" id="sedeCap{{ company.id }}" name="cap" required>
+                                            <label for="sedeCap{{ company.id }}" class="form-label">CAP</label>
+                                            <input type="text" class="form-control" id="sedeCap{{ company.id  | default('')}}" name="cap" required>
                                         </div>
                                         <button type="submit" class="btn btn-primary">Aggiungi Sede</button>
                                     </form>
@@ -642,11 +644,23 @@
                                             </div>
                                             <div class="mb-3">
                                                 <label for="sedeAddressEdit{{ sede.id }}" class="form-label">Indirizzo</label>
-                                                <input type="text" class="form-control" id="sedeAddressEdit{{ sede.id }}" name="indirizzo" value="{{ sede.indirizzo }}" required>
+                                                <input type="text" class="form-control" id="sedeAddressEdit{{ sede.id }}" name="indirizzo" value="{{ sede.indirizzo  | default('')}}" required>
                                             </div>
                                             <div class="mb-3">
                                                 <label for="sedeCityEdit{{ sede.id }}" class="form-label">Città</label>
-                                                <input type="text" class="form-control" id="sedeCityEdit{{ sede.id }}" name="citta" value="{{ sede.citta }}" required>
+                                                <input type="text" class="form-control" id="sedeCityEdit{{ sede.id }}" name="citta" value="{{ sede.citta  | default('')}}" required>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="sedeCapEdit{{ sede.id }}" class="form-label">CAP</label>
+                                                <input type="text" class="form-control" id="sedeCapEdit{{ sede.id }}" name="cap" value="{{ sede.cap  | default('')}}" required>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="sedeEmailEdit{{ sede.id }}" class="form-label">Email</label>
+                                                <input type="email" class="form-control" id="sedeEmailEdit{{ sede.id }}" name="email" value="{{ sede.email }}" required>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="sedePasswordEdit{{ sede.id }}" class="form-label">Password</label>
+                                                <input type="password" class="form-control" id="sedePasswordEdit{{ sede.id }}" name="password" value="{{ sede.password }}" required>
                                             </div>
                                             <button type="submit" class="btn btn-primary">Aggiorna Sede</button>
                                         </form>

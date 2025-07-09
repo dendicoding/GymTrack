@@ -22,16 +22,16 @@
             <div class="col-md-6">
                 <ul class="nav nav-pills nav-pills-white">
                     <li class="nav-item">
-                        <a class="nav-link {% if tipo_attivo == 'tutti' %}active{% endif %}" 
-                           href="{{ url_for('clienti.lista_clienti') }}">Tutti</a>
+                        <a class="nav-link {% if tipo_attivo == 'tutti' %}active fw-bold{% else %}active{% endif %}" 
+                        href="{{ url_for('clienti.lista_clienti') }}">Tutti</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if tipo_attivo == 'lead' %}active{% endif %}" 
-                           href="{{ url_for('clienti.lista_clienti', tipo='lead') }}">Leads</a>
+                        <a class="nav-link {% if tipo_attivo == 'lead' %}active fw-bold{% else %}active{% endif %}" 
+                        href="{{ url_for('clienti.lista_clienti', tipo='lead') }}">Leads</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if tipo_attivo == 'effettivo' %}active{% endif %}" 
-                           href="{{ url_for('clienti.lista_clienti', tipo='effettivo') }}">Effettivi</a>
+                        <a class="nav-link {% if tipo_attivo == 'effettivo' %}active fw-bold{% else %}active{% endif %}" 
+                        href="{{ url_for('clienti.lista_clienti', tipo='effettivo') }}">Effettivi</a>
                     </li>
                 </ul>
             </div>

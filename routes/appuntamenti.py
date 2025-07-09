@@ -49,7 +49,7 @@ def add_appointment():
             for company in societa:
                 sedi.extend(db.get_sedi_by_societa(company['id']))
 
-    clienti = db.get_clienti_effettivi([s['id'] for s in sedi if 'id' in s])
+    clienti = db.get_all_clienti([s['id'] for s in sedi if 'id' in s])
 
     # Precompila la data e ora se fornita nella query string
     prefilled_date_time = request.args.get('date_time', '')
@@ -125,7 +125,7 @@ def edit_appointment(appointment_id):
         flash('Appuntamento non trovato', 'danger')
         return redirect(url_for('trainer_calendar'))
     
-    if appointment['trainer_id'] != session.get('user_id'):
+    if appointment['created_by'] != session.get('user_id'):
         abort(403)
     
     if request.method == 'POST':
@@ -266,9 +266,9 @@ def trainer_calendar():
         grouped_appointments[appointment_date].append(appointment)
 
     if selected_sede_id:
-        clienti = db.get_clienti_effettivi([selected_sede_id])
+        clienti = db.get_all_clienti([selected_sede_id])
     else:
-        clienti = db.get_clienti_effettivi([s['id'] for s in sedi if 'id' in s])
+        clienti = db.get_all_clienti([s['id'] for s in sedi if 'id' in s])
     selected_client_id = request.args.get('client_id', type=int)
 
 

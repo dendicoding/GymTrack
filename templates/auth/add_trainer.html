@@ -16,7 +16,7 @@
                         <a class="nav-link" href="{{ url_for('index') }}">Dashboard</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('gerarchie.gestione_gerarchia') }}">Gestione Gerarchia</a>
+                        <a class="nav-link" href="{{ url_for('gerarchie.hierarchy') }}">Gestione Gerarchia</a>
                     </li>
                 </ul>
                 <div class="navbar-text text-white me-3">
@@ -64,7 +64,7 @@
                         </div>
                         <input type="hidden" name="sede_id" value="{{ sede_id }}"> <!-- Pass the sede_id as needed -->
                         <div class="d-flex justify-content-between">
-                            <a href="{{ url_for('gerarchie.gestione_gerarchia') }}" class="btn btn-secondary">Annulla</a>
+                            <a href="{{ url_for('gerarchie.hierarchy') }}" class="btn btn-secondary">Annulla</a>
                             <button type="submit" class="btn btn-primary">Salva</button>
                         </div>
                     </form>

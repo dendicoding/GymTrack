@@ -28,13 +28,13 @@
     <div class="mb-3">
         <label for="date_time" class="form-label">Data e Ora di Inizio</label>
         <input type="datetime-local" class="form-control" id="date_time" name="date_time" 
-               value="{{ prefilled_date_time }}" required>
+               value="{{ prefilled_date_time }}" required step="600">
     </div>
     <input type="hidden" id="duration" name="duration" value="30">
     <div class="mb-3">
         <label for="end_date_time" class="form-label">Data e Ora di Fine</label>
         <input type="datetime-local" class="form-control" id="end_date_time" name="end_date_time" 
-               value="{{ prefilled_end_date_time }}" required>
+               value="{{ prefilled_end_date_time }}" required step="600">
     </div>
     <div class="mb-3">
         <label for="appointment_type" class="form-label">Tipo</label>
@@ -172,7 +172,7 @@
 
     // Mostra o nasconde il campo "Seleziona Pacchetto" in base al tipo di appuntamento
     appointmentType.addEventListener('change', function () {
-        if (appointmentType.value === 'Allenamento Funzionale' || appointmentType.value === 'Allenamento EMS') {
+        if (appointmentType.value === 'Allenamento Funzionale' || appointmentType.value === 'Allenamento EMS' || appointmentType.value === 'Allenamento VacuLab') {
             packageSelection.style.display = 'block';
             clientSelectionDiv.style.display = 'block';
         } else if (appointmentType.value === 'Blocco Agenda') {
@@ -206,6 +206,12 @@
                             option.textContent = `${pacchetto.nome} - Lezioni rimanenti: ${pacchetto.lezioni_rimanenti}`;
                             packageSelect.appendChild(option);
                         });
+                        // Se c'è un package_id nella query string, selezionalo
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const preselectedPackageId = urlParams.get('package_id');
+                        if (preselectedPackageId) {
+                            packageSelect.value = preselectedPackageId;
+                        }
                     } else {
                         packageSelection.style.display = 'none';
                     }
@@ -241,5 +247,42 @@
         updateEndDateTime();
 
     });
+    function roundToStep(input, stepMinutes) {
+        let value = input.value;    
+        if (!value) return;
+        let date = new Date(value);
+        let minutes = date.getMinutes();
+        let rounded = Math.round(minutes / stepMinutes) * stepMinutes;
+        if (rounded === 60) {
+            date.setHours(date.getHours() + 1);
+            rounded = 0;
+        }
+        date.setMinutes(rounded);
+        input.value = toLocalDatetimeString(date);
+    }
+
+    document.getElementById('date_time').addEventListener('blur', function() {
+        roundToStep(this, 10);
+    });
+    document.getElementById('end_date_time').addEventListener('blur', function() {
+        roundToStep(this, 10);
+    });
+    function toLocalDatetimeString(date) {
+        const pad = n => n < 10 ? '0' + n : n;
+        return date.getFullYear() + '-' +
+            pad(date.getMonth() + 1) + '-' +
+            pad(date.getDate()) + 'T' +
+            pad(date.getHours()) + ':' +
+            pad(date.getMinutes());
+    }
+        // --- AGGIUNTA: se c'è già un client_id nella query string, carica subito i pacchetti ---
+    const urlParams = new URLSearchParams(window.location.search);
+    const preselectedClientId = urlParams.get('client_id');
+    if (preselectedClientId) {
+        clientSelect.value = preselectedClientId;
+        // Trigger manuale del change per caricare i pacchetti e selezionare quello giusto
+        const event = new Event('change');
+        clientSelect.dispatchEvent(event);
+    }
 </script>
 {% endblock %}

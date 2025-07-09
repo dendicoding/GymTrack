@@ -55,7 +55,7 @@ def add_area_manager():
         area_manager_id = db.register_area_manager(nome, cognome, email, password, franchisor_id)
         if area_manager_id:
             flash('Utente ed Area Manager aggiunti con successo!', 'success')
-            return redirect(url_for('gerarchie.gerarchia'))
+            return redirect(url_for('gerarchie.hierarchy'))
         else:
             flash('Errore durante la creazione dell\'utente Area Manager', 'error')
   
@@ -152,9 +152,10 @@ def update_area_manager_route(area_manager_id):
 @gerarchie_bp.route('/delete-area-manager/<int:area_manager_id>', methods=['POST'])
 @login_required
 def delete_area_manager_route(area_manager_id):
-    db.delete_area_manager(area_manager_id)
-    #db.delete_user(area_manager_id)  # Assuming you want to delete the user as well
-    flash('Area Manager deleted successfully!', 'success')
+    result = db.delete_area_manager(area_manager_id)
+    if result:
+        flash('Area manager eliminato con successo!', 'success')
+    # Se fallisce, il messaggio di errore è già stato flashato dalla funzione delete_area_manager
     return redirect(url_for('gerarchie.hierarchy'))
 
 @gerarchie_bp.route('/update-company/<int:company_id>', methods=['POST'])
@@ -168,13 +169,15 @@ def update_company_route(company_id):
     comune = request.form['comune']
     db.update_company(company_id, nome, email, password, indirizzo, provincia, comune)
     flash('Company updated successfully!', 'success')
-    return redirect(url_for('hierarchy'))
+    return redirect(url_for('gerarchie.hierarchy'))
 
 @gerarchie_bp.route('/delete-company/<int:company_id>', methods=['POST'])
 @login_required
 def delete_company_route(company_id):
-    db.delete_company(company_id)
-    flash('Company deleted successfully!', 'success')
+    result = db.delete_company(company_id)
+    if result:
+        flash('Company deleted successfully!', 'success')
+    # Se la funzione ritorna False, il messaggio di errore è già stato flashato da delete_company
     return redirect(url_for('gerarchie.hierarchy'))
 
 @gerarchie_bp.route('/update-sede/<int:sede_id>', methods=['POST'])
@@ -193,8 +196,10 @@ def update_sede_route(sede_id):
 @gerarchie_bp.route('/delete-sede/<int:sede_id>', methods=['POST'])
 @login_required
 def delete_sede_route(sede_id):
-    db.delete_sede(sede_id)
-    flash('Sede deleted successfully!', 'success')
+    result = db.delete_sede(sede_id)
+    if result:
+        flash('Sede eliminata con successo!', 'success')
+    # Se fallisce, il messaggio di errore è già stato flashato dalla funzione delete_sede
     return redirect(url_for('gerarchie.hierarchy'))
 
 @gerarchie_bp.route('/all-utenti')
@@ -228,7 +233,7 @@ def add_trainer():
         trainer_id = db.register_trainer(sede_id, nome, cognome, email, password)
         if trainer_id:
             flash('Trainer aggiunto con successo!', 'success')
-            return redirect(url_for('gerarchie.gestione_gerarchia'))  # Redirect to the hierarchy management page
+            return redirect(url_for('gerarchie.hierarchy'))  # Redirect to the hierarchy management page
         else:
             flash('Errore durante l\'aggiunta del trainer', 'error')
     
@@ -245,11 +250,11 @@ def update_trainer_route(trainer_id):
     password = request.form['password']
     db.update_trainer(trainer_id, nome, cognome, email, password)
     flash('Trainer updated successfully!', 'success')
-    return redirect(url_for('gerarchie.gestione_gerarchia'))  # Redirect to the hierarchy management page
+    return redirect(url_for('gerarchie.hierarchy'))  # Redirect to the hierarchy management page
 
 @gerarchie_bp.route('/delete-trainer/<int:trainer_id>', methods=['POST'])
 @login_required
 def delete_trainer_route(trainer_id):
     db.delete_trainer(trainer_id)
     flash('Trainer deleted successfully!', 'success')
-    return redirect(url_for('gerarchie.gestione_gerarchia'))  # Redirect to the hierarchy management page
+    return redirect(url_for('gerarchie.hierarchy'))  # Redirect to the hierarchy management page
