@@ -66,15 +66,23 @@ def lista_clienti():
     oggi = date.today().strftime('%Y-%m-%d')
     clienti_ids = [c['id'] for c in clienti]
     clienti_senza_appuntamenti = set(clienti_ids)
+    clienti_prova_annullata = set()
     if clienti_ids:
         appuntamenti = db.get_appointments_by_clienti(clienti_ids, oggi)
         clienti_con_appuntamenti = set([a['client_id'] for a in appuntamenti if a['date_time'].date() >= date.today()])
         clienti_senza_appuntamenti = set(clienti_ids) - clienti_con_appuntamenti
+
+        # Evidenzia anche chi ha almeno una "prova annullata"
+        for a in appuntamenti:
+            if (a.get('status', '').lower().replace(' ', '_') == 'prova_annullata'):
+                clienti_prova_annullata.add(a['client_id'])
     else:
         clienti_senza_appuntamenti = set()
+        clienti_prova_annullata = set()
+    
+    clienti_evidenziati = clienti_senza_appuntamenti | clienti_prova_annullata
 
-    return render_template('clienti/lista.html', clienti=clienti, titolo=titolo, tipo_attivo=tipo, clienti_senza_appuntamenti=clienti_senza_appuntamenti )
-
+    return render_template('clienti/lista.html', clienti=clienti, titolo=titolo, tipo_attivo=tipo, clienti_senza_appuntamenti=clienti_evidenziati )
 
 @clienti_bp.route('/clienti/nuovo', methods=['GET', 'POST'])
 @login_required

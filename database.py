@@ -2405,6 +2405,7 @@ def get_appointments_by_users(user_ids, start_date):
             SELECT DISTINCT a.*, 
                 c.nome || ' ' || c.cognome AS client_name, 
                 u.nome || ' ' || u.cognome AS trainer_name,
+                c.tipo AS client_tipo,
                 ab.numero_lezioni,
                 ab.lezioni_utilizzate,
                 ab.pacchetto_id
@@ -2801,5 +2802,23 @@ def ensure_minimum_hierarchy():
     except Exception as e:
         print(f"Errore in ensure_minimum_hierarchy: {e}")
         conn.rollback()
+    finally:
+        conn.close()
+
+def update_appointment_status_and_notes(appointment_id, new_status, notes):
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute('''
+            UPDATE appointments
+            SET status = %s, notes = %s
+            WHERE id = %s
+        ''', (new_status, notes, appointment_id))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Errore durante l'aggiornamento dello stato e delle note dell'appuntamento: {e}")
+        conn.rollback()
+        return False
     finally:
         conn.close()

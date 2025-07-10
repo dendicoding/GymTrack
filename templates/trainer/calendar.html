@@ -128,7 +128,7 @@
             </div>
             <div class="modal-body">
                 <div class="appointment-details">
-                    <p><strong>Cliente:</strong> <span id="modal-client"></span></p>
+                    <p id="modal-client-row"><strong>Cliente:</strong> <span id="modal-client"></span></p>
                     <p><strong>Trainer:</strong> <span id="modal-trainer"></span></p>
                     <p><strong>Data:</strong> <span id="modal-date"></span></p>
                     <p><strong>Orario:</strong> <span id="modal-time"></span></p>
@@ -144,6 +144,8 @@
                 <button type="button" id="delete-appointment" class="btn btn-danger">Elimina</button>
                 <a href="#" id="duplicate-appointment" class="btn btn-warning">Duplica</a>
                 <button type="button" id="mark-completed" class="btn btn-success" style="display: none;">Eseguito</button>
+                <button type="button" id="promuovi-cliente" class="btn btn-info" style="display: none;">Promuovi</button>
+
             </div>
         </div>
     </div>
@@ -173,10 +175,10 @@
 <style>
     :root {
         /* Colori per i tipi di appuntamento */
-        --allenamento_funzionale-color: #b766f9;
-        --chiamata-color: #ffa435;
+        --allenamento_funzionale-color: #d5a9fa;
+        --chiamata-color: #fdc888;
         --blocco_agenda-color: #fcff67;
-        --allenamento_ems-color: #52b4ff;
+        --allenamento_ems-color: #88c8f9;
         --allenamento_vaculab-color: #52ffb4;
         
         /* Colori per gli stati */
@@ -360,7 +362,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     status: '{{ appointment.status|default("") }}',
                     trainer_name: '{{ appointment.trainer_name|default("") }}',
                     client_name: '{{ appointment.client_name }}',
-                    status_icon: getStatusIcon('{{ appointment.status|default("scheduled")|lower|replace(" ", "_") }}')
+                    status_icon: getStatusIcon('{{ appointment.status|default("scheduled")|lower|replace(" ", "_") }}'),
+                    is_trial: {{ 'true' if appointment.is_trial else 'false' }},
+                    client_tipo: '{{ appointment.client_tipo|default("") }}'
+
                 }
             });
         {% endfor %}
@@ -392,37 +397,55 @@ document.addEventListener('DOMContentLoaded', function() {
         },
         events: events,
         eventContent: function(arg) {
-            // Personalizza il contenuto degli eventi
             const statusIcon = arg.event.extendedProps.status_icon;
             const title = arg.event.title;
-            
-            // Crea il contenitore principale
+            const isTrial = arg.event.extendedProps.is_trial === true || arg.event.extendedProps.is_trial === 'true';
+
             const contentEl = document.createElement('div');
             contentEl.classList.add('fc-event-content');
-            contentEl.style.display = 'flex'; // Allinea gli elementi sulla stessa riga
-            contentEl.style.alignItems = 'center'; // Centra verticalmente gli elementi
-            
-            // Aggiungi l'icona dello stato se disponibile
-                
+            contentEl.style.display = 'flex';
+            contentEl.style.alignItems = 'center';
+
+            // Icona stato
             if (statusIcon) {
                 const iconEl = document.createElement('span');
                 iconEl.classList.add('event-icon');
                 iconEl.innerHTML = statusIcon;
-                iconEl.style.marginRight = '5px'; // Spazio tra l'icona e il titolo
+                iconEl.style.marginRight = '5px';
                 contentEl.appendChild(iconEl);
             }
-            // Titolo senza orario
+
+            // Se è una prova, aggiungi la P
+            if (isTrial) {
+                const provaEl = document.createElement('span');
+                provaEl.textContent = 'P';
+                provaEl.title = 'Prova';
+                provaEl.style.fontWeight = 'bold';
+                provaEl.style.color = '#2196f3';
+                provaEl.style.marginRight = '5px';
+                contentEl.appendChild(provaEl);
+                // // Se vuoi un'icona invece della P, usa:
+                //provaEl.innerHTML = '<i class="fas fa-flask" style="color:#2196f3"></i>';
+            }
+
+            // Titolo
             const titleEl = document.createElement('div');
             titleEl.classList.add('event-title');
             titleEl.innerHTML = `${title}`;
             contentEl.appendChild(titleEl);
-            
+
             return { domNodes: [contentEl] };
         },
         eventClick: function(info) {
             const event = info.event;
 
-            document.getElementById('modal-client').textContent = event.extendedProps.client_name || 'N/D';
+            const clientRow = document.getElementById('modal-client-row');
+            if (event.extendedProps.type === 'Blocco Agenda') {
+                clientRow.style.display = 'none';
+            } else {
+                clientRow.style.display = '';
+                document.getElementById('modal-client').textContent = event.extendedProps.client_name || 'N/D';
+            }
             document.getElementById('modal-trainer').textContent = event.extendedProps.trainer_name || 'N/D';
 
             const start = new Date(event.start);
@@ -469,6 +492,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 };
             } else {
                 markCompletedButton.style.display = 'none';
+            }
+
+            // Configura il pulsante "Promuovi"
+            const promuoviButton = document.getElementById('promuovi-cliente');
+            if (
+                (event.extendedProps.is_trial === true || event.extendedProps.is_trial === 'true') &&
+                event.extendedProps.client_tipo === 'lead'
+            ) {
+                promuoviButton.style.display = 'inline-block';
+                promuoviButton.onclick = function() {
+                    if (confirm('Vuoi promuovere questo cliente?')) {
+                        window.location.href = `/clienti/${event.extendedProps.client_id}/promuovi`;
+                    }
+                };
+            } else {
+                promuoviButton.style.display = 'none';
             }
 
             // Mostra il modal
@@ -562,12 +601,14 @@ document.addEventListener('DOMContentLoaded', function() {
     function getStatusIcon(status) {
         const iconMap = {
             'confermato': '<i class="fas fa-check-circle status-confermato-icon"></i>',
-            'riprogrammata': '<i class="fas fa-times-circle status-spostato-icon"></i>',
-            'saltata': '<i class="fas fa-user-slash status-saltato-icon"></i>',
+            'lezione_saltata': '<i class="fas fa-times-circle status-spostato-icon"></i>',
             'completato': '<i class="fas fa-calendar-check status-completato-icon"></i>',
             'prova_fissata': '<i class="fas fa-calendar-plus status-prova_fissata-icon"></i>',
             'prova_in_chiamata': '<i class="fas fa-phone status-prova_in_chiamata-icon"></i>',
-            'appuntamento_non_svolto': '<i class="fas fa-exclamation-circle status-appuntamento_non_svolto-icon"></i>'
+            'appuntamento_non_svolto': '<i class="fas fa-exclamation-circle status-appuntamento_non_svolto-icon"></i>',
+
+            'prova_annullata': '<i class="fas fa-times-circle status-spostato-icon"></i>' // stessa icona e colore della legenda
+
         };
         
         return iconMap[status] || '<i class="fas fa-calendar-check"></i>'; // icona predefinita

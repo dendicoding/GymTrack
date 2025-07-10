@@ -301,33 +301,31 @@ def trainer_calendar():
 @appuntamenti_bp.route('/mark_appointment_completed/<int:appointment_id>', methods=['POST'])
 @login_required
 def mark_appointment_completed(appointment_id):
-    # Ottieni i dettagli dell'appuntamento
     appointment = db.get_appointment_by_id(appointment_id)
     if not appointment:
         return jsonify({'success': False, 'message': 'Appuntamento non trovato'}), 404
 
-    # Verifica che il tipo di appuntamento sia un allenamento
+    note = ''
+    if request.is_json:
+        note = request.json.get('note', '')
+    else:
+        note = request.form.get('note', '')
+
+    # Se è una prova, aggiorna stato e note dell'appuntamento
+    if appointment.get('is_trial'):
+        db.update_appointment_status_and_notes(appointment_id, 'Confermato', note)
+        return jsonify({'success': True, 'message': 'Stato appuntamento aggiornato a Confermato'}), 200
+
+    # Se NON è una prova, registra la lezione come prima
     if appointment['appointment_type'] not in ['Allenamento Funzionale', 'Allenamento EMS']:
         return jsonify({'success': False, 'message': 'Solo gli allenamenti possono essere completati'}), 400
 
-    # Verifica che il pacchetto sia associato all'appuntamento
     if 'package_id' not in appointment or not appointment['package_id']:
         return jsonify({'success': False, 'message': 'Nessun pacchetto associato a questo appuntamento'}), 400
 
-    # Registra la lezione
-    # Verifica se l'abbonamento è ancora valido
     oggi = datetime.now().date()
-    
-    
     if request.method == 'POST':
-        note = ''
-        if request.is_json:
-            note = request.json.get('note', '')
-        else:
-            note = request.form.get('note', '')
         user_id = session.get('user_id')
-        
-        # Registra la lezione
         if db.add_lezione(appointment['package_id'], oggi, note, user_id):
             db.log_event(session.get('user_id'), session.get('user_email'), 'Registrata lezione', f'Abbonamento ID: {appointment["package_id"]}')
             flash('Lezione registrata con successo', 'success')

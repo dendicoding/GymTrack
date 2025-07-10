@@ -284,5 +284,12 @@
         const event = new Event('change');
         clientSelect.dispatchEvent(event);
     }
+    const isTrialCheckbox = document.getElementById('is_trial');
+    isTrialCheckbox.addEventListener('change', function () {
+        packageSelect.disabled = this.checked;
+        if (this.checked) {
+            packageSelect.value = '';
+        }
+    });
 </script>
 {% endblock %}

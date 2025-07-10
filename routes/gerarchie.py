@@ -77,7 +77,7 @@ def add_societa():
         societa_id = db.register_societa(area_manager_id, nome, email, password)
         if societa_id:
             flash('Società aggiunta con successo!', 'success')
-            return redirect(url_for('gerarchie.gestione_gerarchia'))
+            return redirect(url_for('gerarchie.hierarchy'))
         else:
             flash('Errore durante l\'aggiunta della Società', 'error')
     
@@ -105,7 +105,7 @@ def add_sede():
 
         if sede_id:
             flash('Sede aggiunta con successo!', 'success')
-            return redirect(url_for('gerarchie.gestione_gerarchia'))
+            return redirect(url_for('gerarchie.hierarchy'))
         else:
             flash('Errore durante l\'aggiunta della Sede', 'error')
     
