@@ -49,6 +49,7 @@ def setup():
 def index():
     user_role = session.get('user_role')
     user_email = session.get('user_email')
+    user_ids = []
     # Directly fetch the sede_id for the logged-in user if the role is 'sede'
     sede_ids = []
     if user_role == 'sede':
@@ -79,11 +80,26 @@ def index():
                 sedi = db.get_sedi_by_societa(company['id'])
                 sede_ids.extend([sede['id'] for sede in sedi])
 
+    # Recupera gli user_ids dei trainer associati alle sedi
+    for sede_id in sede_ids:
+        trainers_in_sede = db.get_trainers_by_sede(sede_id)
+        for trainer in trainers_in_sede:
+            user = db.get_user_by_email(trainer['email'])
+            if user:
+                user_ids.append(user['id'])
+
     # Ensure only valid sede_ids are used
     sede_ids = [sede_id for sede_id in sede_ids if sede_id is not None]
     stats = db.get_statistiche_dashboard(sede_ids)
     oggi = date.today()
-    return render_template('dashboard.html', stats=stats, oggi=oggi)
+
+    # Appuntamenti di oggi
+    oggi = date.today()
+    appointments_today = []
+    if user_ids:
+        appointments = db.get_appointments_by_users(user_ids, oggi.strftime('%Y-%m-%d'))
+        appointments_today = [a for a in appointments if a['date_time'].date() == oggi]
+    return render_template('dashboard.html', stats=stats, oggi=oggi, appointments_today=appointments_today, user_role=user_role, user_email=user_email)
 
 
 
@@ -143,6 +159,13 @@ def format_date_filter(date):
 # Registra tutti i blueprint
 for bp in blueprints:
     app.register_blueprint(bp)
+
+from flask_wtf.csrf import CSRFError
+
+@app.errorhandler(CSRFError)
+def handle_csrf_error(e):
+    flash("La sessione è scaduta o la pagina è rimasta aperta troppo a lungo. Effettua nuovamente il login.", "danger")
+    return redirect(url_for('auth.login'))
 
 if __name__ == '__main__':
     with app.app_context():

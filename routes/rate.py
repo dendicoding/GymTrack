@@ -139,7 +139,11 @@ def calendario():
     
     # Creiamo un dizionario con la data come chiave
     for scadenza in scadenze:
-        data = datetime.strptime(scadenza['data_scadenza'], '%Y-%m-%d').date()
+    # Se data_scadenza è già una data, non serve convertirla
+        if isinstance(scadenza['data_scadenza'], str):
+            data = datetime.strptime(scadenza['data_scadenza'], '%Y-%m-%d').date()
+        else:
+            data = scadenza['data_scadenza']
         scadenze_dict[data.day] = {
             'rate_da_pagare': scadenza['rate_da_pagare'],
             'clienti': scadenza['clienti'].split(',') if scadenza['clienti'] else [],

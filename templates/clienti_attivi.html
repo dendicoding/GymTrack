@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+{% block title %}Clienti Attivi{% endblock %}
+{% block content %}
+<div class="card">
+    <div class="card-header bg-primary text-white">
+        <h5 class="card-title mb-0">
+            <i class="fas fa-users me-2"></i>Clienti Attivi
+        </h5>
+    </div>
+    <div class="card-body">
+        {% if clienti %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>
+                                Nome
+                                <span class="filter-icon" data-col="0" style="cursor:pointer;">
+                                    <i class="fas fa-filter"></i>
+                                </span>
+                                <input type="text" class="filter-input form-control form-control-sm mt-1" data-col="0" style="display:none; width: 120px;" placeholder="Filtra...">
+                            </th>
+                            <th>
+                                Email
+                                <span class="filter-icon" data-col="1" style="cursor:pointer;">
+                                    <i class="fas fa-filter"></i>
+                                </span>
+                                <input type="text" class="filter-input form-control form-control-sm mt-1" data-col="1" style="display:none; width: 120px;" placeholder="Filtra...">
+                            </th>
+                            <th>
+                                Telefono
+                                <span class="filter-icon" data-col="2" style="cursor:pointer;">
+                                    <i class="fas fa-filter"></i>
+                                </span>
+                                <input type="text" class="filter-input form-control form-control-sm mt-1" data-col="2" style="display:none; width: 120px;" placeholder="Filtra...">
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for c in clienti %}
+                            <tr>
+                                <td>{{ c.nome }} {{ c.cognome }}</td>
+                                <td>{{ c.email }}</td>
+                                <td>{{ c.telefono }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>Nessun cliente attivo trovato.
+            </div>
+        {% endif %}
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Mostra/nasconde il filtro input quando si clicca sull'icona
+    document.querySelectorAll('.filter-icon').forEach(function(icon) {
+        icon.addEventListener('click', function(e) {
+            const col = icon.getAttribute('data-col');
+            const input = document.querySelector('.filter-input[data-col="' + col + '"]');
+            input.style.display = input.style.display === 'none' ? 'inline-block' : 'none';
+            if (input.style.display === 'inline-block') input.focus();
+        });
+    });
+
+    // Funzione di filtro per colonna
+    function filterTable() {
+        const table = document.querySelector('.table');
+        const rows = table.querySelectorAll('tbody tr');
+        // Prendi i valori dei filtri attivi
+        const filters = {};
+        document.querySelectorAll('.filter-input').forEach(function(input) {
+            if (input.value.trim() !== '') {
+                filters[input.getAttribute('data-col')] = input.value.toLowerCase();
+            }
+        });
+
+        rows.forEach(row => {
+            const cells = row.querySelectorAll('td');
+            let show = true;
+            for (const col in filters) {
+                const cellText = cells[col].textContent.toLowerCase();
+                if (!cellText.includes(filters[col])) {
+                    show = false;
+                    break;
+                }
+            }
+            row.style.display = show ? '' : 'none';
+        });
+    }
+
+    // Attiva il filtro su input
+    document.querySelectorAll('.filter-input').forEach(function(input) {
+        input.addEventListener('input', filterTable);
+    });
+});
+</script>
+{% endblock %}

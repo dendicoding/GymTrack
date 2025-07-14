@@ -26,7 +26,7 @@
             </div>
             <div class="card-footer d-flex justify-content-between align-items-center">
                 <span>Visualizza</span>
-                <a href="#" class="text-white" id="show-clienti-attivi">
+                <a href="{{ url_for('stats.clienti_attivi') }}" class="text-white">
                     <i class="fas fa-arrow-circle-right"></i>
                 </a>
             </div>
@@ -75,28 +75,40 @@
 <!-- Nuove statistiche -->
 <div class="row mb-4 g-4">
     <div class="col-md-4">
-        <div class="card bg-success text-white h-100 shadow-sm">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="card-title mb-0">Prove Effettuate</h6>
-                        <h2 class="mt-2 mb-0">18</h2>
-                    </div>
-                    <i class="fas fa-check-circle fa-3x opacity-50"></i>
+    <div class="card bg-success text-white h-100 shadow-sm">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="card-title mb-0">Prove Effettuate</h6>
+                    <h2 class="mt-2 mb-0">{{ n_prove_effettuate }}</h2>
                 </div>
+                <i class="fas fa-check-circle fa-3x opacity-50"></i>
             </div>
         </div>
+        <div class="card-footer d-flex justify-content-between align-items-center">
+            <span>Dettaglio</span>
+            <a href="{{ url_for('stats.prove_effettuate') }}" class="text-white">
+                <i class="fas fa-arrow-circle-right"></i>
+            </a>
+        </div>
     </div>
+</div>
     <div class="col-md-4">
         <div class="card bg-danger text-white h-100 shadow-sm">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <h6 class="card-title mb-0">Prove Non Prese</h6>
-                        <h2 class="mt-2 mb-0">7</h2>
+                        <h2 class="mt-2 mb-0">{{ n_prove_annullate }}</h2>
                     </div>
                     <i class="fas fa-times-circle fa-3x opacity-50"></i>
                 </div>
+            </div>
+            <div class="card-footer d-flex justify-content-between align-items-center">
+                <span>Dettaglio</span>
+                <a href="{{ url_for('stats.prove_non_prese') }}" class="text-white">
+                    <i class="fas fa-arrow-circle-right"></i>
+                </a>
             </div>
         </div>
     </div>
@@ -105,15 +117,15 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h6 class="card-title mb-0">Abbonamenti in Scadenza (mese)</h6>
-                        <h2 class="mt-2 mb-0">5</h2>
+                        <h6 class="card-title mb-0">Rate Pagate in Contanti</h6>
+                        <h2 class="mt-2 mb-0">{{ n_rate_contanti }}</h2>
                     </div>
-                    <i class="fas fa-hourglass-end fa-3x opacity-50"></i>
+                    <i class="fas fa-money-bill-wave fa-3x opacity-50"></i>
                 </div>
             </div>
             <div class="card-footer d-flex justify-content-between align-items-center">
                 <span>Dettaglio</span>
-                <a href="#" class="text-white" id="show-scadenza">
+                <a href="{{ url_for('stats.rate_contanti') }}" class="text-white">
                     <i class="fas fa-arrow-circle-right"></i>
                 </a>
             </div>
@@ -173,14 +185,16 @@
         <div class="card h-100 shadow-sm">
             <div class="card-header bg-success text-white d-flex align-items-center">
                 <h5 class="mb-0">
-                    <i class="fas fa-chart-pie me-1"></i>Pacchetti Venduti
+                    <i class="fas fa-chart-pie me-1"></i>Pacchetti Venduti Questo Mese
                 </h5>
             </div>
-            <div class="card-body d-flex align-items-center justify-content-center" style="min-height:260px;">
-                <canvas id="pieAbbonamenti" height="120"></canvas>
+            <div class="card-body d-flex flex-column align-items-center justify-content-center" style="min-height:260px;">
+                <canvas id="pieAbbonamenti" width="180" height="180" style="max-width:180px;max-height:180px;"></canvas>
+                <div id="pieLegend" class="mt-3"></div>
             </div>
         </div>
     </div>
+    
     <div class="col-md-6">
         <div class="card h-100 shadow-sm">
             <div class="card-header bg-primary text-white d-flex align-items-center">
@@ -196,27 +210,6 @@
 </div>
 
 <!-- Tabelle modali -->
-<div class="modal fade" id="modalClientiAttivi" tabindex="-1">
-  <div class="modal-dialog modal-lg"><div class="modal-content">
-    <div class="modal-header bg-primary text-white"><h5 class="modal-title">Clienti Attivi</h5>
-      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-    </div>
-    <div class="modal-body">
-      <table class="table table-striped">
-        <thead><tr><th>Nome</th><th>Email</th><th>Telefono</th></tr></thead>
-        <tbody>
-        {% for c in clienti_attivi %}
-          <tr>
-            <td>{{ c.nome }} {{ c.cognome }}</td>
-            <td>{{ c.email }}</td>
-            <td>{{ c.telefono }}</td>
-          </tr>
-        {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div></div>
-</div>
 
 <div class="modal fade" id="modalClientiNonAttivi" tabindex="-1">
   <div class="modal-dialog modal-lg"><div class="modal-content">
@@ -263,26 +256,6 @@
   </div></div>
 </div>
 
-<!-- Modale Abbonamenti in Scadenza -->
-<div class="modal fade" id="modalScadenza" tabindex="-1">
-  <div class="modal-dialog modal-lg"><div class="modal-content">
-    <div class="modal-header bg-warning text-white"><h5 class="modal-title">Pacchetti in Scadenza Questo Mese</h5>
-      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-    </div>
-    <div class="modal-body">
-      <table class="table table-striped">
-        <thead><tr><th>Cliente</th><th>Pacchetto</th><th>Data Scadenza</th></tr></thead>
-        <tbody>
-        <tr><td>Mario Rossi</td><td>Mensile</td><td>28/05/2025</td></tr>
-        <tr><td>Anna Bianchi</td><td>Trimestrale</td><td>30/05/2025</td></tr>
-        <tr><td>Luca Verdi</td><td>Mensile</td><td>31/05/2025</td></tr>
-        <tr><td>Giulia Neri</td><td>Annuale</td><td>15/05/2025</td></tr>
-        <tr><td>Paolo Blu</td><td>Mensile</td><td>29/05/2025</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div></div>
-</div>
 
 <!-- Modale Upgrade Effettuati -->
 <div class="modal fade" id="modalUpgrade" tabindex="-1">
@@ -307,10 +280,7 @@
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-document.getElementById('show-clienti-attivi').onclick = function(e) {
-    e.preventDefault();
-    new bootstrap.Modal(document.getElementById('modalClientiAttivi')).show();
-};
+
 document.getElementById('show-clienti-non-attivi').onclick = function(e) {
     e.preventDefault();
     new bootstrap.Modal(document.getElementById('modalClientiNonAttivi')).show();
@@ -319,10 +289,7 @@ document.getElementById('show-prove').onclick = function(e) {
     e.preventDefault();
     new bootstrap.Modal(document.getElementById('modalProve')).show();
 };
-document.getElementById('show-scadenza').onclick = function(e) {
-    e.preventDefault();
-    new bootstrap.Modal(document.getElementById('modalScadenza')).show();
-};
+
 document.getElementById('show-upgrade').onclick = function(e) {
     e.preventDefault();
     new bootstrap.Modal(document.getElementById('modalUpgrade')).show();
@@ -331,24 +298,40 @@ document.getElementById('show-upgrade').onclick = function(e) {
 // Pie chart abbonamenti venduti
 const ctx = document.getElementById('pieAbbonamenti').getContext('2d');
 const abbonamentiData = {{ abbonamenti_venduti|tojson }};
-new Chart(ctx, {
+const pieColors = [
+    '#007bff', '#28a745', '#ffc107', '#dc3545', '#6f42c1', '#fd7e14', '#20c997', '#6610f2', '#e83e8c', '#17a2b8'
+];
+
+const pieChart = new Chart(ctx, {
     type: 'pie',
     data: {
         labels: Object.keys(abbonamentiData),
         datasets: [{
             data: Object.values(abbonamentiData),
-            backgroundColor: [
-                '#007bff', '#28a745', '#ffc107', '#dc3545', '#6f42c1', '#fd7e14'
-            ]
+            backgroundColor: pieColors.slice(0, Object.keys(abbonamentiData).length),
+            borderColor: '#fff',
+            borderWidth: 2
         }]
     },
     options: {
         responsive: true,
         plugins: {
-            legend: { position: 'bottom' }
+            legend: { display: false }
         }
     }
 });
+
+// Legenda custom sotto il grafico
+const legendContainer = document.getElementById('pieLegend');
+const labels = Object.keys(abbonamentiData);
+const values = Object.values(abbonamentiData);
+legendContainer.innerHTML = labels.map((label, i) => `
+    <div class="d-flex align-items-center mb-1">
+        <span style="display:inline-block;width:18px;height:18px;background:${pieColors[i]};border-radius:3px;margin-right:8px;"></span>
+        <span class="fw-bold">${label}</span>
+        <span class="ms-2 text-muted">(${values[i]} venduti)</span>
+    </div>
+`).join('');
 
 // Istogramma nuovi clienti per mese
 const ctxBar = document.getElementById('barRegistrazioni').getContext('2d');

@@ -748,6 +748,33 @@ def completa_lezione(lezione_id):
     finally:
         conn.close()
 
+def get_pacchetti_venduti_mese(sede_ids=None):
+    conn = get_db_connection()
+    try:
+        mese_inizio = datetime.now().replace(day=1).strftime("%Y-%m-%d")
+        mese_fine = (datetime.now().replace(day=1) + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+        mese_fine = mese_fine.strftime("%Y-%m-%d")
+        cursor = conn.cursor()
+        if sede_ids:
+            placeholders = ','.join(['%s'] * len(sede_ids))
+            query = f"""
+                SELECT COUNT(*) FROM abbonamenti
+                WHERE data_inizio BETWEEN %s AND %s
+                AND cliente_id IN (SELECT id FROM clienti WHERE sede_id IN ({placeholders}))
+            """
+            params = [mese_inizio, mese_fine] + sede_ids
+            cursor.execute(query, params)
+        else:
+            query = """
+                SELECT COUNT(*) FROM abbonamenti
+                WHERE data_inizio BETWEEN %s AND %s
+            """
+            cursor.execute(query, (mese_inizio, mese_fine))
+        count = cursor.fetchone()[0]
+        return count
+    finally:
+        conn.close()
+
 # Funzioni per la dashboard
 def get_statistiche_dashboard(sede_ids=None):
     conn = get_db_connection()
@@ -765,6 +792,8 @@ def get_statistiche_dashboard(sede_ids=None):
                 sede_ids
             )
             stats['abbonamenti_attivi'] = cursor.fetchone()[0]
+
+            stats['pacchetti_venduti_mese'] = get_pacchetti_venduti_mese(sede_ids)
 
             cursor.execute(
                 f"SELECT COUNT(*) FROM rate WHERE abbonamento_id IN (SELECT id FROM abbonamenti WHERE cliente_id IN (SELECT id FROM clienti WHERE sede_id IN ({placeholders}))) AND data_scadenza = %s AND pagato = FALSE",
@@ -828,6 +857,42 @@ def get_statistiche_dashboard(sede_ids=None):
     finally:
         conn.close()
     return stats
+
+def get_rate_contanti(sede_ids=None, da=None, a=None):
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        query = '''
+            SELECT r.*, 
+                   c.nome || ' ' || c.cognome as nome_cliente, 
+                   p.nome as tipo_pacchetto, 
+                   a.id as abbonamento_id,
+                   c.id as cliente_id
+            FROM rate r
+            JOIN abbonamenti a ON r.abbonamento_id = a.id
+            JOIN clienti c ON a.cliente_id = c.id
+            JOIN pacchetti p ON a.pacchetto_id = p.id
+            WHERE r.pagato = TRUE AND r.metodo_pagamento = 'Contanti'
+        '''
+        params = []
+        if sede_ids:
+            placeholders = ','.join(['%s'] * len(sede_ids))
+            query += f' AND c.sede_id IN ({placeholders})'
+            params += sede_ids
+        if da:
+            query += ' AND r.data_pagamento >= %s'
+            params.append(da)
+        if a:
+            query += ' AND r.data_pagamento <= %s'
+            params.append(a)
+        query += ' ORDER BY r.data_pagamento DESC'
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+        columns = [desc[0] for desc in cursor.description]
+        rate = [dict(zip(columns, row)) for row in rows]
+        return rate
+    finally:
+        conn.close()
 
 def get_scadenze_calendario():
     conn = get_db_connection()
@@ -2656,32 +2721,40 @@ def update_appointment(appointment_id, title, client_id, notes, date_time, end_d
     finally:
         conn.close()
 
-def get_appointments_by_sedi(sede_ids, start_date):
+def get_appointments_by_sedi(sede_ids, da=None, a=None):
     """
-    Recupera gli appuntamenti per un elenco di sedi a partire da una data specifica.
-
-    :param sede_ids: Lista di ID delle sedi.
-    :param start_date: Data di inizio (stringa in formato 'YYYY-MM-DD').
-    :return: Lista di appuntamenti.
+    Recupera gli appuntamenti per un elenco di sedi tra le date da e a.
+    Se da e a non sono specificate, mostra il mese corrente.
     """
     conn = get_db_connection()
     try:
-        # Calcola la data di fine (7 giorni dopo la data di inizio)
-        start_date_dt = datetime.strptime(start_date, '%Y-%m-%d')
-        end_date_dt = start_date_dt + timedelta(days=7)
-        start_date_str = start_date_dt.strftime('%Y-%m-%d %H:%M:%S')
-        end_date_str = end_date_dt.strftime('%Y-%m-%d %H:%M:%S')
+        if da and a:
+            start_date = datetime.strptime(da, '%Y-%m-%d')
+            end_date = datetime.strptime(a, '%Y-%m-%d') + timedelta(days=1)
+        elif da:
+            start_date = datetime.strptime(da, '%Y-%m-%d')
+            end_date = start_date + timedelta(days=31)
+        elif a:
+            end_date = datetime.strptime(a, '%Y-%m-%d') + timedelta(days=1)
+            start_date = end_date - timedelta(days=31)
+        else:
+            today = datetime.now()
+            start_date = today.replace(day=1)
+            next_month = (today.replace(day=1) + timedelta(days=32)).replace(day=1)
+            end_date = next_month
 
-        # Costruisci la query per recuperare gli appuntamenti
+        start_date_str = start_date.strftime('%Y-%m-%d 00:00:00')
+        end_date_str = end_date.strftime('%Y-%m-%d 23:59:59')
+
         placeholders = ','.join(['%s'] * len(sede_ids))
         query = f'''
             SELECT 
                 a.*, 
                 c.nome || ' ' || c.cognome AS client_name, 
-                t.nome || ' ' || t.cognome AS trainer_name
+                u.nome || ' ' || u.cognome AS user_name
             FROM appointments a
             JOIN clienti c ON a.client_id = c.id
-            JOIN trainer t ON a.created_by = t.id
+            JOIN utenti u ON a.created_by = u.id
             WHERE c.sede_id IN ({placeholders})
             AND a.date_time BETWEEN %s AND %s
             ORDER BY a.date_time ASC

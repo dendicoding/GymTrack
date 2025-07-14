@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% block title %}Prove Effettuate{% endblock %}
+{% block content %}
+<div class="card">
+    <div class="card-header bg-success text-white">
+        <h5 class="card-title mb-0">
+            <i class="fas fa-check-circle me-2"></i>Prove Effettuate
+        </h5>
+    </div>
+    <div class="card-body">
+        <form method="get" class="row mb-3">
+            <div class="col-md-5">
+                <label for="filter-date-from" class="form-label mb-0">Da</label>
+                <input type="date" id="filter-date-from" name="da" class="form-control" value="{{ da or '' }}">
+            </div>
+            <div class="col-md-5">
+                <label for="filter-date-to" class="form-label mb-0">A</label>
+                <input type="date" id="filter-date-to" name="a" class="form-control" value="{{ a or '' }}">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">Filtra</button>
+            </div>
+        </form>
+        {% if prove %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Cliente</th>
+                            <th>Note</th>
+                            <th>Stato</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in prove %}
+                            <tr>
+                                <td>{{ p['date_time']|format_datetime }}</td>
+                                <td>{{ p['client_name'] }}</td>
+                                <td>{{ p['notes'] }}</td>
+                                <td>{{ p['status'] }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>Nessuna prova effettuata trovata.
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
