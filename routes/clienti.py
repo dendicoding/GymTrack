@@ -113,7 +113,11 @@ def nuovo_cliente():
         
         db.log_event(session.get('user_id'), session.get('user_email'), 'Aggiunto nuovo cliente', f'Cliente: {nome} {cognome}')
         flash(f'Cliente {nome} {cognome} aggiunto con successo!', 'success')
-        return redirect(url_for('clienti.dettaglio_cliente', cliente_id=cliente_id))
+        # Redireziona in base al tipo
+        if tipo.lower() == 'lead':
+            return redirect(url_for('clienti.lista_clienti'))
+        else:
+            return redirect(url_for('clienti.dettaglio_cliente', cliente_id=cliente_id))
     
     # Fetch sedi under the logged-in user's hierarchy
     user_role = session.get('user_role')
@@ -187,6 +191,8 @@ def modifica_cliente(cliente_id):
         email = request.form['email']
         telefono = request.form['telefono']
         data_nascita = request.form['data_nascita']
+        if not data_nascita:
+            data_nascita = None
         indirizzo = request.form['indirizzo']
         citta = request.form['citta']
         cap = request.form['cap']
@@ -211,7 +217,7 @@ def modifica_cliente(cliente_id):
             flash(f'Cliente {nome} {cognome} aggiornato con successo!', 'success')
         except Exception as e:
             flash(f'Errore durante l\'aggiornamento del cliente: {str(e)}', 'error')
-            return redirect(url_for('modifica_cliente', cliente_id=cliente_id))
+            return redirect(url_for('clienti.modifica_cliente', cliente_id=cliente_id))
         
         return redirect(url_for('clienti.dettaglio_cliente', cliente_id=cliente_id))
     
@@ -239,3 +245,5 @@ def promuovi_cliente(cliente_id):
     else:
         flash(message, 'error')
     return redirect(url_for('clienti.dettaglio_cliente', cliente_id=cliente_id))
+    
+

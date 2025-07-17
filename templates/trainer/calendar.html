@@ -485,7 +485,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Configura il pulsante "Eseguito"
             const markCompletedButton = document.getElementById('mark-completed');
-            if (event.extendedProps.type === 'Allenamento Funzionale' || event.extendedProps.type === 'Allenamento EMS') {
+            if (event.extendedProps.type === 'Allenamento Funzionale' || event.extendedProps.type === 'Allenamento EMS' || event.extendedProps.type === 'Allenamento VacuLab') {
                 markCompletedButton.style.display = 'inline-block';
                 markCompletedButton.onclick = function() {
                     markAppointmentAsCompleted(event.id);
@@ -494,6 +494,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 markCompletedButton.style.display = 'none';
             }
 
+            // Configura il pulsante "Promuovi"
             // Configura il pulsante "Promuovi"
             const promuoviButton = document.getElementById('promuovi-cliente');
             if (
@@ -509,7 +510,6 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 promuoviButton.style.display = 'none';
             }
-
             // Mostra il modal
             const appointmentModal = new bootstrap.Modal(document.getElementById('appointmentModal'));
             appointmentModal.show();
@@ -603,6 +603,8 @@ document.addEventListener('DOMContentLoaded', function() {
             'confermato': '<i class="fas fa-check-circle status-confermato-icon"></i>',
             'lezione_saltata': '<i class="fas fa-times-circle status-spostato-icon"></i>',
             'completato': '<i class="fas fa-calendar-check status-completato-icon"></i>',
+            'riprogrammata': '<i class="fas fa-times-circle status-confermato-icon"></i>', // stessa icona e colore della legenda
+
             'prova_fissata': '<i class="fas fa-calendar-plus status-prova_fissata-icon"></i>',
             'prova_in_chiamata': '<i class="fas fa-phone status-prova_in_chiamata-icon"></i>',
             'appuntamento_non_svolto': '<i class="fas fa-exclamation-circle status-appuntamento_non_svolto-icon"></i>',

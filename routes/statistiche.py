@@ -136,13 +136,15 @@ def statistiche():
     clienti_non_attivi_ids = clienti_effettivi_ids - clienti_attivi_ids
     clienti_non_attivi = [db.get_cliente(cid) for cid in clienti_non_attivi_ids]
 
+    mese_inizio = oggi.replace(day=1)
+    mese_fine = (mese_inizio + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+
     # Pie chart abbonamenti venduti
-    abbonamenti = db.get_all_pacchetti()
-    abbonamenti_venduti = {}
-    for ab in abbonamenti:
-        nome = ab['nome']
-        count = db.get_abbonamenti_by_pacchetto(ab['id'])
-        abbonamenti_venduti[nome] = len(count)
+    abbonamenti_venduti = db.get_abbonamenti_venduti_mese(
+        sede_ids,
+        mese_inizio.strftime('%Y-%m-%d'),
+        mese_fine.strftime('%Y-%m-%d')
+    )
 
     # Appuntamenti di prova (is_trial)
     prove = [a for a in appointments if a.get('is_trial')]
@@ -157,8 +159,6 @@ def statistiche():
         })
 
 
-    mese_inizio = oggi.replace(day=1)
-    mese_fine = (mese_inizio + timedelta(days=32)).replace(day=1) - timedelta(days=1)
 
     appointments_mese = db.get_appointments_by_sedi(
         sede_ids,
@@ -175,6 +175,8 @@ def statistiche():
         a for a in prove_mese
         if a.get('status', '').lower().replace(' ', '_') == 'confermato'
     ])
+
+    numero_prove_mese = len(prove_mese)
 
     clienti_registrati = db.get_clienti_effettivi(sede_ids)
     registrazioni_per_mese = OrderedDict()
@@ -197,6 +199,27 @@ def statistiche():
 
     n_rate_contanti = len([r for r in db.get_rate_contanti(sede_ids) if r.get('pagato')])
 
+    upgrades = db.get_abbonamenti_upgrade(
+        sede_ids,
+        mese_inizio.strftime('%Y-%m-%d'),
+        mese_fine.strftime('%Y-%m-%d')
+    )
+    n_upgrade = len(upgrades)
+
+    rinnovi = db.get_rinnovi_effettuati(
+        sede_ids,
+        mese_inizio.strftime('%Y-%m-%d'),
+        mese_fine.strftime('%Y-%m-%d')
+    )
+    n_rinnovi = len(rinnovi)
+
+    rinnovi_non = db.get_rinnovi_non_effettuati(
+        sede_ids,
+        mese_inizio.strftime('%Y-%m-%d'),
+        mese_fine.strftime('%Y-%m-%d')
+    )
+    n_rinnovi_non = len(rinnovi_non)
+
     return render_template(
         'statistiche.html',
         n_clienti_attivi=len(clienti_attivi),
@@ -205,14 +228,17 @@ def statistiche():
         clienti_non_attivi=clienti_non_attivi,
         abbonamenti_venduti=abbonamenti_venduti,
         n_prove=len(prove),
-        
+        numero_prove_mese = numero_prove_mese,
         prove=prove,
         clienti_prove=clienti_prove,
         mesi_labels=mesi_labels,
         mesi_values=mesi_values,
         n_rate_contanti=n_rate_contanti,
         n_prove_annullate=n_prove_annullate,
-        n_prove_effettuate=n_prove_effettuate
+        n_prove_effettuate=n_prove_effettuate,
+        n_upgrade= n_upgrade,
+        n_rinnovi=n_rinnovi,
+        n_rinnovi_non=n_rinnovi_non
 
 
     )
@@ -358,3 +384,214 @@ def clienti_attivi():
     clienti_attivi = [db.get_cliente(cid) for cid in clienti_attivi_ids]
 
     return render_template('clienti_attivi.html', clienti=clienti_attivi, oggi=oggi, da=da, a=a)
+
+
+@stats_bp.route('/prove')
+@login_required
+def prove():
+    user_role = session.get('user_role')
+    user_email = session.get('user_email')
+    sedi = []
+    if user_role == 'trainer':
+        sede = db.get_sede_by_trainer_email(user_email)
+        if sede:
+            sedi.append(sede)
+    elif user_role == 'sede':
+        sede = db.get_sede_by_email(user_email)
+        if sede:
+            sedi.append(sede)
+    elif user_role == 'area manager':
+        societa = db.get_societa_by_area_manager_email(user_email)
+        for company in societa:
+            sedi.extend(db.get_sedi_by_societa(company['id']))
+    elif user_role == 'societa':
+        societa = db.get_societa_by_email(user_email)
+        if societa:
+            sedi = db.get_sedi_by_societa(societa['id'])
+    elif user_role == 'franchisor':
+        area_managers = db.get_area_managers_by_franchisor_email(user_email)
+        for manager in area_managers:
+            societa = db.get_societa_by_area_manager(manager['id'])
+            for company in societa:
+                sedi.extend(db.get_sedi_by_societa(company['id']))
+
+    sede_ids = [sede['id'] for sede in sedi if sede and 'id' in sede]
+
+    # Recupera tutti gli appuntamenti prova (is_trial=True)
+    appointments = db.get_appointments_by_sedi(sede_ids)
+    prove = [a for a in appointments if a.get('is_trial')]
+
+    return render_template('prove.html', prove=prove)
+
+@stats_bp.route('/clienti_non_attivi')
+@login_required
+def clienti_non_attivi():
+    user_role = session.get('user_role')
+    user_email = session.get('user_email')
+    sedi = []
+    if user_role == 'trainer':
+        sede = db.get_sede_by_trainer_email(user_email)
+        if sede:
+            sedi.append(sede)
+    elif user_role == 'sede':
+        sede = db.get_sede_by_email(user_email)
+        if sede:
+            sedi.append(sede)
+    elif user_role == 'area manager':
+        societa = db.get_societa_by_area_manager_email(user_email)
+        for company in societa:
+            sedi.extend(db.get_sedi_by_societa(company['id']))
+    elif user_role == 'societa':
+        societa = db.get_societa_by_email(user_email)
+        if societa:
+            sedi = db.get_sedi_by_societa(societa['id'])
+    elif user_role == 'franchisor':
+        area_managers = db.get_area_managers_by_franchisor_email(user_email)
+        for manager in area_managers:
+            societa = db.get_societa_by_area_manager(manager['id'])
+            for company in societa:
+                sedi.extend(db.get_sedi_by_societa(company['id']))
+
+    sede_ids = [sede['id'] for sede in sedi if sede and 'id' in sede]
+
+    oggi = date.today()
+    appointments = db.get_appointments_by_sedi(sede_ids, oggi.strftime('%Y-%m-%d'))
+    clienti_attivi_ids = set([a['client_id'] for a in appointments if a['date_time'].date() >= oggi])
+
+    clienti_effettivi = db.get_clienti_effettivi(sede_ids)
+    clienti_effettivi_ids = set([c['id'] for c in clienti_effettivi])
+
+    clienti_non_attivi_ids = clienti_effettivi_ids - clienti_attivi_ids
+    clienti_non_attivi = [db.get_cliente(cid) for cid in clienti_non_attivi_ids]
+
+    return render_template('clienti_non_attivi.html', clienti=clienti_non_attivi)
+
+@stats_bp.route('/upgrade_effettuati')
+@login_required
+def upgrade_effettuati():
+    user_role = session.get('user_role')
+    user_email = session.get('user_email')
+    sedi = []
+    if user_role == 'trainer':
+        sede = db.get_sede_by_trainer_email(user_email)
+        if sede:
+            sedi.append(sede)
+    elif user_role == 'sede':
+        sede = db.get_sede_by_email(user_email)
+        if sede:
+            sedi.append(sede)
+    elif user_role == 'area manager':
+        societa = db.get_societa_by_area_manager_email(user_email)
+        for company in societa:
+            sedi.extend(db.get_sedi_by_societa(company['id']))
+    elif user_role == 'societa':
+        societa = db.get_societa_by_email(user_email)
+        if societa:
+            sedi = db.get_sedi_by_societa(societa['id'])
+    elif user_role == 'franchisor':
+        area_managers = db.get_area_managers_by_franchisor_email(user_email)
+        for manager in area_managers:
+            societa = db.get_societa_by_area_manager(manager['id'])
+            for company in societa:
+                sedi.extend(db.get_sedi_by_societa(company['id']))
+
+    sede_ids = [sede['id'] for sede in sedi if sede and 'id' in sede]
+
+    oggi = date.today()
+    mese_inizio = oggi.replace(day=1)
+    mese_fine = (mese_inizio + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+
+    # Recupera abbonamenti con data_inizio nel mese corrente e pacchetto 'Upgrade'
+    abbonamenti_upgrade = db.get_abbonamenti_upgrade(
+        sede_ids,
+        mese_inizio.strftime('%Y-%m-%d'),
+        mese_fine.strftime('%Y-%m-%d')
+    )
+
+    return render_template('upgrade_effettuati.html', upgrade=abbonamenti_upgrade)
+
+@stats_bp.route('/rinnovi_effettuati')
+@login_required
+def rinnovi_effettuati():
+    user_role = session.get('user_role')
+    user_email = session.get('user_email')
+    sedi = []
+    if user_role == 'trainer':
+        sede = db.get_sede_by_trainer_email(user_email)
+        if sede:
+            sedi.append(sede)
+    elif user_role == 'sede':
+        sede = db.get_sede_by_email(user_email)
+        if sede:
+            sedi.append(sede)
+    elif user_role == 'area manager':
+        societa = db.get_societa_by_area_manager_email(user_email)
+        for company in societa:
+            sedi.extend(db.get_sedi_by_societa(company['id']))
+    elif user_role == 'societa':
+        societa = db.get_societa_by_email(user_email)
+        if societa:
+            sedi = db.get_sedi_by_societa(societa['id'])
+    elif user_role == 'franchisor':
+        area_managers = db.get_area_managers_by_franchisor_email(user_email)
+        for manager in area_managers:
+            societa = db.get_societa_by_area_manager(manager['id'])
+            for company in societa:
+                sedi.extend(db.get_sedi_by_societa(company['id']))
+
+    sede_ids = [sede['id'] for sede in sedi if sede and 'id' in sede]
+
+    oggi = date.today()
+    mese_inizio = oggi.replace(day=1)
+    mese_fine = (mese_inizio + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+
+    rinnovi = db.get_rinnovi_effettuati(
+        sede_ids,
+        mese_inizio.strftime('%Y-%m-%d'),
+        mese_fine.strftime('%Y-%m-%d')
+    )
+
+    return render_template('rinnovi_effettuati.html', rinnovi=rinnovi)
+
+@stats_bp.route('/rinnovi_non_effettuati')
+@login_required
+def rinnovi_non_effettuati():
+    user_role = session.get('user_role')
+    user_email = session.get('user_email')
+    sedi = []
+    if user_role == 'trainer':
+        sede = db.get_sede_by_trainer_email(user_email)
+        if sede:
+            sedi.append(sede)
+    elif user_role == 'sede':
+        sede = db.get_sede_by_email(user_email)
+        if sede:
+            sedi.append(sede)
+    elif user_role == 'area manager':
+        societa = db.get_societa_by_area_manager_email(user_email)
+        for company in societa:
+            sedi.extend(db.get_sedi_by_societa(company['id']))
+    elif user_role == 'societa':
+        societa = db.get_societa_by_email(user_email)
+        if societa:
+            sedi = db.get_sedi_by_societa(societa['id'])
+    elif user_role == 'franchisor':
+        area_managers = db.get_area_managers_by_franchisor_email(user_email)
+        for manager in area_managers:
+            societa = db.get_societa_by_area_manager(manager['id'])
+            for company in societa:
+                sedi.extend(db.get_sedi_by_societa(company['id']))
+
+    sede_ids = [sede['id'] for sede in sedi if sede and 'id' in sede]
+
+    oggi = date.today()
+    mese_inizio = oggi.replace(day=1)
+    mese_fine = (mese_inizio + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+
+    rinnovi_non = db.get_rinnovi_non_effettuati(
+        sede_ids,
+        mese_inizio.strftime('%Y-%m-%d'),
+        mese_fine.strftime('%Y-%m-%d')
+    )
+
+    return render_template('rinnovi_non_effettuati.html', rinnovi=rinnovi_non)

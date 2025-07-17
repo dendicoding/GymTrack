@@ -120,14 +120,40 @@ def edit_appointment(appointment_id):
         abort(403)
     
     appointment = db.get_appointment_by_id(appointment_id)
-    
     if not appointment:
         flash('Appuntamento non trovato', 'danger')
         return redirect(url_for('trainer_calendar'))
     
-    if appointment['created_by'] != session.get('user_id'):
-        abort(403)
-    
+
+    # --- INIZIO BLOCCO AGGIUNTO: controllo sedi come in add_appointment ---
+    user_role = session.get('user_role')
+    user_email = session.get('user_email')
+    societa = []
+    sedi = []
+    if user_role == 'trainer':
+        sede = db.get_sede_by_trainer_email(user_email)
+        if sede:
+            sedi.append(sede)
+    elif user_role == 'sede':
+        sede = db.get_sede_by_email(user_email)
+        if sede:
+            sedi.append(sede)
+    elif user_role == 'area manager':
+        societa = db.get_societa_by_area_manager_email(user_email)
+        for company in societa:
+            sedi.extend(db.get_sedi_by_societa(company['id']))
+    elif user_role == 'societa':
+        societa = db.get_societa_by_email(user_email)
+        if societa:
+            sedi = db.get_sedi_by_societa(societa['id'])
+    elif user_role == 'franchisor':
+        area_managers = db.get_area_managers_by_franchisor_email(user_email)
+        for manager in area_managers:
+            societa = db.get_societa_by_area_manager(manager['id'])
+            for company in societa:
+                sedi.extend(db.get_sedi_by_societa(company['id']))
+    # --- FINE BLOCCO AGGIUNTO ---
+
     if request.method == 'POST':
         # Raccolta dei dati dal form
         client_id = request.form.get('client_id')
@@ -137,8 +163,6 @@ def edit_appointment(appointment_id):
         status = request.form.get('status')
         notes = request.form.get('notes')
         
-        
-        # Aggiornamento dell'appuntamento
         db.update_appointment(
             appointment_id=appointment_id,
             title=request.form.get('title'),
@@ -157,7 +181,8 @@ def edit_appointment(appointment_id):
         return redirect(url_for('appuntamenti.trainer_calendar'))
     
     # Per il metodo GET, mostra il form di modifica
-    clients = db.get_all_clienti()
+    # Usa le sedi per filtrare i clienti
+    clients = db.get_all_clienti([s['id'] for s in sedi if 'id' in s])
     return render_template(
         'trainer/edit_appointment.html',
         appointment=appointment,

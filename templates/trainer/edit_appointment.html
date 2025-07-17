@@ -130,11 +130,32 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
+    
     dateTimeInput.addEventListener('change', validateDateTimes);
     endDateTimeInput.addEventListener('change', validateDateTimes);
     
     // Validazione iniziale
+    
+    const durationMinutes = 30; // oppure recupera la durata dinamicamente se serve
+    
+    function updateEndDateTime() {
+        const startValue = dateTimeInput.value;
+        if (startValue) {
+            const startDate = new Date(startValue);
+            const endDate = new Date(startDate.getTime() + durationMinutes * 60000);
+            // Formatta come yyyy-MM-ddTHH:mm per input type="datetime-local"
+            const pad = n => n < 10 ? '0' + n : n;
+            const formatted = endDate.getFullYear() + '-' +
+                pad(endDate.getMonth() + 1) + '-' +
+                pad(endDate.getDate()) + 'T' +
+                pad(endDate.getHours()) + ':' +
+                pad(endDate.getMinutes());
+            endDateTimeInput.value = formatted;
+        }
+    }
+    dateTimeInput.addEventListener('change', updateEndDateTime);
     validateDateTimes();
+
     
     // Gestione per il cambio di stato
     const statusSelect = document.getElementById('status');
@@ -154,5 +175,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+
 </script>
 {% endblock %}

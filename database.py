@@ -2493,7 +2493,7 @@ def get_appointments_by_users(user_ids, start_date):
         # Calcolo progressivo X/N
         # Usa il progressivo fisso salvato nel DB
         for app in appointments:
-            if app['appointment_type'] in ['Allenamento Funzionale', 'Allenamento EMS']:
+            if app['appointment_type'] in ['Allenamento Funzionale', 'Allenamento EMS', 'Allenamento VacuLab']:
                 app['lezione_numero'] = app.get('progressivo_lezione')
                 app['numero_lezioni'] = app.get('numero_lezioni', 0) or 0
             else:
@@ -2552,7 +2552,7 @@ def add_appointment(user_id, client_id, title, notes, date_time, end_date_time, 
         cursor = conn.cursor()
         progressivo_lezione = None
         # Calcola il progressivo solo per le lezioni vere
-        if appointment_type in ['Allenamento Funzionale', 'Allenamento EMS'] and package_id:
+        if appointment_type in ['Allenamento Funzionale', 'Allenamento EMS', 'Allenamento VacuLab'] and package_id:
             # Conta lezioni completate
             cursor.execute('''
                 SELECT COUNT(*) FROM appointments
@@ -2893,5 +2893,124 @@ def update_appointment_status_and_notes(appointment_id, new_status, notes):
         print(f"Errore durante l'aggiornamento dello stato e delle note dell'appuntamento: {e}")
         conn.rollback()
         return False
+    finally:
+        conn.close()
+
+
+def get_abbonamenti_upgrade(sede_ids, da, a):
+    conn = get_db_connection()
+    try:
+        placeholders = ','.join(['%s'] * len(sede_ids))
+        query = f'''
+            SELECT ab.*, c.nome, c.cognome, p.nome AS pacchetto_nome
+            FROM abbonamenti ab
+            JOIN clienti c ON ab.cliente_id = c.id
+            JOIN pacchetti p ON ab.pacchetto_id = p.id
+            WHERE ab.sede_id IN ({placeholders})
+            AND ab.data_inizio BETWEEN %s AND %s
+            AND LOWER(p.nome) = 'upgrade'
+            ORDER BY ab.data_inizio DESC
+        '''
+        params = sede_ids + [da, a]
+        cursor = conn.cursor()
+        cursor.execute(query, params)
+        abbonamenti = cursor.fetchall()
+        columns = [desc[0] for desc in cursor.description]
+        return [dict(zip(columns, row)) for row in abbonamenti]
+    finally:
+        conn.close()
+
+def get_rinnovi_effettuati(sede_ids, da, a):
+    """
+    Restituisce tutti gli abbonamenti che NON sono il primo per ciascun cliente,
+    con data_inizio tra da e a e sede tra quelle indicate.
+    """
+    conn = get_db_connection()
+    try:
+        placeholders = ','.join(['%s'] * len(sede_ids))
+        query = f"""
+            SELECT ab.*, c.nome, c.cognome, p.nome AS pacchetto_nome
+            FROM abbonamenti ab
+            JOIN clienti c ON ab.cliente_id = c.id
+            JOIN pacchetti p ON ab.pacchetto_id = p.id
+            WHERE ab.sede_id IN ({placeholders})
+            AND ab.data_inizio BETWEEN %s AND %s
+            AND p.nome NOT LIKE 'Upgrade'
+            AND ab.id NOT IN (
+                SELECT MIN(id) FROM abbonamenti
+                WHERE sede_id IN ({placeholders})
+                GROUP BY cliente_id
+            )
+            ORDER BY ab.data_inizio DESC
+        """
+        params = sede_ids + [da, a] + sede_ids
+        cursor = conn.cursor()
+        cursor.execute(query, params)
+        abbonamenti = cursor.fetchall()
+        columns = [desc[0] for desc in cursor.description]
+        return [dict(zip(columns, row)) for row in abbonamenti]
+    finally:
+        conn.close()
+
+
+def get_rinnovi_non_effettuati(sede_ids, da, a):
+    """
+    Restituisce tutti gli abbonamenti che sono terminati (lezioni_utilizzate = numero_lezioni)
+    e per cui NON esiste un altro abbonamento per lo stesso cliente con data_inizio successiva.
+    """
+    conn = get_db_connection()
+    try:
+        placeholders = ','.join(['%s'] * len(sede_ids))
+        query = f"""
+            SELECT ab.*, c.nome, c.cognome, p.nome AS pacchetto_nome
+            FROM abbonamenti ab
+            JOIN clienti c ON ab.cliente_id = c.id
+            JOIN pacchetti p ON ab.pacchetto_id = p.id
+            WHERE ab.sede_id IN ({placeholders})
+            AND ab.data_inizio BETWEEN %s AND %s
+            AND ab.lezioni_utilizzate = ab.numero_lezioni
+            AND NOT EXISTS (
+                SELECT 1 FROM abbonamenti ab2
+                WHERE ab2.cliente_id = ab.cliente_id
+                AND ab2.data_inizio > ab.data_inizio
+                AND ab2.sede_id = ab.sede_id
+            )
+            ORDER BY ab.data_inizio DESC
+        """
+        params = sede_ids + [da, a]
+        cursor = conn.cursor()
+        cursor.execute(query, params)
+        abbonamenti = cursor.fetchall()
+        columns = [desc[0] for desc in cursor.description]
+        return [dict(zip(columns, row)) for row in abbonamenti]
+    finally:
+        conn.close()
+
+
+def get_abbonamenti_venduti_mese(sede_ids, data_inizio, data_fine):
+    """
+    Restituisce un dizionario {nome_pacchetto: numero_venduti} per il mese corrente.
+    """
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        # Recupera tutti i pacchetti
+        cursor.execute("SELECT id, nome FROM pacchetti")
+        pacchetti = cursor.fetchall()
+        abbonamenti_venduti = {}
+        for pacchetto_id, nome in pacchetti:
+            # Conta abbonamenti venduti per pacchetto, sede e mese
+            placeholders = ','.join(['%s'] * len(sede_ids))
+            query = f"""
+                SELECT COUNT(*) FROM abbonamenti
+                WHERE pacchetto_id = %s
+                AND sede_id IN ({placeholders})
+                AND data_inizio BETWEEN %s AND %s
+            """
+            params = [pacchetto_id] + sede_ids + [data_inizio, data_fine]
+            cursor.execute(query, params)
+            count = cursor.fetchone()[0]
+            abbonamenti_venduti[nome] = count
+        return abbonamenti_venduti
     finally:
         conn.close()
