@@ -383,7 +383,7 @@ def update_pacchetto(pacchetto_id, nome, descrizione, prezzo, numero_lezioni, at
 
 # Funzioni per gli abbonamenti
 from datetime import datetime, date
-def create_abbonamento(cliente_id, pacchetto_id, data_inizio, prezzo_totale, numero_rate=1):
+def create_abbonamento(cliente_id, pacchetto_id, data_inizio, prezzo_totale, numero_rate=1, numero_lezioni=None):
     conn = get_db_connection()
     try:
         pacchetto = get_pacchetto(pacchetto_id)
@@ -407,11 +407,15 @@ def create_abbonamento(cliente_id, pacchetto_id, data_inizio, prezzo_totale, num
         data_inizio_sql = data_inizio.strftime('%Y-%m-%d')
         #data_fine_sql = data_fine.strftime('%Y-%m-%d')
 
+        # Usa il valore dal form se presente, altrimenti quello del pacchetto
+        if not numero_lezioni:
+            numero_lezioni = pacchetto['numero_lezioni']
+
         print("DEBUG create_abbonamento params:", {
             "cliente_id": cliente_id,
             "pacchetto_id": pacchetto_id,
             "data_inizio": data_inizio_sql,
-            "numero_lezioni": pacchetto['numero_lezioni'],
+            "numero_lezioni": numero_lezioni,
             "prezzo_totale": prezzo_totale,
             "numero_rate": numero_rate,
             "sede_id": sede_id
@@ -433,7 +437,7 @@ def create_abbonamento(cliente_id, pacchetto_id, data_inizio, prezzo_totale, num
             cliente_id, 
             pacchetto_id, 
             data_inizio_sql, 
-            pacchetto['numero_lezioni'],
+            numero_lezioni,
             0,  # lezioni_utilizzate
             prezzo_totale,
             numero_rate,

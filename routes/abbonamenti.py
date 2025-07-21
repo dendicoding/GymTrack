@@ -17,8 +17,9 @@ def nuovo_abbonamento(cliente_id):
         data_inizio = request.form.get('data_inizio')
         prezzo_totale = request.form.get('prezzo_totale', type=float)
         numero_rate = request.form.get('numero_rate', type=int, default=1)
-        
-        if db.create_abbonamento(cliente_id, pacchetto_id, data_inizio, prezzo_totale, numero_rate):
+        numero_lezioni = request.form.get('numero_lezioni', type=int)  # <-- aggiungi questa riga
+
+        if db.create_abbonamento(cliente_id, pacchetto_id, data_inizio, prezzo_totale, numero_rate, numero_lezioni):
             flash('Abbonamento creato con successo', 'success')
             return redirect(url_for('clienti.dettaglio_cliente', cliente_id=cliente_id))
         else:
