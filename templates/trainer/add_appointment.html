@@ -4,6 +4,38 @@
 
 {% block content %}
 <h1>Nuovo Appuntamento</h1>
+<!-- Form GET per selezione società/sede -->
+{% if session.user_role in ['franchisor', 'area manager', 'societa'] %}
+<form method="GET" id="select-societa-sede-form">
+    {% if session.user_role in ['franchisor', 'area manager'] %}
+    <div class="mb-3">
+        <label for="societa_id" class="form-label">Società</label>
+        <select class="form-select" id="societa_id" name="societa_id" required>
+            <option value="" disabled selected hidden>Seleziona una società</option>
+            {% for soc in societa %}
+            <option value="{{ soc.id }}" {% if selected_societa_id == soc.id %}selected{% endif %}>{{ soc.nome }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    {% endif %}
+    <div class="mb-3">
+        <label for="sede_id" class="form-label">Sede</label>
+        <select class="form-select" id="sede_id" name="sede_id" required>
+            <option value="" disabled selected hidden>Seleziona una sede</option>
+            {% for sede in sedi %}
+            <option value="{{ sede.id }}" {% if selected_sede_id == sede.id %}selected{% endif %}>{{ sede.nome }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <input type="hidden" name="date_time" value="{{ request.args.get('date_time', prefilled_date_time) }}">
+    <input type="hidden" name="end_date_time" value="{{ request.args.get('end_date_time', prefilled_end_date_time) }}">
+    <input type="hidden" name="client_id" value="{{ request.args.get('client_id', '') }}">
+    <input type="hidden" name="title" value="{{ request.args.get('title', '') }}">
+    <input type="hidden" name="notes" value="{{ request.args.get('notes', '') }}">
+    <input type="hidden" name="appointment_type" value="{{ request.args.get('appointment_type', '') }}">
+    <input type="hidden" name="status" value="{{ request.args.get('status', '') }}">
+</form>
+{% endif %}
 <form method="POST">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="mb-3">
@@ -289,6 +321,21 @@
         packageSelect.disabled = this.checked;
         if (this.checked) {
             packageSelect.value = '';
+        }
+    });
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const societaSelect = document.getElementById('societa_id');
+        if (societaSelect) {
+            societaSelect.addEventListener('change', function() {
+                document.getElementById('select-societa-sede-form').submit();
+            });
+        }
+        const sedeSelect = document.getElementById('sede_id');
+        if (sedeSelect) {
+            sedeSelect.addEventListener('change', function() {
+                document.getElementById('select-societa-sede-form').submit();
+            });
         }
     });
 </script>

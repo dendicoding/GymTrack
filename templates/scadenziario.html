@@ -90,6 +90,9 @@
                         {% endfor %}
                     </tbody>
                 </table>
+                <nav>
+                    <ul class="pagination justify-content-center" id="pagination-scadenziario"></ul>
+                </nav>
             </div>
         {% else %}
             <div class="alert alert-info">
@@ -132,7 +135,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     break;
                 }
             }
-            row.style.display = show ? '' : 'none';
+            if (show) {
+                row.classList.remove('filtered-out');
+            } else {
+                row.classList.add('filtered-out');
+            }
         });
     }
 
@@ -164,6 +171,78 @@ document.addEventListener('DOMContentLoaded', function() {
         dateFromInput.addEventListener('change', filterByDate);
         dateToInput.addEventListener('change', filterByDate);
     }
+});
+document.addEventListener('DOMContentLoaded', function() {
+    const table = document.querySelector('.table');
+    const rows = table.querySelectorAll('tbody tr');
+    const rowsPerPage = 10;
+    let currentPage = 1;
+
+    function getVisibleRows() {
+        return Array.from(rows).filter(row => !row.classList.contains('filtered-out'));
+    }
+
+    function showPage(page) {
+        const visibleRows = getVisibleRows();
+        const start = (page - 1) * rowsPerPage;
+        const end = start + rowsPerPage;
+        let count = 0;
+        for (let i = 0; i < rows.length; i++) {
+            if (!rows[i].classList.contains('filtered-out')) {
+                if (count >= start && count < end) {
+                    rows[i].style.display = '';
+                } else {
+                    rows[i].style.display = 'none';
+                }
+                count++;
+            } else {
+                rows[i].style.display = 'none';
+            }
+        }
+    }
+
+    function createPaginationControls() {
+        const visibleRows = getVisibleRows();
+        const totalPages = Math.ceil(visibleRows.length / rowsPerPage);
+        const pagination = document.getElementById('pagination-scadenziario');
+        pagination.innerHTML = '';
+        if (totalPages > 1) {
+            for (let i = 1; i <= totalPages; i++) {
+                const li = document.createElement('li');
+                li.className = 'page-item' + (i === currentPage ? ' active' : '');
+                const a = document.createElement('a');
+                a.className = 'page-link';
+                a.href = '#';
+                a.textContent = i;
+                a.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    currentPage = i;
+                    showPage(currentPage);
+                    createPaginationControls();
+                });
+                li.appendChild(a);
+                pagination.appendChild(li);
+            }
+        }
+    }
+
+    // Inizializza paginazione
+    showPage(currentPage);
+    createPaginationControls();
+
+    // Aggiorna paginazione dopo ogni filtro
+    document.querySelectorAll('.filter-input, #filter-date-from, #filter-date-to').forEach(function(input) {
+        input.addEventListener('input', function() {
+            currentPage = 1;
+            showPage(currentPage);
+            createPaginationControls();
+        });
+        input.addEventListener('change', function() {
+            currentPage = 1;
+            showPage(currentPage);
+            createPaginationControls();
+        });
+    });
 });
 </script>
 {% endblock %}

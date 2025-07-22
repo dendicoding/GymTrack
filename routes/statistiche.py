@@ -126,7 +126,7 @@ def statistiche():
     appointments = db.get_appointments_by_sedi(sede_ids, oggi.strftime('%Y-%m-%d'))
     print(f"Appointments fetched: {len(appointments)}")
     clienti_attivi_ids = set([a['client_id'] for a in appointments if a['date_time'].date() >= oggi])
-    clienti_attivi = [db.get_cliente(cid) for cid in clienti_attivi_ids]
+    clienti_attivi = [db.get_cliente_completo(cid) for cid in clienti_attivi_ids]
 
     # Clienti effettivi della sede
     clienti_effettivi = db.get_clienti_effettivi(sede_ids)
@@ -134,7 +134,7 @@ def statistiche():
 
     # Clienti non attivi: effettivi che NON hanno appuntamenti da oggi in poi
     clienti_non_attivi_ids = clienti_effettivi_ids - clienti_attivi_ids
-    clienti_non_attivi = [db.get_cliente(cid) for cid in clienti_non_attivi_ids]
+    clienti_non_attivi = [db.get_cliente_completo(cid) for cid in clienti_non_attivi_ids]
 
     mese_inizio = oggi.replace(day=1)
     mese_fine = (mese_inizio + timedelta(days=32)).replace(day=1) - timedelta(days=1)
@@ -381,7 +381,7 @@ def clienti_attivi():
     oggi = date.today()
     appointments = db.get_appointments_by_sedi(sede_ids, da or oggi.strftime('%Y-%m-%d'), a)
     clienti_attivi_ids = set([a['client_id'] for a in appointments if a['date_time'].date() >= oggi])
-    clienti_attivi = [db.get_cliente(cid) for cid in clienti_attivi_ids]
+    clienti_attivi = [db.get_cliente_completo(cid) for cid in clienti_attivi_ids]
 
     return render_template('clienti_attivi.html', clienti=clienti_attivi, oggi=oggi, da=da, a=a)
 
@@ -462,7 +462,7 @@ def clienti_non_attivi():
     clienti_effettivi_ids = set([c['id'] for c in clienti_effettivi])
 
     clienti_non_attivi_ids = clienti_effettivi_ids - clienti_attivi_ids
-    clienti_non_attivi = [db.get_cliente(cid) for cid in clienti_non_attivi_ids]
+    clienti_non_attivi = [db.get_cliente_completo(cid) for cid in clienti_non_attivi_ids]
 
     return render_template('clienti_non_attivi.html', clienti=clienti_non_attivi)
 

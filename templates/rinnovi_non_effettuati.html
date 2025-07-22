@@ -34,6 +34,20 @@
                                 </span>
                                 <input type="text" class="filter-input form-control form-control-sm mt-1" data-col="2" style="display:none; width: 120px;" placeholder="Filtra...">
                             </th>
+                            <th>
+                                Sede
+                                <span class="filter-icon" data-col="3" style="cursor:pointer;">
+                                    <i class="fas fa-filter"></i>
+                                </span>
+                                <input type="text" class="filter-input form-control form-control-sm mt-1" data-col="3" style="display:none; width: 120px;" placeholder="Filtra...">
+                            </th>
+                            <th>
+                                Società
+                                <span class="filter-icon" data-col="4" style="cursor:pointer;">
+                                    <i class="fas fa-filter"></i>
+                                </span>
+                                <input type="text" class="filter-input form-control form-control-sm mt-1" data-col="4" style="display:none; width: 120px;" placeholder="Filtra...">
+                            </th>
                         </tr>
                     </thead>
                     <tbody>
@@ -42,6 +56,8 @@
                                 <td>{{ ab.nome }} {{ ab.cognome }}</td>
                                 <td>{{ ab.data_fine.strftime('%d/%m/%Y') if ab.data_fine else '' }}</td>
                                 <td>{{ ab.pacchetto_nome }}</td>
+                                <td>{{ ab.nome_sede if ab.nome_sede else '' }}</td>
+                                <td>{{ ab.nome_societa if ab.nome_societa else '' }}</td>
                             </tr>
                         {% endfor %}
                     </tbody>

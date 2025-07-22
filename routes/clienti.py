@@ -130,8 +130,11 @@ def nuovo_cliente():
             for societa in area_manager.get('societa', []):
                 sedi.extend(societa.get('sedi', []))
     elif user_role == 'area manager':
-        for societa in hierarchy[0].get('area_managers', [])[0].get('societa', []):
-            sedi.extend(societa.get('sedi', []))
+        for area_manager in hierarchy[0].get('area_managers', []):
+            # Filtra solo l'area manager loggato
+            if area_manager.get('email') == user_email:
+                for societa in area_manager.get('societa', []):
+                    sedi.extend(societa.get('sedi', []))
     elif user_role == 'societa':
         # Fetch sedi directly under the company
         societa = db.get_societa_by_email(user_email)

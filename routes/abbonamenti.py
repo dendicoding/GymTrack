@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, abort, session, g
 import database as db
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from utils.auth import login_required
 abbonamenti_bp = Blueprint('abbonamenti', __name__)
 
@@ -72,3 +72,45 @@ def elimina_abbonamento(abbonamento_id):
         flash('Errore durante l\'eliminazione dell\'abbonamento', 'error')
     
     return redirect(url_for('clienti.dettaglio_cliente', cliente_id=cliente_id))
+
+@abbonamenti_bp.route('/abbonamenti_conferiti')
+def abbonamenti_conferiti():
+    user_role = session.get('user_role')
+    user_email = session.get('user_email')
+    sedi = []
+    if user_role == 'trainer':
+        sede = db.get_sede_by_trainer_email(user_email)
+        if sede:
+            sedi.append(sede)
+    elif user_role == 'sede':
+        sede = db.get_sede_by_email(user_email)
+        if sede:
+            sedi.append(sede)
+    elif user_role == 'area manager':
+        societa = db.get_societa_by_area_manager_email(user_email)
+        for company in societa:
+            sedi.extend(db.get_sedi_by_societa(company['id']))
+    elif user_role == 'societa':
+        societa = db.get_societa_by_email(user_email)
+        if societa:
+            sedi = db.get_sedi_by_societa(societa['id'])
+    elif user_role == 'franchisor':
+        area_managers = db.get_area_managers_by_franchisor_email(user_email)
+        societa = []
+        for manager in area_managers:
+            societa.extend(db.get_societa_by_area_manager(manager['id']))
+        for company in societa:
+            sedi.extend(db.get_sedi_by_societa(company['id']))
+
+    sede_ids = [s['id'] for s in sedi if s and 'id' in s]
+
+    # Gestione filtri da/a
+    oggi = date.today()
+    mese_inizio = oggi.replace(day=1)
+    mese_fine = (mese_inizio + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+    da = request.args.get('da', mese_inizio.strftime('%Y-%m-%d'))
+    a = request.args.get('a', mese_fine.strftime('%Y-%m-%d'))
+
+    abbonamenti = db.get_abbonamenti_conferiti(sede_ids, da, a)
+
+    return render_template('abbonamenti_conferiti.html', abbonamenti=abbonamenti, da=da, a=a)

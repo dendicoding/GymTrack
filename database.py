@@ -163,10 +163,23 @@ def get_all_clienti(sede_ids=None):
     cursor = conn.cursor()
     if sede_ids:
         placeholders = ','.join(['%s'] * len(sede_ids))
-        query = f'SELECT * FROM clienti WHERE sede_id IN ({placeholders}) ORDER BY cognome, nome'
+        query = f'''
+            SELECT c.*, s.nome AS nome_sede, so.nome AS nome_societa
+            FROM clienti c
+            JOIN sede s ON c.sede_id = s.id
+            JOIN societa so ON s.societa_id = so.id
+            WHERE c.sede_id IN ({placeholders}) 
+            ORDER BY c.cognome, c.nome
+        '''
         cursor.execute(query, sede_ids)
     else:
-        cursor.execute('SELECT * FROM clienti ORDER BY cognome, nome')
+        cursor.execute('''
+            SELECT c.*, s.nome AS nome_sede, so.nome AS nome_societa
+            FROM clienti c
+            JOIN sede s ON c.sede_id = s.id
+            JOIN societa so ON s.societa_id = so.id
+            ORDER BY c.cognome, c.nome
+        ''')
     rows = cursor.fetchall()
     columns = [desc[0] for desc in cursor.description]
     clienti = [dict(zip(columns, row)) for row in rows]
@@ -214,10 +227,24 @@ def get_leads(sede_ids=None):
     cursor = conn.cursor()
     if sede_ids:
         placeholders = ','.join(['%s'] * len(sede_ids))
-        query = f"SELECT * FROM clienti WHERE tipo = 'lead' AND sede_id IN ({placeholders}) ORDER BY cognome, nome"
+        query = f'''
+            SELECT c.*, s.nome AS nome_sede, so.nome AS nome_societa
+            FROM clienti c
+            JOIN sede s ON c.sede_id = s.id
+            JOIN societa so ON s.societa_id = so.id
+            WHERE c.sede_id IN ({placeholders}) AND c.tipo = 'lead'
+            ORDER BY c.cognome, c.nome
+        '''
         cursor.execute(query, sede_ids)
     else:
-        cursor.execute("SELECT * FROM clienti WHERE tipo = 'lead' ORDER BY cognome, nome")
+        cursor.execute('''
+            SELECT c.*, s.nome AS nome_sede, so.nome AS nome_societa
+            FROM clienti c
+            JOIN sede s ON c.sede_id = s.id
+            JOIN societa so ON s.societa_id = so.id
+            WHERE c.tipo = 'lead'
+            ORDER BY c.cognome, c.nome
+        ''')
     rows = cursor.fetchall()
     columns = [desc[0] for desc in cursor.description]
     leads = [dict(zip(columns, row)) for row in rows]
@@ -229,10 +256,24 @@ def get_clienti_effettivi(sede_ids=None):
     cursor = conn.cursor()
     if sede_ids:
         placeholders = ','.join(['%s'] * len(sede_ids))
-        query = f"SELECT * FROM clienti WHERE tipo = 'effettivo' AND sede_id IN ({placeholders}) ORDER BY cognome, nome"
+        query = f'''
+            SELECT c.*, s.nome AS nome_sede, so.nome AS nome_societa
+            FROM clienti c
+            JOIN sede s ON c.sede_id = s.id
+            JOIN societa so ON s.societa_id = so.id
+            WHERE c.sede_id IN ({placeholders}) AND c.tipo = 'effettivo'
+            ORDER BY c.cognome, c.nome
+        '''
         cursor.execute(query, sede_ids)
     else:
-        cursor.execute("SELECT * FROM clienti WHERE tipo = 'effettivo' ORDER BY cognome, nome")
+        cursor.execute('''
+            SELECT c.*, s.nome AS nome_sede, so.nome AS nome_societa
+            FROM clienti c
+            JOIN sede s ON c.sede_id = s.id
+            JOIN societa so ON s.societa_id = so.id
+            WHERE c.tipo = 'effettivo'
+            ORDER BY c.cognome, c.nome
+        ''')
     rows = cursor.fetchall()
     columns = [desc[0] for desc in cursor.description]
     clienti = [dict(zip(columns, row)) for row in rows]
@@ -2906,10 +2947,18 @@ def get_abbonamenti_upgrade(sede_ids, da, a):
     try:
         placeholders = ','.join(['%s'] * len(sede_ids))
         query = f'''
-            SELECT ab.*, c.nome, c.cognome, p.nome AS pacchetto_nome
+            SELECT ab.*, 
+                   c.nome, 
+                   c.cognome, 
+                   c.telefono,
+                   p.nome AS pacchetto_nome,
+                   s.nome AS nome_sede,
+                   so.nome AS nome_societa
             FROM abbonamenti ab
             JOIN clienti c ON ab.cliente_id = c.id
             JOIN pacchetti p ON ab.pacchetto_id = p.id
+            JOIN sede s ON ab.sede_id = s.id
+            JOIN societa so ON s.societa_id = so.id
             WHERE ab.sede_id IN ({placeholders})
             AND ab.data_inizio BETWEEN %s AND %s
             AND LOWER(p.nome) = 'upgrade'
@@ -2933,10 +2982,17 @@ def get_rinnovi_effettuati(sede_ids, da, a):
     try:
         placeholders = ','.join(['%s'] * len(sede_ids))
         query = f"""
-            SELECT ab.*, c.nome, c.cognome, p.nome AS pacchetto_nome
+            SELECT ab.*, 
+                   c.nome, 
+                   c.cognome, 
+                   p.nome AS pacchetto_nome,
+                   s.nome AS nome_sede,
+                   so.nome AS nome_societa
             FROM abbonamenti ab
             JOIN clienti c ON ab.cliente_id = c.id
             JOIN pacchetti p ON ab.pacchetto_id = p.id
+            JOIN sede s ON ab.sede_id = s.id
+            JOIN societa so ON s.societa_id = so.id
             WHERE ab.sede_id IN ({placeholders})
             AND ab.data_inizio BETWEEN %s AND %s
             AND p.nome NOT LIKE 'Upgrade'
@@ -2966,10 +3022,17 @@ def get_rinnovi_non_effettuati(sede_ids, da, a):
     try:
         placeholders = ','.join(['%s'] * len(sede_ids))
         query = f"""
-            SELECT ab.*, c.nome, c.cognome, p.nome AS pacchetto_nome
+            SELECT ab.*, 
+                   c.nome, 
+                   c.cognome, 
+                   p.nome AS pacchetto_nome,
+                   s.nome AS nome_sede,
+                   so.nome AS nome_societa
             FROM abbonamenti ab
             JOIN clienti c ON ab.cliente_id = c.id
             JOIN pacchetti p ON ab.pacchetto_id = p.id
+            JOIN sede s ON ab.sede_id = s.id
+            JOIN societa so ON s.societa_id = so.id
             WHERE ab.sede_id IN ({placeholders})
             AND ab.data_inizio BETWEEN %s AND %s
             AND ab.lezioni_utilizzate = ab.numero_lezioni
@@ -3018,3 +3081,72 @@ def get_abbonamenti_venduti_mese(sede_ids, data_inizio, data_fine):
         return abbonamenti_venduti
     finally:
         conn.close()
+
+def get_user_ids_by_sede(sede_id):
+    """
+    Restituisce tutti gli ID utente che hanno creato appuntamenti per una sede.
+    """
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT DISTINCT a.created_by
+            FROM appointments a
+            JOIN clienti c ON a.client_id = c.id
+            WHERE c.sede_id = %s
+        ''', (sede_id,))
+        rows = cursor.fetchall()
+        return [row[0] for row in rows]
+    finally:
+        conn.close()
+
+def get_abbonamenti_conferiti(sede_ids, da, a):
+    """
+    Restituisce tutti gli abbonamenti conferiti ai clienti nelle sedi indicate tra le date da e a,
+    includendo nome sede e società.
+    """
+    conn = get_db_connection()
+    try:
+        placeholders = ','.join(['%s'] * len(sede_ids))
+        query = f'''
+            SELECT ab.*, 
+                   c.nome AS nome_cliente, 
+                   c.cognome AS cognome_cliente, 
+                   p.nome AS nome_pacchetto,
+                   s.nome AS nome_sede,
+                   so.nome AS nome_societa
+            FROM abbonamenti ab
+            JOIN clienti c ON ab.cliente_id = c.id
+            JOIN pacchetti p ON ab.pacchetto_id = p.id
+            JOIN sede s ON ab.sede_id = s.id
+            JOIN societa so ON s.societa_id = so.id
+            WHERE ab.sede_id IN ({placeholders})
+            AND ab.data_inizio BETWEEN %s AND %s
+            ORDER BY ab.data_inizio DESC
+        '''
+        params = sede_ids + [da, a]
+        cursor = conn.cursor()
+        cursor.execute(query, params)
+        abbonamenti = cursor.fetchall()
+        columns = [desc[0] for desc in cursor.description]
+        return [dict(zip(columns, row)) for row in abbonamenti]
+    finally:
+        conn.close()
+
+
+def get_cliente_completo(cliente_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT c.*, s.nome AS nome_sede, so.nome AS nome_societa
+        FROM clienti c
+        JOIN sede s ON c.sede_id = s.id
+        JOIN societa so ON s.societa_id = so.id
+        WHERE c.id = %s
+    ''', (cliente_id,))
+    row = cursor.fetchone()
+    columns = [desc[0] for desc in cursor.description]
+    conn.close()
+    if row:
+        return dict(zip(columns, row))
+    return None

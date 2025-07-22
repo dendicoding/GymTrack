@@ -10,7 +10,7 @@
     <div class="card-body">
         {% if prove %}
             <div class="table-responsive">
-                <table class="table table-hover">
+                <table class="table table-hover" id="prove-table">
                     <thead>
                         <tr>
                             <th>
@@ -54,6 +54,9 @@
                         {% endfor %}
                     </tbody>
                 </table>
+                <nav>
+                    <ul class="pagination justify-content-center" id="pagination-prove"></ul>
+                </nav>
             </div>
         {% else %}
             <div class="alert alert-info">

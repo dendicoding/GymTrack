@@ -10,7 +10,7 @@
     <div class="card-body">
         {% if clienti %}
             <div class="table-responsive">
-                <table class="table table-hover">
+                <table class="table table-hover" id="clienti-attivi-table">
                     <thead>
                         <tr>
                             <th>
@@ -21,27 +21,81 @@
                                 <input type="text" class="filter-input form-control form-control-sm mt-1" data-col="0" style="display:none; width: 120px;" placeholder="Filtra...">
                             </th>
                             <th>
-                                Email
+                                Cognome
                                 <span class="filter-icon" data-col="1" style="cursor:pointer;">
                                     <i class="fas fa-filter"></i>
                                 </span>
                                 <input type="text" class="filter-input form-control form-control-sm mt-1" data-col="1" style="display:none; width: 120px;" placeholder="Filtra...">
                             </th>
                             <th>
-                                Telefono
+                                Email
                                 <span class="filter-icon" data-col="2" style="cursor:pointer;">
                                     <i class="fas fa-filter"></i>
                                 </span>
                                 <input type="text" class="filter-input form-control form-control-sm mt-1" data-col="2" style="display:none; width: 120px;" placeholder="Filtra...">
+                            </th>
+                            <th>
+                                Telefono
+                                <span class="filter-icon" data-col="3" style="cursor:pointer;">
+                                    <i class="fas fa-filter"></i>
+                                </span>
+                                <input type="text" class="filter-input form-control form-control-sm mt-1" data-col="3" style="display:none; width: 120px;" placeholder="Filtra...">
+                            </th>
+                            <th>
+                                Tipo
+                                <span class="filter-icon" data-col="4" style="cursor:pointer;">
+                                    <i class="fas fa-filter"></i>
+                                </span>
+                                <input type="text" class="filter-input form-control form-control-sm mt-1" data-col="4" style="display:none; width: 120px;" placeholder="Filtra...">
+                            </th>
+                            <th>
+                                Tipologia
+                                <span class="filter-icon" data-col="5" style="cursor:pointer;">
+                                    <i class="fas fa-filter"></i>
+                                </span>
+                                <input type="text" class="filter-input form-control form-control-sm mt-1" data-col="5" style="display:none; width: 120px;" placeholder="Filtra...">
+                            </th>
+                            <th>
+                                Data Registrazione
+                                <span class="filter-icon" data-col="6" style="cursor:pointer;">
+                                    <i class="fas fa-filter"></i>
+                                </span>
+                                <input type="text" class="filter-input form-control form-control-sm mt-1" data-col="6" style="display:none; width: 120px;" placeholder="Filtra...">
+                            </th>
+                            <th>
+                                Sede
+                                <span class="filter-icon" data-col="7" style="cursor:pointer;">
+                                    <i class="fas fa-filter"></i>
+                                </span>
+                                <input type="text" class="filter-input form-control form-control-sm mt-1" data-col="7" style="display:none; width: 120px;" placeholder="Filtra...">
+                            </th>
+                            <th>
+                                Società
+                                <span class="filter-icon" data-col="8" style="cursor:pointer;">
+                                    <i class="fas fa-filter"></i>
+                                </span>
+                                <input type="text" class="filter-input form-control form-control-sm mt-1" data-col="8" style="display:none; width: 120px;" placeholder="Filtra...">
                             </th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for c in clienti %}
                             <tr>
-                                <td>{{ c.nome }} {{ c.cognome }}</td>
+                                <td>{{ c.nome }}</td>
+                                <td>{{ c.cognome }}</td>
                                 <td>{{ c.email }}</td>
                                 <td>{{ c.telefono }}</td>
+                                <td>
+                                    {% if c.tipo == 'lead' %}
+                                        <span class="badge bg-success">Lead</span>
+                                    {% else %}
+                                        <span class="badge bg-primary">Effettivo</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ c.tipologia }}</td>
+                                <td>{{ c.data_registrazione }}</td>
+                                <td>{{ c.nome_sede }}</td>
+                                <td>{{ c.nome_societa }}</td>
                             </tr>
                         {% endfor %}
                     </tbody>
@@ -56,7 +110,7 @@
 </div>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Mostra/nasconde il filtro input quando si clicca sull'icona
+    // Filtro per colonna (già presente)
     document.querySelectorAll('.filter-icon').forEach(function(icon) {
         icon.addEventListener('click', function(e) {
             const col = icon.getAttribute('data-col');
@@ -66,18 +120,15 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Funzione di filtro per colonna
-    function filterTable() {
-        const table = document.querySelector('.table');
+    function filterTable(tableId, rowsPerPage, paginationId) {
+        const table = document.getElementById(tableId);
         const rows = table.querySelectorAll('tbody tr');
-        // Prendi i valori dei filtri attivi
         const filters = {};
         document.querySelectorAll('.filter-input').forEach(function(input) {
             if (input.value.trim() !== '') {
                 filters[input.getAttribute('data-col')] = input.value.toLowerCase();
             }
         });
-
         rows.forEach(row => {
             const cells = row.querySelectorAll('td');
             let show = true;
@@ -90,11 +141,66 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             row.style.display = show ? '' : 'none';
         });
+        paginateTable(tableId, rowsPerPage, paginationId);
     }
 
-    // Attiva il filtro su input
-    document.querySelectorAll('.filter-input').forEach(function(input) {
-        input.addEventListener('input', filterTable);
+    function paginateTable(tableId, rowsPerPage, paginationId) {
+        const table = document.getElementById(tableId);
+        const rows = Array.from(table.querySelectorAll('tbody tr')).filter(row => row.style.display !== 'none');
+        const totalRows = rows.length;
+        const totalPages = Math.ceil(totalRows / rowsPerPage);
+
+        // Nascondi tutte le righe
+        table.querySelectorAll('tbody tr').forEach(row => row.style.display = 'none');
+
+        // Mostra solo quelle della pagina corrente
+        let currentPage = window['currentPage_' + tableId] || 1;
+        const start = (currentPage - 1) * rowsPerPage;
+        const end = start + rowsPerPage;
+        rows.slice(start, end).forEach(row => row.style.display = '');
+
+        // Aggiorna la paginazione
+        const pagination = document.getElementById(paginationId);
+        if (pagination) {
+            pagination.innerHTML = '';
+            if (totalPages > 1) {
+                for (let i = 1; i <= totalPages; i++) {
+                    const li = document.createElement('li');
+                    li.className = 'page-item' + (i === currentPage ? ' active' : '');
+                    const a = document.createElement('a');
+                    a.className = 'page-link';
+                    a.href = '#';
+                    a.textContent = i;
+                    a.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        window['currentPage_' + tableId] = i;
+                        paginateTable(tableId, rowsPerPage, paginationId);
+                    });
+                    li.appendChild(a);
+                    pagination.appendChild(li);
+                }
+            }
+        }
+    }
+
+    // Per ogni tabella, inizializza paginazione e filtri
+    [
+        {tableId: 'clienti-attivi-table', paginationId: 'pagination-attivi', rowsPerPage: 20},
+        {tableId: 'clienti-non-attivi-table', paginationId: 'pagination-non-attivi', rowsPerPage: 20},
+        {tableId: 'prove-table', paginationId: 'pagination-prove', rowsPerPage: 20},
+        {tableId: 'prove-effettuate-table', paginationId: 'pagination-effettuate', rowsPerPage: 20},
+        {tableId: 'prove-non-prese-table', paginationId: 'pagination-non-prese', rowsPerPage: 20}
+    ].forEach(function(cfg) {
+        if (document.getElementById(cfg.tableId)) {
+            window['currentPage_' + cfg.tableId] = 1;
+            paginateTable(cfg.tableId, cfg.rowsPerPage, cfg.paginationId);
+            document.querySelectorAll('.filter-input').forEach(function(input) {
+                input.addEventListener('input', function() {
+                    window['currentPage_' + cfg.tableId] = 1;
+                    filterTable(cfg.tableId, cfg.rowsPerPage, cfg.paginationId);
+                });
+            });
+        }
     });
 });
 </script>

@@ -248,7 +248,16 @@ const pieChart = new Chart(ctx, {
     options: {
         responsive: true,
         plugins: {
-            legend: { display: false }
+            legend: { display: false },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        const label = context.label || '';
+                        const value = context.parsed || 0;
+                        return `${label}: Num. Pacchetti: ${value}`;
+                    }
+                }
+            }
         }
     }
 });

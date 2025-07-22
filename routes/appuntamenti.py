@@ -16,40 +16,56 @@ def add_appointment():
     user_role = session.get('user_role')
     user_email = session.get('user_email')
     user_id = session.get('user_id')
-    
-    print(f"Ruolo ed email {user_role}: {user_email}")
 
-    # Step 2: Determina le sedi sotto la gerarchia dell'utente
     societa = []
     sedi = []
-    if user_role == 'trainer':
-        sede = db.get_sede_by_trainer_email(user_email)
-        if sede:
-            sedi.append(sede)
+    selected_societa_id = None
+    selected_sede_id = None
+
+    # Recupera società e sedi in base al ruolo
+    if user_role == 'franchisor':
+        area_managers = db.get_area_managers_by_franchisor_email(user_email)
+        for manager in area_managers:
+            societa.extend(db.get_societa_by_area_manager(manager['id']))
+        # Prendi i parametri sia da POST che da GET
+        selected_societa_id = request.values.get('societa_id')
+        selected_societa_id = int(selected_societa_id) if selected_societa_id else None
+        if selected_societa_id:
+            sedi = db.get_sedi_by_societa(selected_societa_id)
+            selected_sede_id = request.values.get('sede_id')
+            selected_sede_id = int(selected_sede_id) if selected_sede_id else None
+        else:
+            sedi = []
+    # selected_sede_id rimane None finché non selezioni una sede
+    elif user_role == 'area manager':
+        societa = db.get_societa_by_area_manager_email(user_email)
+        selected_societa_id = request.values.get('societa_id')
+        selected_societa_id = int(selected_societa_id) if selected_societa_id else None
+        if selected_societa_id:
+            sedi = db.get_sedi_by_societa(selected_societa_id)
+            selected_sede_id = request.values.get('sede_id')
+            selected_sede_id = int(selected_sede_id) if selected_sede_id else None
+        else:
+            sedi = []
+    elif user_role == 'societa':
+        societa = [db.get_societa_by_email(user_email)]
+        selected_sede_id = request.values.get('sede_id')
+        selected_sede_id = int(selected_sede_id) if selected_sede_id else None
+        if societa:
+            sedi = db.get_sedi_by_societa(societa[0]['id'])
     elif user_role == 'sede':
         sede = db.get_sede_by_email(user_email)
         if sede:
             sedi.append(sede)
-    elif user_role == 'area manager':
-        societa = db.get_societa_by_area_manager_email(user_email)
-        print(f"Società sotto l'area manager {user_email}: {societa}")
+    elif user_role == 'trainer':
+        sede = db.get_sede_by_trainer_email(user_email)
+        if sede:
+            sedi.append(sede)
 
-        for company in societa:
-            sedi.extend(db.get_sedi_by_societa(company['id']))
-    elif user_role == 'societa':
-        societa = db.get_societa_by_email(user_email)
-        if societa:
-            sedi = db.get_sedi_by_societa(societa['id'])
-            #sedi.extend([sede['id'] for sede in sedi])
-    elif user_role == 'franchisor':
-        area_managers = db.get_area_managers_by_franchisor_email(user_email)
-        for manager in area_managers:
-            societa = db.get_societa_by_area_manager(manager['id'])
-            
-            for company in societa:
-                sedi.extend(db.get_sedi_by_societa(company['id']))
+    print(selected_sede_id)
 
-    clienti = db.get_all_clienti([s['id'] for s in sedi if 'id' in s])
+    # Filtra i clienti per la sede selezionata (o tutte le sedi disponibili)
+    clienti = db.get_all_clienti([selected_sede_id] if selected_sede_id else [s['id'] for s in sedi if 'id' in s])
 
     # Precompila la data e ora se fornita nella query string
     prefilled_date_time = request.args.get('date_time', '')
@@ -109,6 +125,10 @@ def add_appointment():
     return render_template(
         'trainer/add_appointment.html',
         clienti=clienti,
+        societa=societa,
+        sedi=sedi,
+        selected_societa_id=selected_societa_id,
+        selected_sede_id=selected_sede_id,
         prefilled_date_time=prefilled_date_time,
         prefilled_end_date_time=prefilled_end_date_time
     )
@@ -116,8 +136,7 @@ def add_appointment():
 @appuntamenti_bp.route('/edit_appointment/<int:appointment_id>', methods=['GET', 'POST'])
 @login_required
 def edit_appointment(appointment_id):
-    if session.get('user_role') != 'trainer':
-        abort(403)
+    
     
     appointment = db.get_appointment_by_id(appointment_id)
     if not appointment:
@@ -246,11 +265,11 @@ def trainer_calendar():
             #sedi.extend([sede['id'] for sede in sedi])
     elif user_role == 'franchisor':
         area_managers = db.get_area_managers_by_franchisor_email(user_email)
+        societa = []
         for manager in area_managers:
-            societa = db.get_societa_by_area_manager(manager['id'])
-            
-            for company in societa:
-                sedi.extend(db.get_sedi_by_societa(company['id']))
+            societa.extend(db.get_societa_by_area_manager(manager['id']))
+        for company in societa:
+            sedi.extend(db.get_sedi_by_societa(company['id']))
 
     # Step 3: Filtra gli eventi in base alla sede selezionata
     selected_societa_id = request.args.get('societa_id', type=int)
@@ -262,19 +281,10 @@ def trainer_calendar():
         sedi = db.get_sedi_by_societa(selected_societa_id)
 
     if selected_sede_id:
-        trainers_in_sede = db.get_trainers_by_sede(selected_sede_id)
-        user_ids = []
-        for trainer in trainers_in_sede:
-            user = db.get_user_by_email(trainer['email'])
-            if user:
-                user_ids.append(user['id'])
+        user_ids = db.get_user_ids_by_sede(selected_sede_id)
     else:
         for sede in sedi:
-            trainers_in_sede = db.get_trainers_by_sede(sede['id'])
-            for trainer in trainers_in_sede:
-                user = db.get_user_by_email(trainer['email'])
-                if user:
-                    user_ids.append(user['id'])
+            user_ids.extend(db.get_user_ids_by_sede(sede['id']))
 
     # Step 4: Ottieni gli appuntamenti per gli utenti trovati
     print(f"User IDs per gli appuntamenti: {user_ids}")
