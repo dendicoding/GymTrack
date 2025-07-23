@@ -5,50 +5,45 @@
 {% block content %}
 <div class="container mt-4">
     <div class="row">
-        <div class="col-md-8 mx-auto">
-            <div class="card">
+        <div class="col-md-10 col-lg-8 mx-auto">
+            <div class="card shadow">
                 <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0">Modifica Appuntamento</h4>
+                    <h4 class="mb-0"><i class="fas fa-calendar-edit me-2"></i>Modifica Appuntamento</h4>
                 </div>
                 <div class="card-body">
                     <form method="POST" action="{{ url_for('appuntamenti.edit_appointment', appointment_id=appointment.id) }}">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-                        <!-- Title -->
-                        <div class="mb-3">
-                            <label for="title" class="form-label">Titolo</label>
-                            <input type="text" class="form-control" id="title" name="title" 
-                                   value="{{ appointment.title }}" required>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="title" class="form-label">Titolo</label>
+                                <input type="text" class="form-control" id="title" name="title" 
+                                       value="{{ appointment.title }}" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="client_id" class="form-label">Cliente</label>
+                                <select class="form-select" id="client_id" name="client_id" required>
+                                    <option value="">Seleziona un cliente</option>
+                                    {% for client in clients %}
+                                    <option value="{{ client.id }}" {% if client.id == appointment.client_id %}selected{% endif %}>
+                                        {{ client.nome }} {{ client.cognome }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
                         </div>
 
-                        <!-- Client -->
-                        <div class="mb-3">
-                            <label for="client_id" class="form-label">Cliente</label>
-                            <select class="form-select" id="client_id" name="client_id" required>
-                                <option value="">Seleziona un cliente</option>
-                                {% for client in clients %}
-                                <option value="{{ client.id }}" {% if client.id == appointment.client_id %}selected{% endif %}>
-                                    {{ client.nome }} {{ client.cognome }}
-                                </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-
-                        <!-- Notes -->
                         <div class="mb-3">
                             <label for="notes" class="form-label">Note</label>
                             <textarea class="form-control" id="notes" name="notes" rows="3">{{ appointment.notes or '' }}</textarea>
                         </div>
 
-                        <!-- Start Date and Time -->
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label for="date_time" class="form-label">Data e ora di inizio</label>
                                 <input type="datetime-local" class="form-control" id="date_time" name="date_time" 
                                        value="{{ appointment.date_time.strftime('%Y-%m-%dT%H:%M') }}" required>
                             </div>
-
-                            <!-- End Date and Time -->
                             <div class="col-md-6">
                                 <label for="end_date_time" class="form-label">Data e ora di fine</label>
                                 <input type="datetime-local" class="form-control" id="end_date_time" name="end_date_time" 
@@ -56,52 +51,53 @@
                             </div>
                         </div>
 
-                        <!-- Appointment Type -->
-                        <div class="mb-3">
-                            <label for="type" class="form-label">Tipo di appuntamento</label>
-                            <select class="form-select" id="type" name="type" required>
-                                <option value="Allenamento Funzionale" {% if appointment.appointment_type == 'Allenamento Funzionale' %}selected{% endif %}>Allenamento Funzionale</option>
-                                <option value="Chiamata" {% if appointment.appointment_type == 'Chiamata' %}selected{% endif %}>Chiamata</option>
-                                <option value="Blocco Agenda" {% if appointment.appointment_type == 'Blocco Agenda' %}selected{% endif %}>Blocco Agenda</option>
-                                <option value="Allenamento EMS" {% if appointment.appointment_type == 'Allenamento EMS' %}selected{% endif %}>Allenamento EMS</option>
-                                <option value="Allenamento VacuLab" {% if appointment.appointment_type == 'Allenamento VacuLab' %}selected{% endif %}>Allenamento VacuLab</option>
-                            </select>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="type" class="form-label">Tipo di appuntamento</label>
+                                <select class="form-select" id="type" name="type" required>
+                                    <option value="Allenamento Funzionale" {% if appointment.appointment_type == 'Allenamento Funzionale' %}selected{% endif %}>Allenamento Funzionale</option>
+                                    <option value="Chiamata" {% if appointment.appointment_type == 'Chiamata' %}selected{% endif %}>Chiamata</option>
+                                    <option value="Blocco Agenda" {% if appointment.appointment_type == 'Blocco Agenda' %}selected{% endif %}>Blocco Agenda</option>
+                                    <option value="Allenamento EMS" {% if appointment.appointment_type == 'Allenamento EMS' %}selected{% endif %}>Allenamento EMS</option>
+                                    <option value="Allenamento VacuLab" {% if appointment.appointment_type == 'Allenamento VacuLab' %}selected{% endif %}>Allenamento VacuLab</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="status" class="form-label">Stato dell'appuntamento</label>
+                                <select class="form-select" id="status" name="status" required>
+                                    <option value="Confermato" {% if appointment.status == 'Confermato' %}selected{% endif %}>Confermato</option>
+                                    <option value="Riprogrammata" {% if appointment.status == 'Riprogrammata' %}selected{% endif %}>Riprogrammata</option>
+                                    <option value="Lezione Saltata" {% if appointment.status == 'Lezione Saltata' %}selected{% endif %}>Lezione Saltata</option>
+                                    <option value="Prova Fissata" {% if appointment.status == 'Prova Fissata' %}selected{% endif %}>Prova Fissata</option>
+                                    <option value="Prova Annullata" {% if appointment.status == 'Prova Annullata' %}selected{% endif %}>Prova Annullata</option>     
+                                </select>
+                            </div>
                         </div>
 
-                        <!-- Status -->
-                        <div class="mb-3">
-                            <label for="status" class="form-label">Stato dell'appuntamento</label>
-                            <select class="form-select" id="status" name="status" required>
-                                <option value="Confermato" {% if appointment.status == 'Confermato' %}selected{% endif %}>Confermato</option>
-                                <option value="Riprogrammata" {% if appointment.status == 'Riprogrammata' %}selected{% endif %}>Riprogrammata</option>
-                                <option value="Lezione Saltata" {% if appointment.status == 'Lezione Saltata' %}selected{% endif %}>Lezione Saltata</option>
-                                <option value="Prova Fissata" {% if appointment.status == 'Prova Fissata' %}selected{% endif %}>Prova Fissata</option>
-                                <option value="Prova Annullata" {% if appointment.status == 'Prova Annullata' %}selected{% endif %}>Prova Annullata</option>     
-                            </select>
+                        <div class="row mb-3">
+                            <div class="col-md-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="is_trial" name="is_trial" 
+                                           {% if appointment.is_trial %}checked{% endif %}>
+                                    <label class="form-check-label" for="is_trial">Prova</label>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="is_recovery" name="is_recovery" 
+                                           {% if appointment.is_recovery %}checked{% endif %}>
+                                    <label class="form-check-label" for="is_recovery">Recupero</label>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="is_lesson_zero" name="is_lesson_zero" 
+                                           {% if appointment.is_lesson_zero %}checked{% endif %}>
+                                    <label class="form-check-label" for="is_lesson_zero">Lezione Zero</label>
+                                </div>
+                            </div>
                         </div>
 
-                        <!-- Is Trial -->
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="is_trial" name="is_trial" 
-                                   {% if appointment.is_trial %}checked{% endif %}>
-                            <label class="form-check-label" for="is_trial">Prova</label>
-                        </div>
-
-                        <!-- Is Recovery -->
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="is_recovery" name="is_recovery" 
-                                   {% if appointment.is_recovery %}checked{% endif %}>
-                            <label class="form-check-label" for="is_recovery">Recupero</label>
-                        </div>
-
-                        <!-- Is Lesson Zero -->
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="is_lesson_zero" name="is_lesson_zero" 
-                                   {% if appointment.is_lesson_zero %}checked{% endif %}>
-                            <label class="form-check-label" for="is_lesson_zero">Lezione Zero</label>
-                        </div>
-
-                        <!-- Submit Button -->
                         <div class="d-flex justify-content-between mt-4">
                             <a href="{{ url_for('appuntamenti.trainer_calendar') }}" class="btn btn-secondary">Annulla</a>
                             <button type="submit" class="btn btn-primary">Salva modifiche</button>

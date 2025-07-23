@@ -152,4 +152,5 @@ def trainer_resoconto():
         flash('Resoconto dichiarato con successo!', 'success')
         return redirect(url_for('trainers.trainer_resoconto'))
     
-    return render_template('trainer/resoconto.html')
+    # Passa la variabile date al template
+    return render_template('trainer/resoconto.html', date=date)

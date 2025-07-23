@@ -3,130 +3,163 @@
 {% block title %}Nuovo Appuntamento{% endblock %}
 
 {% block content %}
-<h1>Nuovo Appuntamento</h1>
-<!-- Form GET per selezione società/sede -->
-{% if session.user_role in ['franchisor', 'area manager', 'societa'] %}
-<form method="GET" id="select-societa-sede-form">
-    {% if session.user_role in ['franchisor', 'area manager'] %}
-    <div class="mb-3">
-        <label for="societa_id" class="form-label">Società</label>
-        <select class="form-select" id="societa_id" name="societa_id" required>
-            <option value="" disabled selected hidden>Seleziona una società</option>
-            {% for soc in societa %}
-            <option value="{{ soc.id }}" {% if selected_societa_id == soc.id %}selected{% endif %}>{{ soc.nome }}</option>
-            {% endfor %}
-        </select>
-    </div>
-    {% endif %}
-    <div class="mb-3">
-        <label for="sede_id" class="form-label">Sede</label>
-        <select class="form-select" id="sede_id" name="sede_id" required>
-            <option value="" disabled selected hidden>Seleziona una sede</option>
-            {% for sede in sedi %}
-            <option value="{{ sede.id }}" {% if selected_sede_id == sede.id %}selected{% endif %}>{{ sede.nome }}</option>
-            {% endfor %}
-        </select>
-    </div>
-    <input type="hidden" name="date_time" value="{{ request.args.get('date_time', prefilled_date_time) }}">
-    <input type="hidden" name="end_date_time" value="{{ request.args.get('end_date_time', prefilled_end_date_time) }}">
-    <input type="hidden" name="client_id" value="{{ request.args.get('client_id', '') }}">
-    <input type="hidden" name="title" value="{{ request.args.get('title', '') }}">
-    <input type="hidden" name="notes" value="{{ request.args.get('notes', '') }}">
-    <input type="hidden" name="appointment_type" value="{{ request.args.get('appointment_type', '') }}">
-    <input type="hidden" name="status" value="{{ request.args.get('status', '') }}">
-</form>
-{% endif %}
-<form method="POST">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <div class="mb-3">
-        <label for="client_id" class="form-label">Cliente</label>
-        <select class="form-select" id="client_id" name="client_id" required>
-            <option value="" disabled selected hidden>Seleziona un cliente</option>
-            {% for cliente in clienti %}
-            <option value="{{ cliente.id }}" {% if request.args.get('client_id') == cliente.id|string %}selected{% endif %}>
-                {{ cliente.nome }} {{ cliente.cognome }}
-            </option>
-            {% endfor %}
-        </select>
-    </div>
-    <div class="mb-3">
-        <label for="title" class="form-label">Titolo</label>
-        <input type="text" class="form-control" id="title" name="title" value="{{ request.args.get('title', '') }}" required>
-    </div>
-    <div class="mb-3">
-        <label for="notes" class="form-label">Note</label>
-        <textarea class="form-control" id="notes" name="notes">{{ request.args.get('notes', '') }}</textarea>
-    </div>
-    <div class="mb-3">
-        <label for="date_time" class="form-label">Data e Ora di Inizio</label>
-        <input type="datetime-local" class="form-control" id="date_time" name="date_time" 
-               value="{{ prefilled_date_time }}" required step="600">
-    </div>
-    <input type="hidden" id="duration" name="duration" value="30">
-    <div class="mb-3">
-        <label for="end_date_time" class="form-label">Data e Ora di Fine</label>
-        <input type="datetime-local" class="form-control" id="end_date_time" name="end_date_time" 
-               value="{{ prefilled_end_date_time }}" required step="600">
-    </div>
-    <div class="mb-3">
-        <label for="appointment_type" class="form-label">Tipo</label>
-        <select class="form-select" id="appointment_type" name="appointment_type" required>
-            <option value="Allenamento Funzionale" {% if request.args.get('appointment_type') == 'Allenamento Funzionale' %}selected{% endif %}>Allenamento Funzionale</option>
-            <option value="Chiamata" {% if request.args.get('appointment_type') == 'Chiamata' %}selected{% endif %}>Chiamata</option>
-            <option value="Blocco Agenda" {% if request.args.get('appointment_type') == 'Blocco Agenda' %}selected{% endif %}>Blocco Agenda</option>
-            <option value="Allenamento EMS" {% if request.args.get('appointment_type') == 'Allenamento EMS' %}selected{% endif %}>Allenamento EMS</option>
-            <option value="Allenamento VacuLab" {% if request.args.get('appointment_type') == 'Allenamento VacuLab' %}selected{% endif %}>Allenamento VacuLab</option>
-        </select>
-    </div>
-    <div class="mb-3">
-        <label for="status" class="form-label">Stato</label>
-        <select class="form-select" id="status" name="status" required>
-            <option value="Confermato" {% if request.args.get('status') == 'Confermato' %}selected{% endif %}>Confermato</option>
-            <option value="Riprogrammata" {% if request.args.get('status') == 'Riprogrammata' %}selected{% endif %}>Riprogrammata</option>
-            <option value="Lezione Saltata" {% if request.args.get('status') == 'Lezione Saltata' %}selected{% endif %}>Lezione Saltata</option>
-            <option value="Prova Fissata" {% if request.args.get('status') == 'Prova Fissata' %}selected{% endif %}>Prova Fissata</option>
-            <option value="Prova Annullata" {% if request.args.get('status') == 'Prova Annullata' %}selected{% endif %}>Prova Annullata</option>
-        </select>
-    </div>
-    
-    <div class="form-check">
-        <input class="form-check-input" type="checkbox" id="is_trial" name="is_trial">
-        <label class="form-check-label" for="is_trial">Prova</label>
-    </div>
-    <div class="form-check">
-        <input class="form-check-input" type="checkbox" id="is_recovery" name="is_recovery">
-        <label class="form-check-label" for="is_recovery">Recupero</label>
-    </div>
-    <div class="form-check">
-        <input class="form-check-input" type="checkbox" id="is_lesson_zero" name="is_lesson_zero">
-        <label class="form-check-label" for="is_lesson_zero">Lezione 0</label>
-    </div>
-    <div class="form-check">
-        <input class="form-check-input" type="checkbox" id="is_recurring" name="is_recurring">
-        <label class="form-check-label" for="is_recurring">Ripetuto</label>
-    </div>
-    <div id="recurring-options" style="display: none;">
-        <div class="mb-3" style="display: none;">
-            <label for="duration" class="form-label">Durata (minuti)</label>
-            <input type="number" class="form-control" id="duration" name="duration" min="1" value="30">
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-10 col-lg-8 mx-auto">
+            <div class="card shadow">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0"><i class="fas fa-calendar-plus me-2"></i>Nuovo Appuntamento</h4>
+                </div>
+                <div class="card-body">
+                    <!-- Form GET per selezione società/sede -->
+                    {% if session.user_role in ['franchisor', 'area manager', 'societa'] %}
+                    <form method="GET" id="select-societa-sede-form" class="mb-4">
+                        <div class="row">
+                            {% if session.user_role in ['franchisor', 'area manager'] %}
+                            <div class="col-md-6 mb-3">
+                                <label for="societa_id" class="form-label">Società</label>
+                                <select class="form-select" id="societa_id" name="societa_id" required>
+                                    <option value="" disabled selected hidden>Seleziona una società</option>
+                                    {% for soc in societa %}
+                                    <option value="{{ soc.id }}" {% if selected_societa_id == soc.id %}selected{% endif %}>{{ soc.nome }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            {% endif %}
+                            <div class="col-md-6 mb-3">
+                                <label for="sede_id" class="form-label">Sede</label>
+                                <select class="form-select" id="sede_id" name="sede_id" required>
+                                    <option value="" disabled selected hidden>Seleziona una sede</option>
+                                    {% for sede in sedi %}
+                                    <option value="{{ sede.id }}" {% if selected_sede_id == sede.id %}selected{% endif %}>{{ sede.nome }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <input type="hidden" name="date_time" value="{{ request.args.get('date_time', prefilled_date_time) }}">
+                        <input type="hidden" name="end_date_time" value="{{ request.args.get('end_date_time', prefilled_end_date_time) }}">
+                        <input type="hidden" name="client_id" value="{{ request.args.get('client_id', '') }}">
+                        <input type="hidden" name="title" value="{{ request.args.get('title', '') }}">
+                        <input type="hidden" name="notes" value="{{ request.args.get('notes', '') }}">
+                        <input type="hidden" name="appointment_type" value="{{ request.args.get('appointment_type', '') }}">
+                        <input type="hidden" name="status" value="{{ request.args.get('status', '') }}">
+                    </form>
+                    {% endif %}
+
+                    <form method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="client_id" class="form-label">Cliente</label>
+                                <select class="form-select" id="client_id" name="client_id" required>
+                                    <option value="" disabled selected hidden>Seleziona un cliente</option>
+                                    {% for cliente in clienti %}
+                                    <option value="{{ cliente.id }}" {% if request.args.get('client_id') == cliente.id|string %}selected{% endif %}>
+                                        {{ cliente.nome }} {{ cliente.cognome }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="title" class="form-label">Titolo</label>
+                                <input type="text" class="form-control" id="title" name="title" value="{{ request.args.get('title', '') }}" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="notes" class="form-label">Note</label>
+                            <textarea class="form-control" id="notes" name="notes">{{ request.args.get('notes', '') }}</textarea>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="date_time" class="form-label">Data e Ora di Inizio</label>
+                                <input type="datetime-local" class="form-control" id="date_time" name="date_time" 
+                                       value="{{ prefilled_date_time }}" required step="600">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="end_date_time" class="form-label">Data e Ora di Fine</label>
+                                <input type="datetime-local" class="form-control" id="end_date_time" name="end_date_time" 
+                                       value="{{ prefilled_end_date_time }}" required step="600">
+                            </div>
+                        </div>
+                        <input type="hidden" id="duration" name="duration" value="30">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="appointment_type" class="form-label">Tipo</label>
+                                <select class="form-select" id="appointment_type" name="appointment_type" required>
+                                    <option value="Allenamento Funzionale" {% if request.args.get('appointment_type') == 'Allenamento Funzionale' %}selected{% endif %}>Allenamento Funzionale</option>
+                                    <option value="Chiamata" {% if request.args.get('appointment_type') == 'Chiamata' %}selected{% endif %}>Chiamata</option>
+                                    <option value="Blocco Agenda" {% if request.args.get('appointment_type') == 'Blocco Agenda' %}selected{% endif %}>Blocco Agenda</option>
+                                    <option value="Allenamento EMS" {% if request.args.get('appointment_type') == 'Allenamento EMS' %}selected{% endif %}>Allenamento EMS</option>
+                                    <option value="Allenamento VacuLab" {% if request.args.get('appointment_type') == 'Allenamento VacuLab' %}selected{% endif %}>Allenamento VacuLab</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="status" class="form-label">Stato</label>
+                                <select class="form-select" id="status" name="status" required>
+                                    <option value="Confermato" {% if request.args.get('status') == 'Confermato' %}selected{% endif %}>Confermato</option>
+                                    <option value="Riprogrammata" {% if request.args.get('status') == 'Riprogrammata' %}selected{% endif %}>Riprogrammata</option>
+                                    <option value="Lezione Saltata" {% if request.args.get('status') == 'Lezione Saltata' %}selected{% endif %}>Lezione Saltata</option>
+                                    <option value="Prova Fissata" {% if request.args.get('status') == 'Prova Fissata' %}selected{% endif %}>Prova Fissata</option>
+                                    <option value="Prova Annullata" {% if request.args.get('status') == 'Prova Annullata' %}selected{% endif %}>Prova Annullata</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="is_trial" name="is_trial">
+                                    <label class="form-check-label" for="is_trial">Prova</label>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="is_recovery" name="is_recovery">
+                                    <label class="form-check-label" for="is_recovery">Recupero</label>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="is_lesson_zero" name="is_lesson_zero">
+                                    <label class="form-check-label" for="is_lesson_zero">Lezione 0</label>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="is_recurring" name="is_recurring">
+                                    <label class="form-check-label" for="is_recurring">Ripetuto</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="recurring-options" style="display: none;">
+                            <div class="mb-3" style="display: none;">
+                                <label for="duration" class="form-label">Durata (minuti)</label>
+                                <input type="number" class="form-control" id="duration" name="duration" min="1" value="30">
+                            </div>
+                            <div class="mb-3">
+                                <label for="day_of_week" class="form-label">Giorno della settimana</label>
+                                <input type="text" class="form-control" id="day_of_week" name="day_of_week" readonly>
+                            </div>
+                        </div>
+                        <div class="mb-3" id="package-selection" style="display: none;">
+                            <label for="package_id" class="form-label">Seleziona Pacchetto</label>
+                            <select class="form-select" id="package_id" name="package_id">
+                                {% for pacchetto in pacchetti %}
+                                <option value="{{ pacchetto.id }}" {% if request.args.get('pacchetto_id') == pacchetto.id|string %}selected{% endif %}>
+                                    {{ pacchetto.nome }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{{ url_for('appuntamenti.trainer_calendar') }}" class="btn btn-secondary">Annulla</a>
+                            <button type="submit" class="btn btn-success">Aggiungi</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
-        <div class="mb-3">
-            <label for="day_of_week" class="form-label">Giorno della settimana</label>
-            <input type="text" class="form-control" id="day_of_week" name="day_of_week" readonly>
-        </div>
     </div>
-    <div class="mb-3" id="package-selection" style="display: none;">
-        <label for="package_id" class="form-label">Seleziona Pacchetto</label>
-        <select class="form-select" id="package_id" name="package_id">
-            {% for pacchetto in pacchetti %}
-            <option value="{{ pacchetto.id }}" {% if request.args.get('pacchetto_id') == pacchetto.id|string %}selected{% endif %}>
-                {{ pacchetto.nome }}
-            </option>
-            {% endfor %}
-        </select>
-    </div>
-    <button type="submit" class="btn btn-success mt-3">Aggiungi</button>
-</form>
+</div>
 
 <script>
     const appointmentType = document.getElementById('appointment_type');
@@ -242,7 +275,10 @@
                         const urlParams = new URLSearchParams(window.location.search);
                         const preselectedPackageId = urlParams.get('package_id');
                         if (preselectedPackageId) {
-                            packageSelect.value = preselectedPackageId;
+                            // Attendi che le opzioni siano state aggiunte, poi seleziona
+                            setTimeout(() => {
+                                packageSelect.value = preselectedPackageId;
+                            }, 0);
                         }
                     } else {
                         packageSelection.style.display = 'none';

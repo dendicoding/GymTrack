@@ -3,25 +3,50 @@
 {% block title %}Dichiarazione Resoconto{% endblock %}
 
 {% block content %}
-<h1>Dichiarazione Resoconto</h1>
-<form method="POST">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <div class="mb-3">
-        <label for="data" class="form-label">Data</label>
-        <input type="date" class="form-control" id="data" name="data" required>
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="fas fa-file-alt me-2"></i>Dichiarazione Resoconto</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <!-- Data -->
+                        <div class="mb-3">
+                            <label for="data" class="form-label">Data</label>
+                            <input type="date" class="form-control" id="data" name="data" required value="{{ date.today().strftime('%Y-%m-%d') }}">
+                        </div>
+
+                        <!-- Ore di Lavoro -->
+                        <div class="mb-3">
+                            <label for="ore_lavoro" class="form-label">Ore di Lavoro</label>
+                            <input type="number" class="form-control" id="ore_lavoro" name="ore_lavoro" min="0" step="0.5" required>
+                        </div>
+
+                        <!-- Ore Buca -->
+                        <div class="mb-3">
+                            <label for="ore_buca" class="form-label">Ore Buca</label>
+                            <input type="number" class="form-control" id="ore_buca" name="ore_buca" min="0" step="0.5" required>
+                        </div>
+
+                        <!-- Attività Svolte Durante le Ore Buca -->
+                        <div class="mb-3">
+                            <label for="attivita_buca" class="form-label">Attività Svolte Durante le Ore Buca</label>
+                            <textarea class="form-control" id="attivita_buca" name="attivita_buca" rows="3" required></textarea>
+                        </div>
+
+                        <!-- Bottoni -->
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{{ url_for('index') }}" class="btn btn-secondary">Annulla</a>
+                            <button type="submit" class="btn btn-primary">Dichiara</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
-    <div class="mb-3">
-        <label for="ore_lavoro" class="form-label">Ore di Lavoro</label>
-        <input type="number" class="form-control" id="ore_lavoro" name="ore_lavoro" required>
-    </div>
-    <div class="mb-3">
-        <label for="ore_buca" class="form-label">Ore Buca</label>
-        <input type="number" class="form-control" id="ore_buca" name="ore_buca" required>
-    </div>
-    <div class="mb-3">
-        <label for="attivita_buca" class="form-label">Attività Svolte Durante le Ore Buca</label>
-        <textarea class="form-control" id="attivita_buca" name="attivita_buca" rows="3" required></textarea>
-    </div>
-    <button type="submit" class="btn btn-primary">Dichiara</button>
-</form>
+</div>
 {% endblock %}
