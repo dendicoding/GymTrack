@@ -164,14 +164,17 @@ def get_all_clienti(sede_ids=None):
     if sede_ids:
         placeholders = ','.join(['%s'] * len(sede_ids))
         query = f'''
-            SELECT c.*, s.nome AS nome_sede, so.nome AS nome_societa
+            SELECT DISTINCT c.*, s.nome AS nome_sede, so.nome AS nome_societa
             FROM clienti c
             JOIN sede s ON c.sede_id = s.id
             JOIN societa so ON s.societa_id = so.id
+            LEFT JOIN clienti_sedi cs ON cs.cliente_id = c.id
             WHERE c.sede_id IN ({placeholders}) 
+               OR cs.sede_id IN ({placeholders})
             ORDER BY c.cognome, c.nome
         '''
-        cursor.execute(query, sede_ids)
+        # sede_ids va passato due volte (per c.sede_id e cs.sede_id)
+        cursor.execute(query, sede_ids + sede_ids)
     else:
         cursor.execute('''
             SELECT c.*, s.nome AS nome_sede, so.nome AS nome_societa
@@ -307,7 +310,7 @@ def add_cliente(nome, cognome, email, telefono, data_nascita, indirizzo, citta, 
     finally:
         conn.close()
 
-def update_cliente(cliente_id, nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo, codice_fiscale, tipologia, taglia_giubotto, taglia_cintura, taglia_braccia, taglia_gambe, obiettivo_cliente):
+def update_cliente(cliente_id, nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo, codice_fiscale, tipologia, taglia_giubotto, taglia_cintura, taglia_braccia, taglia_gambe, obiettivo_cliente, sede_id):
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
@@ -316,12 +319,12 @@ def update_cliente(cliente_id, nome, cognome, email, telefono, data_nascita, ind
             SET nome = %s, cognome = %s, email = %s, telefono = %s, data_nascita = %s, 
                 indirizzo = %s, citta = %s, cap = %s, note = %s, tipo = %s, codice_fiscale = %s, 
                 tipologia = %s, taglia_giubotto = %s, taglia_cintura = %s, taglia_braccia = %s, 
-                taglia_gambe = %s, obiettivo_cliente = %s
+                taglia_gambe = %s, obiettivo_cliente = %s, sede_id = %s
             WHERE id = %s
         ''', (
             nome, cognome, email, telefono, data_nascita, indirizzo, citta, cap, note, tipo,
             codice_fiscale, tipologia, taglia_giubotto, taglia_cintura, taglia_braccia, taglia_gambe,
-            obiettivo_cliente, cliente_id
+            obiettivo_cliente, sede_id, cliente_id
         ))
         conn.commit()
     except Exception as e:
@@ -3118,9 +3121,9 @@ def get_abbonamenti_conferiti(sede_ids, da, a):
             FROM abbonamenti ab
             JOIN clienti c ON ab.cliente_id = c.id
             JOIN pacchetti p ON ab.pacchetto_id = p.id
-            JOIN sede s ON ab.sede_id = s.id
+            JOIN sede s ON c.sede_id = s.id
             JOIN societa so ON s.societa_id = so.id
-            WHERE ab.sede_id IN ({placeholders})
+            WHERE c.sede_id IN ({placeholders})
             AND ab.data_inizio BETWEEN %s AND %s
             ORDER BY ab.data_inizio DESC
         '''
@@ -3150,3 +3153,31 @@ def get_cliente_completo(cliente_id):
     if row:
         return dict(zip(columns, row))
     return None
+
+def set_clienti_sedi(cliente_id, sedi_ids):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    # Cancella associazioni precedenti
+    cursor.execute('DELETE FROM clienti_sedi WHERE cliente_id = %s', (cliente_id,))
+    # Inserisci nuove associazioni
+    for sede_id in sedi_ids:
+        cursor.execute('INSERT INTO clienti_sedi (cliente_id, sede_id) VALUES (%s, %s)', (cliente_id, sede_id))
+    conn.commit()
+    conn.close()
+
+
+def get_sedi_aggiuntive_cliente(cliente_id, sede_principale_id):
+    """
+    Restituisce la lista delle sedi aggiuntive (oltre la principale) associate a un cliente.
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT s.id, s.nome, s.citta
+        FROM clienti_sedi cs
+        JOIN sede s ON cs.sede_id = s.id
+        WHERE cs.cliente_id = %s AND s.id != %s
+    ''', (cliente_id, sede_principale_id))
+    sedi_aggiuntive = [dict(zip(['id', 'nome', 'citta'], row)) for row in cursor.fetchall()]
+    conn.close()
+    return sedi_aggiuntive

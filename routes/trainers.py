@@ -53,6 +53,9 @@ def view_resoconto(resoconto_id):
 @login_required
 def trainer_resoconti(trainer_id):
     resoconti = db.get_resoconti_by_trainer(trainer_id)
+    for r in resoconti:
+    # Assumendo che r['data'] sia una stringa tipo '2025-07-23'
+        r['mese'] = r['data'].strftime('%Y-%m')  # 'YYYY-MM'
     return render_template('trainer/resoconti.html', resoconti=resoconti)
 
 

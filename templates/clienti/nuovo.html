@@ -11,7 +11,7 @@
     </ol>
 </nav>
 
-<div class="card">
+<div class="card shadow">
     <div class="card-header bg-primary text-white">
         <h5 class="card-title mb-0">
             <i class="fas fa-user-plus me-2"></i>Aggiungi Nuovo Cliente
@@ -20,10 +20,9 @@
     <div class="card-body">
         <form action="{{ url_for('clienti.nuovo_cliente') }}" method="post">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <div class="row mb-3">
+            <div class="row">
                 <div class="col-md-6">
-                    <h5>Informazioni Personali</h5>
-                    
+                    <h5 class="mb-3 text-primary">Informazioni Personali</h5>
                     <div class="mb-3">
                         <label for="tipo" class="form-label">Tipo di Cliente *</label>
                         <select class="form-select" id="tipo" name="tipo" required>
@@ -31,37 +30,30 @@
                             <option value="effettivo">Effettivo</option>
                         </select>
                     </div>
-                    
                     <div class="mb-3">
                         <label for="nome" class="form-label">Nome *</label>
                         <input type="text" class="form-control" id="nome" name="nome" required>
                     </div>
-                    
                     <div class="mb-3">
                         <label for="cognome" class="form-label">Cognome *</label>
                         <input type="text" class="form-control" id="cognome" name="cognome" required>
                     </div>
-                    
                     <div class="mb-3">
                         <label for="data_nascita" class="form-label">Data di Nascita</label>
                         <input type="date" class="form-control" id="data_nascita" name="data_nascita">
                     </div>
-                    
                     <div class="mb-3">
                         <label for="email" class="form-label">Email</label>
                         <input type="email" class="form-control" id="email" name="email">
                     </div>
-                    
                     <div class="mb-3">
                         <label for="telefono" class="form-label">Telefono *</label>
                         <input type="tel" class="form-control" id="telefono" name="telefono" required>
                     </div>
-                    
                     <div class="mb-3">
                         <label for="codice_fiscale" class="form-label">Codice Fiscale</label>
                         <input type="text" class="form-control" id="codice_fiscale" name="codice_fiscale">
                     </div>
-
                     <div class="mb-3">
                         <label for="tipologia" class="form-label">Tipologia</label>
                         <select class="form-select" id="tipologia" name="tipologia">
@@ -71,7 +63,7 @@
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label for="provenienza" class="form-label">Provenienza</label>
+                        <label for="provenienza" class="form-label">Provenienza *</label>
                         <select class="form-select" id="provenienza" name="provenienza" required>
                             <option value="" disabled selected>Seleziona Provenienza</option>
                             <option value="meta">Meta</option>
@@ -82,69 +74,83 @@
                         </select>
                     </div>
                 </div>
-                
-                
                 <div class="col-md-6">
-                    <h5>Indirizzo</h5>
-                    
+                    <h5 class="mb-3 text-primary">Indirizzo & Taglie</h5>
                     <div class="mb-3">
                         <label for="indirizzo" class="form-label">Indirizzo</label>
                         <input type="text" class="form-control" id="indirizzo" name="indirizzo">
                     </div>
-                    
-                    <div class="mb-3">
-                        <label for="citta" class="form-label">Città</label>
-                        <input type="text" class="form-control" id="citta" name="citta">
+                    <div class="row">
+                        <div class="col-md-8 mb-3">
+                            <label for="citta" class="form-label">Città</label>
+                            <input type="text" class="form-control" id="citta" name="citta">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="cap" class="form-label">CAP</label>
+                            <input type="text" class="form-control" id="cap" name="cap">
+                        </div>
                     </div>
-                    
-                    <div class="mb-3">
-                        <label for="cap" class="form-label">CAP</label>
-                        <input type="text" class="form-control" id="cap" name="cap">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="taglia_giubotto" class="form-label">Taglia Giubotto</label>
+                            <input type="text" class="form-control" id="taglia_giubotto" name="taglia_giubotto">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="taglia_cintura" class="form-label">Taglia Cintura</label>
+                            <input type="text" class="form-control" id="taglia_cintura" name="taglia_cintura">
+                        </div>
                     </div>
-                    
-                    <div class="mb-3">
-                        <label for="taglia_giubotto" class="form-label">Taglia Giubotto</label>
-                        <input type="text" class="form-control" id="taglia_giubotto" name="taglia_giubotto">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="taglia_braccia" class="form-label">Taglia Braccia</label>
+                            <input type="text" class="form-control" id="taglia_braccia" name="taglia_braccia">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="taglia_gambe" class="form-label">Taglia Gambe</label>
+                            <input type="text" class="form-control" id="taglia_gambe" name="taglia_gambe">
+                        </div>
                     </div>
-                    
+                    <hr>
+                    <h5 class="mb-3 text-primary">Sedi</h5>
                     <div class="mb-3">
-                        <label for="taglia_cintura" class="form-label">Taglia Cintura</label>
-                        <input type="text" class="form-control" id="taglia_cintura" name="taglia_cintura">
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="taglia_braccia" class="form-label">Taglia Braccia</label>
-                        <input type="text" class="form-control" id="taglia_braccia" name="taglia_braccia">
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="taglia_gambe" class="form-label">Taglia Gambe</label>
-                        <input type="text" class="form-control" id="taglia_gambe" name="taglia_gambe">
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="sede_id" class="form-label">Sede *</label>
-                        <select class="form-select" id="sede_id" name="sede_id" required>
+                        <label for="sede_id" class="form-label">Sede principale *</label>
+                        <select class="form-select" id="sede_id" name="sede_id" required onchange="updateSediAggiuntive()">
                             <option value="" disabled selected>Seleziona una sede</option>
                             {% for sede in sedi %}
                                 <option value="{{ sede.id }}">{{ sede.nome }} - {{ sede.citta }}</option>
                             {% endfor %}
                         </select>
                     </div>
-                    
-                    <h5 class="mt-4">Note</h5>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="multi_sede" name="multi_sede" onchange="toggleSediAggiuntive()">
+                            <label class="form-check-label" for="multi_sede">Cliente multi-sede</label>
+                        </div>
+                    </div>
+                    <div class="mb-3" id="sedi-aggiuntive-container" style="display:none;">
+                        <label class="form-label">Seleziona sedi aggiuntive</label>
+                        <div id="sedi-aggiuntive-list"></div>
+                        <small class="text-muted">Seleziona le sedi aggiuntive (oltre la principale).</small>
+                    </div>
+                </div>
+            </div>
+            <hr>
+            <div class="row">
+                <div class="col-md-6">
+                    <h5 class="mb-3 text-primary">Note</h5>
                     <div class="mb-3">
                         <label for="note" class="form-label">Note Aggiuntive</label>
                         <textarea class="form-control" id="note" name="note" rows="4"></textarea>
                     </div>
-                    
+                </div>
+                <div class="col-md-6">
+                    <h5 class="mb-3 text-primary">Obiettivo Cliente</h5>
                     <div class="mb-3">
                         <label for="obiettivo_cliente" class="form-label">Obiettivo Cliente</label>
                         <textarea class="form-control" id="obiettivo_cliente" name="obiettivo_cliente" rows="4"></textarea>
                     </div>
                 </div>
             </div>
-            
             <div class="text-end">
                 <a href="{{ url_for('clienti.lista_clienti') }}" class="btn btn-secondary me-2">
                     <i class="fas fa-times me-1"></i>Annulla
@@ -156,4 +162,33 @@
         </form>
     </div>
 </div>
+<script>
+function toggleSediAggiuntive() {
+    const checked = document.getElementById('multi_sede').checked;
+    document.getElementById('sedi-aggiuntive-container').style.display = checked ? 'block' : 'none';
+    updateSediAggiuntive();
+}
+function updateSediAggiuntive() {
+    const container = document.getElementById('sedi-aggiuntive-list');
+    const sedePrincipale = document.getElementById('sede_id').value;
+    const sedi = [
+        {% for sede in sedi %}
+        { id: '{{ sede.id }}', nome: '{{ sede.nome }}', citta: '{{ sede.citta }}' },
+        {% endfor %}
+    ];
+    container.innerHTML = '';
+    sedi.forEach(function(sede) {
+        if (sede.id !== sedePrincipale && sedePrincipale !== '') {
+            const div = document.createElement('div');
+            div.className = 'form-check mb-1';
+            div.innerHTML = `
+                <input class="form-check-input" type="checkbox" name="sedi_aggiuntive" value="${sede.id}" id="sede_add_${sede.id}">
+                <label class="form-check-label" for="sede_add_${sede.id}">${sede.nome} - ${sede.citta}</label>
+            `;
+            container.appendChild(div);
+        }
+    });
+}
+document.getElementById('sede_id').addEventListener('change', updateSediAggiuntive);
+</script>
 {% endblock %}

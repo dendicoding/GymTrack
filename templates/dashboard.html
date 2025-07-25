@@ -11,6 +11,34 @@
         <p class="lead">Panoramica della tua palestra</p>
     </div>
 </div>
+<!-- FILTRI SOCIETA E SEDE -->
+{% if societa|length > 1 or sedi|length > 1 %}
+<form method="GET" class="mb-4">
+    <div class="row g-2 align-items-end">
+        <div class="col-md-4">
+            <label for="societa_id" class="form-label">Società</label>
+            <select class="form-select" id="societa_id" name="societa_id" onchange="this.form.submit()">
+                <option value="">Tutte</option>
+                {% for soc in societa %}
+                    <option value="{{ soc.id }}" {% if soc.id|string == selected_societa_id %}selected{% endif %}>{{ soc.nome }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label for="sede_id" class="form-label">Sede</label>
+            <select class="form-select" id="sede_id" name="sede_id" onchange="this.form.submit()">
+                <option value="">Tutte</option>
+                {% for sede in sedi %}
+                    <option value="{{ sede.id }}" {% if sede.id|string == selected_sede_id %}selected{% endif %}>{{ sede.nome }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-4">
+            <a href="{{ url_for('index') }}" class="btn btn-secondary mt-4">Reset filtri</a>
+        </div>
+    </div>
+</form>
+{% endif %}
 
 <!-- Key Metrics -->
 <div class="row mb-4">

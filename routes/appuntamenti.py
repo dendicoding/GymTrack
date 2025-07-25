@@ -241,6 +241,9 @@ def trainer_calendar():
     user_email = session.get('user_email')
     print(f"Ruolo ed email {user_role}: {user_email}")
 
+    selected_client_id = request.args.get('client_id')
+
+
     # Step 2: Determina le sedi sotto la gerarchia dell'utente
     societa = []
     sedi = []
@@ -271,18 +274,41 @@ def trainer_calendar():
         for company in societa:
             sedi.extend(db.get_sedi_by_societa(company['id']))
 
-    # Step 3: Filtra gli eventi in base alla sede selezionata
-    selected_societa_id = request.args.get('societa_id', type=int)
+    # Unifica la logica di selezione e filtro
+    selected_societa_id = request.args.get('societa_id')
+    selected_sede_id = request.args.get('sede_id')
 
-    selected_sede_id = request.args.get('sede_id', type=int)
+    if selected_societa_id is None and selected_sede_id is None:
+        selected_societa_id = session.get('societa_id')
+        selected_sede_id = session.get('sede_id')
+
+    # Aggiorna la sessione solo se l'utente ha cambiato filtro
+    if request.args.get('societa_id') is not None:
+        session['societa_id'] = selected_societa_id
+    if request.args.get('sede_id') is not None:
+        session['sede_id'] = selected_sede_id
+
+    # Converti in interi se possibile, altrimenti None
+    try:
+        selected_societa_id_int = int(selected_societa_id) if selected_societa_id not in [None, ''] else None
+    except ValueError:
+        selected_societa_id_int = None
+    try:
+        selected_sede_id_int = int(selected_sede_id) if selected_sede_id not in [None, ''] else None
+    except ValueError:
+        selected_sede_id_int = None
     user_ids = []
     
-    if selected_societa_id:
-        sedi = db.get_sedi_by_societa(selected_societa_id)
-
-    if selected_sede_id:
-        user_ids = db.get_user_ids_by_sede(selected_sede_id)
+    if selected_sede_id_int:
+        user_ids = db.get_user_ids_by_sede(selected_sede_id_int)
+        sedi = [sede for sede in sedi if sede['id'] == selected_sede_id_int]
+    elif selected_societa_id_int:
+        sedi = db.get_sedi_by_societa(selected_societa_id_int)
+        user_ids = []
+        for sede in sedi:
+            user_ids.extend(db.get_user_ids_by_sede(sede['id']))
     else:
+        user_ids = []
         for sede in sedi:
             user_ids.extend(db.get_user_ids_by_sede(sede['id']))
 
@@ -290,7 +316,15 @@ def trainer_calendar():
     print(f"User IDs per gli appuntamenti: {user_ids}")
     start_date = (date.today() - timedelta(days=30)).strftime('%Y-%m-%d')
     print(f"Data di inizio per gli appuntamenti: {start_date}")
-    appointments = db.get_appointments_by_users(user_ids, start_date)
+    # Ottieni gli ID dei clienti della sede selezionata
+    if selected_sede_id_int:
+        clienti_ids = [c['id'] for c in db.get_all_clienti([selected_sede_id_int])]
+    elif selected_societa_id_int:
+        clienti_ids = [c['id'] for c in db.get_all_clienti([s['id'] for s in sedi])]
+    else:
+        clienti_ids = [c['id'] for c in db.get_all_clienti([s['id'] for s in sedi if 'id' in s])]
+
+    appointments = db.get_appointments_by_clienti(clienti_ids, start_date)
     if appointments: print(f"Appuntamenti trovati: {appointments}") 
     else: print("Nessun appuntamento trovato.")
 
@@ -302,9 +336,10 @@ def trainer_calendar():
 
     if selected_sede_id:
         clienti = db.get_all_clienti([selected_sede_id])
+    elif selected_societa_id:
+        clienti = db.get_all_clienti([s['id'] for s in sedi])
     else:
         clienti = db.get_all_clienti([s['id'] for s in sedi if 'id' in s])
-    selected_client_id = request.args.get('client_id', type=int)
 
 
     # FILTRO per client_id
@@ -329,8 +364,8 @@ def trainer_calendar():
         grouped_appointments=grouped_appointments,
         sedi=sedi,
         societa=societa,
-        selected_societa_id=selected_societa_id,
-        selected_sede_id=selected_sede_id
+        selected_societa_id=str(selected_societa_id) if selected_societa_id else '',
+        selected_sede_id=str(selected_sede_id) if selected_sede_id else ''
     )
 
 @appuntamenti_bp.route('/mark_appointment_completed/<int:appointment_id>', methods=['POST'])

@@ -12,42 +12,73 @@ def lista_clienti():
     user_role = session.get('user_role')
     user_email = session.get('user_email')
 
+    # Filtri società/sede
+    societa_id = request.args.get('societa_id')
+    sede_id = request.args.get('sede_id')
 
-    # Directly fetch the sede_id for the logged-in user if the role is 'sede'
-    sede_ids = []
-    if user_role == 'sede':
+    # Se non ci sono parametri, usa la sessione come default
+    if societa_id is None and sede_id is None:
+        societa_id = session.get('societa_id')
+        sede_id = session.get('sede_id')
+
+    # Aggiorna la sessione se l'utente cambia filtro
+    if request.args.get('societa_id') is not None:
+        session['societa_id'] = societa_id
+    if request.args.get('sede_id') is not None:
+        session['sede_id'] = sede_id
+
+    # Costruisci la gerarchia per i menu a tendina
+    hierarchy = db.build_hierarchy(user_role=user_role, user_email=user_email)
+    societa = []
+    sedi = []
+
+    if user_role == 'franchisor':
+        for area_manager in hierarchy[0].get('area_managers', []):
+            for soc in area_manager.get('societa', []):
+                societa.append({'id': soc['id'], 'nome': soc['nome']})
+        if societa_id:
+            sedi = [{'id': sede['id'], 'nome': sede['nome']} for sede in db.get_sedi_by_societa(societa_id)]
+        else:
+            for area_manager in hierarchy[0].get('area_managers', []):
+                for soc in area_manager.get('societa', []):
+                    sedi.extend([{'id': sede['id'], 'nome': sede['nome']} for sede in soc.get('sedi', [])])
+    elif user_role == 'area manager':
+        for area_manager in hierarchy[0].get('area_managers', []):
+            if area_manager.get('email') == user_email:
+                for soc in area_manager.get('societa', []):
+                    societa.append({'id': soc['id'], 'nome': soc['nome']})
+        if societa_id:
+            sedi = [{'id': sede['id'], 'nome': sede['nome']} for sede in db.get_sedi_by_societa(societa_id)]
+        else:
+            for area_manager in hierarchy[0].get('area_managers', []):
+                if area_manager.get('email') == user_email:
+                    for soc in area_manager.get('societa', []):
+                        sedi.extend([{'id': sede['id'], 'nome': sede['nome']} for sede in soc.get('sedi', [])])
+    elif user_role == 'societa':
+        societa_obj = db.get_societa_by_email(user_email)
+        if societa_obj:
+            societa.append({'id': societa_obj['id'], 'nome': societa_obj['nome']})
+            sedi = [{'id': sede['id'], 'nome': sede['nome']} for sede in db.get_sedi_by_societa(societa_obj['id'])]
+    elif user_role == 'sede':
         sede = db.get_sede_by_email(user_email)
         if sede:
-            sede_ids.append(sede['id'])
+            sedi = [{'id': sede['id'], 'nome': sede['nome']}]
     elif user_role == 'trainer':
-        # Fetch the sede associated with the trainer
         sede = db.get_sede_by_trainer_email(user_email)
         if sede:
-            sede_ids.append(sede['id'])
-    elif user_role == 'societa':
-        # Fetch all sedi under the company
-        societa = db.get_societa_by_email(user_email)
-        if societa:
-            sedi = db.get_sedi_by_societa(societa['id'])
-            sede_ids.extend([sede['id'] for sede in sedi])
-    elif user_role == 'area manager':
-        societa = db.get_societa_by_area_manager_email(user_email)
-        for company in societa:
-            sedi = db.get_sedi_by_societa(company['id'])
-            sede_ids.extend([sede['id'] for sede in sedi])
-    elif user_role == 'franchisor':
-        area_managers = db.get_area_managers_by_franchisor_email(user_email)
-        for manager in area_managers:
-            societa = db.get_societa_by_area_manager(manager['id'])
-            for company in societa:
-                sedi = db.get_sedi_by_societa(company['id'])
-                sede_ids.extend([sede['id'] for sede in sedi])
+            sedi = [{'id': sede['id'], 'nome': sede['nome']}]
 
-    # Ensure only valid sede_ids are used
-    sede_ids = [sede_id for sede_id in sede_ids if sede_id is not None]
-    print(f"Filtered sede_ids: {sede_ids}")
+    # Determina i sede_ids da usare per il filtro clienti
+    sede_ids = []
+    if sede_id:
+        sede_ids = [int(sede_id)]
+    elif societa_id:
+        sedi_societa = db.get_sedi_by_societa(societa_id)
+        sede_ids = [sede['id'] for sede in sedi_societa]
+    else:
+        sede_ids = [sede['id'] for sede in sedi]
 
-    # If no sedi are found, return an empty list of clients
+    # Se non ci sono sedi, nessun cliente
     if not sede_ids:
         clienti = []
         titolo = "Nessun Cliente Disponibile"
@@ -63,6 +94,11 @@ def lista_clienti():
             clienti = db.get_all_clienti(sede_ids)
             titolo = "Tutti i Clienti"
         
+    for cliente in clienti:
+        # Conta le sedi associate (usando la tabella clienti_sedi)
+        sedi_assoc = db.get_sedi_aggiuntive_cliente(cliente['id'], cliente['sede_id'])
+        cliente['is_multi_sede'] = len(sedi_assoc) > 0
+
     oggi = date.today().strftime('%Y-%m-%d')
     clienti_ids = [c['id'] for c in clienti]
     clienti_senza_appuntamenti = set(clienti_ids)
@@ -82,7 +118,18 @@ def lista_clienti():
     
     clienti_evidenziati = clienti_senza_appuntamenti | clienti_prova_annullata
 
-    return render_template('clienti/lista.html', clienti=clienti, titolo=titolo, tipo_attivo=tipo, clienti_senza_appuntamenti=clienti_evidenziati )
+    # Passa anche societa, sedi, e i valori selezionati al template
+    return render_template(
+        'clienti/lista.html',
+        clienti=clienti,
+        titolo=titolo,
+        tipo_attivo=tipo,
+        clienti_senza_appuntamenti=clienti_evidenziati,
+        societa=societa,
+        sedi=sedi,
+        selected_societa_id=str(societa_id) if societa_id else '',
+        selected_sede_id=str(sede_id) if sede_id else ''
+    )
 
 @clienti_bp.route('/clienti/nuovo', methods=['GET', 'POST'])
 @login_required
@@ -107,10 +154,20 @@ def nuovo_cliente():
         taglia_gambe = request.form['taglia_gambe']
         obiettivo_cliente = request.form['obiettivo_cliente']
         sede_id = request.form['sede_id']
+        multi_sede = request.form.get('multi_sede')
+        sedi_ids = [sede_id]
+        if multi_sede:
+            sedi_aggiuntive = request.form.getlist('sedi_aggiuntive')
+            # Evita duplicati e la sede principale
+            sedi_ids += [sid for sid in sedi_aggiuntive if sid != sede_id]
         
         cliente_id = db.add_cliente(nome, cognome, email, telefono, data_nascita, 
                                      indirizzo, citta, cap, note, tipo, codice_fiscale, tipologia, provenienza, taglia_giubotto, taglia_cintura, taglia_braccia, taglia_gambe, obiettivo_cliente, sede_id)
         
+        if multi_sede and sedi_ids:
+            db.set_clienti_sedi(cliente_id, sedi_ids)
+        else:
+            db.set_clienti_sedi(cliente_id, [sede_id])
         db.log_event(session.get('user_id'), session.get('user_email'), 'Aggiunto nuovo cliente', f'Cliente: {nome} {cognome}')
         flash(f'Cliente {nome} {cognome} aggiunto con successo!', 'success')
         # Redireziona in base al tipo
@@ -163,23 +220,23 @@ def dettaglio_cliente(cliente_id):
     if not cliente:
         flash('Cliente non trovato', 'error')
         return redirect(url_for('clienti.lista_clienti'))
-    
+
     abbonamenti = db.get_abbonamenti_by_cliente(cliente_id)
     lezioni = db.get_lezioni_by_cliente(cliente_id)
-    
-    # Convert rows to dictionaries and fetch the email of the user who registered each lesson
-    lezioni = db.get_lezioni_by_cliente(cliente_id)
     for lezione in lezioni:
-        print(lezione['registrata_da'])
         lezione['registrata_da'] = db.get_user_email_by_id(lezione['registrata_da'])
-    
+
     oggi = datetime.now().strftime('%Y-%m-%d')
-    
+
+    # Usa la funzione del database per recuperare le sedi aggiuntive
+    sedi_aggiuntive = db.get_sedi_aggiuntive_cliente(cliente_id, cliente['sede_id'])
+
     return render_template('clienti/dettaglio.html',
                          cliente=cliente,
                          abbonamenti=abbonamenti,
                          lezioni=lezioni,
-                         oggi=oggi)
+                         oggi=oggi,
+                         sedi_aggiuntive=sedi_aggiuntive)
 
 @clienti_bp.route('/clienti/<int:cliente_id>/modifica', methods=['GET', 'POST'])
 @login_required
@@ -187,7 +244,44 @@ def modifica_cliente(cliente_id):
     cliente = db.get_cliente(cliente_id)
     if not cliente:
         abort(404)
-    
+
+    # Recupera tutte le sedi disponibili per l'utente loggato
+    user_role = session.get('user_role')
+    user_email = session.get('user_email')
+    hierarchy = db.build_hierarchy(user_role=user_role, user_email=user_email)
+    sedi = []
+    if user_role == 'franchisor':
+        for area_manager in hierarchy[0].get('area_managers', []):
+            for societa in area_manager.get('societa', []):
+                sedi.extend(societa.get('sedi', []))
+    elif user_role == 'area manager':
+        for area_manager in hierarchy[0].get('area_managers', []):
+            if area_manager.get('email') == user_email:
+                for societa in area_manager.get('societa', []):
+                    sedi.extend(societa.get('sedi', []))
+    elif user_role == 'societa':
+        societa = db.get_societa_by_email(user_email)
+        if societa:
+            sedi = db.get_sedi_by_societa(societa['id'])
+    elif user_role == 'sede':
+        sede = db.get_sede_by_email(user_email)
+        if sede:
+            sedi = [sede]
+    elif user_role == 'trainer':
+        sede = db.get_sede_by_trainer_email(user_email)
+        if sede:
+            sedi = [sede]
+    if not isinstance(sedi, list):
+        sedi = []
+
+    # Recupera le sedi associate al cliente (oltre la principale)
+    conn = db.get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT sede_id FROM clienti_sedi WHERE cliente_id = %s', (cliente_id,))
+    sedi_associati = [str(row[0]) for row in cursor.fetchall() if str(row[0]) != str(cliente['sede_id'])]
+    conn.close()
+    multi_sede = len(sedi_associati) > 0
+
     if request.method == 'POST':
         nome = request.form['nome']
         cognome = request.form['cognome']
@@ -201,30 +295,37 @@ def modifica_cliente(cliente_id):
         cap = request.form['cap']
         note = request.form['note']
         tipo = request.form['tipo']
-        tipologia = request.form['tipologia']  # Assicurati che venga letto correttamente
+        tipologia = request.form['tipologia']
         codice_fiscale = request.form['codice_fiscale']
         taglia_giubotto = request.form['taglia_giubotto']
         taglia_cintura = request.form['taglia_cintura']
         taglia_braccia = request.form['taglia_braccia']
         taglia_gambe = request.form['taglia_gambe']
         obiettivo_cliente = request.form['obiettivo_cliente']
-        #sede_id = request.form['sede_id']  # Fetch sede_id from the form
-        
+        sede_id = request.form['sede_id']
+        multi_sede = request.form.get('multi_sede')
+        sedi_ids = [sede_id]
+        if multi_sede:
+            sedi_aggiuntive = request.form.getlist('sedi_aggiuntive')
+            sedi_ids += [sid for sid in sedi_aggiuntive if sid != sede_id]
         try:
-            db.update_cliente(cliente_id, nome, cognome, email, telefono, data_nascita, 
-                              indirizzo, citta, cap, note, tipo, codice_fiscale, tipologia, 
-                              taglia_giubotto, taglia_cintura, taglia_braccia, taglia_gambe, 
-                              obiettivo_cliente)
-            
+            db.update_cliente(cliente_id, nome, cognome, email, telefono, data_nascita,
+                              indirizzo, citta, cap, note, tipo, codice_fiscale, tipologia,
+                              taglia_giubotto, taglia_cintura, taglia_braccia, taglia_gambe,
+                              obiettivo_cliente, sede_id)
+            db.set_clienti_sedi(cliente_id, sedi_ids)
             db.log_event(session.get('user_id'), session.get('user_email'), 'Modificato cliente', f'Cliente ID: {cliente_id}')
             flash(f'Cliente {nome} {cognome} aggiornato con successo!', 'success')
         except Exception as e:
             flash(f'Errore durante l\'aggiornamento del cliente: {str(e)}', 'error')
             return redirect(url_for('clienti.modifica_cliente', cliente_id=cliente_id))
-        
         return redirect(url_for('clienti.dettaglio_cliente', cliente_id=cliente_id))
-    
-    return render_template('clienti/modifica.html', cliente=cliente)
+
+    return render_template('clienti/modifica.html',
+                           cliente=cliente,
+                           sedi=sedi,
+                           sedi_associati=sedi_associati,
+                           multi_sede=multi_sede)
 
 
 @clienti_bp.route('/clienti/<int:cliente_id>/elimina', methods=['POST'])

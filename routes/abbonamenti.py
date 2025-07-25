@@ -77,32 +77,77 @@ def elimina_abbonamento(abbonamento_id):
 def abbonamenti_conferiti():
     user_role = session.get('user_role')
     user_email = session.get('user_email')
+
+    societa_id = request.args.get('societa_id')
+    sede_id = request.args.get('sede_id')
+
+    # Se non ci sono parametri, usa la sessione come default
+    if societa_id is None and sede_id is None:
+        societa_id = session.get('societa_id')
+        sede_id = session.get('sede_id')
+
+    if request.args.get('societa_id') is not None:
+        session['societa_id'] = societa_id
+    if request.args.get('sede_id') is not None:
+        session['sede_id'] = sede_id
+
+    # Costruisci la gerarchia per i menu a tendina
+    societa = []
     sedi = []
-    if user_role == 'trainer':
-        sede = db.get_sede_by_trainer_email(user_email)
-        if sede:
-            sedi.append(sede)
+    if user_role == 'franchisor':
+        area_managers = db.get_area_managers_by_franchisor_email(user_email)
+        for manager in area_managers:
+            for soc in db.get_societa_by_area_manager(manager['id']):
+                societa.append({'id': soc['id'], 'nome': soc['nome']})
+        if societa_id:
+            sedi = [{'id': sede['id'], 'nome': sede['nome']} for sede in db.get_sedi_by_societa(societa_id)]
+        else:
+            for manager in area_managers:
+                for soc in db.get_societa_by_area_manager(manager['id']):
+                    sedi.extend([{'id': sede['id'], 'nome': sede['nome']} for sede in db.get_sedi_by_societa(soc['id'])])
+    elif user_role == 'area manager':
+        societa_list = db.get_societa_by_area_manager_email(user_email)
+        for soc in societa_list:
+            societa.append({'id': soc['id'], 'nome': soc['nome']})
+        if societa_id:
+            sedi = [{'id': sede['id'], 'nome': sede['nome']} for sede in db.get_sedi_by_societa(societa_id)]
+        else:
+            for soc in societa_list:
+                sedi.extend([{'id': sede['id'], 'nome': sede['nome']} for sede in db.get_sedi_by_societa(soc['id'])])
+    elif user_role == 'societa':
+        societa_obj = db.get_societa_by_email(user_email)
+        if societa_obj:
+            societa.append({'id': societa_obj['id'], 'nome': societa_obj['nome']})
+            sedi = [{'id': sede['id'], 'nome': sede['nome']} for sede in db.get_sedi_by_societa(societa_obj['id'])]
     elif user_role == 'sede':
         sede = db.get_sede_by_email(user_email)
         if sede:
-            sedi.append(sede)
-    elif user_role == 'area manager':
-        societa = db.get_societa_by_area_manager_email(user_email)
-        for company in societa:
-            sedi.extend(db.get_sedi_by_societa(company['id']))
-    elif user_role == 'societa':
-        societa = db.get_societa_by_email(user_email)
-        if societa:
-            sedi = db.get_sedi_by_societa(societa['id'])
-    elif user_role == 'franchisor':
-        area_managers = db.get_area_managers_by_franchisor_email(user_email)
-        societa = []
-        for manager in area_managers:
-            societa.extend(db.get_societa_by_area_manager(manager['id']))
-        for company in societa:
-            sedi.extend(db.get_sedi_by_societa(company['id']))
+            sedi = [{'id': sede['id'], 'nome': sede['nome']}]
+    elif user_role == 'trainer':
+        sede = db.get_sede_by_trainer_email(user_email)
+        if sede:
+            sedi = [{'id': sede['id'], 'nome': sede['nome']}]
 
-    sede_ids = [s['id'] for s in sedi if s and 'id' in s]
+    # Se la lista sedi è vuota, ricostruiscila dalla gerarchia
+    if not sedi:
+        if user_role == 'franchisor':
+            area_managers = db.get_area_managers_by_franchisor_email(user_email)
+            for manager in area_managers:
+                for soc in db.get_societa_by_area_manager(manager['id']):
+                    sedi.extend([{'id': sede['id'], 'nome': sede['nome']} for sede in db.get_sedi_by_societa(soc['id'])])
+        elif user_role == 'area manager':
+            societa_list = db.get_societa_by_area_manager_email(user_email)
+            for soc in societa_list:
+                sedi.extend([{'id': sede['id'], 'nome': sede['nome']} for sede in db.get_sedi_by_societa(soc['id'])])
+
+    # Determina i sede_ids da usare per il filtro abbonamenti
+    if sede_id:
+        sede_ids = [int(sede_id)]
+    elif societa_id:
+        sedi_societa = db.get_sedi_by_societa(societa_id)
+        sede_ids = [sede['id'] for sede in sedi_societa]
+    else:
+        sede_ids = [sede['id'] for sede in sedi]
 
     # Gestione filtri da/a
     oggi = date.today()
@@ -113,4 +158,13 @@ def abbonamenti_conferiti():
 
     abbonamenti = db.get_abbonamenti_conferiti(sede_ids, da, a)
 
-    return render_template('abbonamenti_conferiti.html', abbonamenti=abbonamenti, da=da, a=a)
+    return render_template(
+        'abbonamenti_conferiti.html',
+        abbonamenti=abbonamenti,
+        da=da,
+        a=a,
+        societa=societa,
+        sedi=sedi,
+        selected_societa_id=str(societa_id) if societa_id else '',
+        selected_sede_id=str(sede_id) if sede_id else ''
+    )

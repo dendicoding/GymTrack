@@ -6,7 +6,7 @@ from flask_wtf.csrf import generate_csrf
 from werkzeug.exceptions import NotFound
 
 
-# ... altri import ...
+
 
 utils_bp = Blueprint('utils', __name__)
 

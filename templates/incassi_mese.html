@@ -18,6 +18,32 @@
         </h5>
     </div>
     <div class="card-body">
+        <div class="row mb-3">
+            <div class="col-12">
+                <form method="GET" id="incassi-filter-form">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-md-4">
+                            <label for="societa_id" class="form-label mb-1">Società</label>
+                            <select class="form-select" name="societa_id" id="societa_id" onchange="document.getElementById('incassi-filter-form').submit();">
+                                <option value="">Tutte</option>
+                                {% for soc in societa %}
+                                    <option value="{{ soc.id }}" {% if soc.id|string == selected_societa_id %}selected{% endif %}>{{ soc.nome }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="sede_id" class="form-label mb-1">Sede</label>
+                            <select class="form-select" name="sede_id" id="sede_id" onchange="document.getElementById('incassi-filter-form').submit();">
+                                <option value="">Tutte</option>
+                                {% for sede in sedi %}
+                                    <option value="{{ sede.id }}" {% if sede.id|string == selected_sede_id %}selected{% endif %}>{{ sede.nome }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
         {% if rate %}
             <div class="table-responsive">
                 <table class="table table-hover" id="rate-table">

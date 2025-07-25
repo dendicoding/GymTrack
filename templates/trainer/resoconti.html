@@ -4,23 +4,24 @@
 
 {% block content %}
 <nav aria-label="breadcrumb">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Home</a></li>
-            <li class="breadcrumb-item"><a href="{{ url_for('trainers.view_trainers') }}">Visualizza Trainers</a></li>
-            <li class="breadcrumb-item active">Resoconti Trainer</a></li>
-            
-        </ol>
+    <ol class="breadcrumb bg-light px-3 py-2 rounded shadow-sm">
+        <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Home</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('trainers.view_trainers') }}">Visualizza Trainers</a></li>
+        <li class="breadcrumb-item active">Resoconti Trainer</li>
+    </ol>
 </nav>
 <div class="container mt-4">
-    <h1 class="text-center mb-4">Resoconti del Trainer</h1>
+    <h1 class="text-center mb-4 text-primary fw-bold">
+        <i class="fas fa-file-alt me-2"></i>Resoconti del Trainer
+    </h1>
 
     {% if resoconti %}
-    <div class="row">
+    <div class="row g-4">
         <!-- Donut Chart Card -->
-        <div class="col-md-6 mb-4">
-            <div class="card shadow-sm" style="height: 400px;">
-                <div class="card-header text-center bg-primary text-white">
-                    <h5 class="mb-0">Distribuzione Ore</h5>
+        <div class="col-md-6">
+            <div class="card shadow-sm h-100 border-0">
+                <div class="card-header text-center bg-gradient bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Distribuzione Ore</h5>
                 </div>
                 <div class="card-body d-flex justify-content-center align-items-center">
                     <canvas id="donutChart" style="max-height: 300px; max-width: 300px;"></canvas>
@@ -29,10 +30,10 @@
         </div>
 
         <!-- Bar Chart Card -->
-        <div class="col-md-6 mb-4">
-            <div class="card shadow-sm" style="height: 400px;">
-                <div class="card-header text-center bg-primary text-white">
-                    <h5 class="mb-0">Ore Lavoro per Mese</h5>
+        <div class="col-md-6">
+            <div class="card shadow-sm h-100 border-0">
+                <div class="card-header text-center bg-gradient bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Ore Lavoro per Mese</h5>
                 </div>
                 <div class="card-body d-flex justify-content-center align-items-center">
                     <canvas id="barChart" style="max-height: 300px; max-width: 300px;"></canvas>
@@ -44,19 +45,34 @@
     <hr class="my-4">
 
     <!-- Resoconti List -->
-    <h4 class="mb-3">Lista Resoconti</h4>
-    <ul class="list-group">
-        {% for resoconto in resoconti %}
-        <li class="list-group-item d-flex justify-content-between align-items-center">
-            <a href="{{ url_for('trainers.view_resoconto', resoconto_id=resoconto.id) }}">
-                <strong>{{ resoconto.data }}</strong> - {{ resoconto.ore_lavoro }} ore lavoro
-            </a>
-            <span class="badge bg-primary rounded-pill">{{ resoconto.ore_buca }} ore buca</span>
-        </li>
-        {% endfor %}
-    </ul>
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-gradient bg-primary text-white">
+            <h4 class="mb-0"><i class="fas fa-list-alt me-2"></i>Lista Resoconti</h4>
+        </div>
+        <div class="card-body p-0">
+            <ul class="list-group list-group-flush">
+                {% for resoconto in resoconti %}
+                <li class="list-group-item d-flex justify-content-between align-items-center py-3">
+                    <div>
+                        <a href="{{ url_for('trainers.view_resoconto', resoconto_id=resoconto.id) }}" class="text-decoration-none text-dark fw-bold">
+                            <i class="far fa-calendar-alt me-1 text-primary"></i>
+                            {{ resoconto.data }}
+                        </a>
+                        <span class="ms-2 text-success">
+                            <i class="fas fa-briefcase me-1"></i>{{ resoconto.ore_lavoro }} ore lavoro
+                        </span>
+                    </div>
+                    <span class="badge bg-warning text-dark rounded-pill px-3 py-2">
+                        <i class="fas fa-clock me-1"></i>{{ resoconto.ore_buca }} ore buca
+                    </span>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
     {% else %}
-    <div class="alert alert-info text-center" role="alert">
+    <div class="alert alert-info text-center mt-5" role="alert">
+        <i class="fas fa-info-circle me-2"></i>
         Non ci sono resoconti dichiarati dal trainer scelto.
     </div>
     {% endif %}
@@ -64,6 +80,7 @@
 {% endblock %}
 
 {% block extra_js %}
+{% set grouped = resoconti | groupby('mese') %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     // Data for Donut Chart
@@ -74,20 +91,20 @@
                 {{ resoconti | sum(attribute='ore_lavoro') }},
                 {{ resoconti | sum(attribute='ore_buca') }}
             ],
-            backgroundColor: ['#4CAF50', '#FF5722'],
-            hoverBackgroundColor: ['#45A049', '#E64A19']
+            backgroundColor: ['#4CAF50', '#FF9800'],
+            hoverBackgroundColor: ['#388E3C', '#F57C00']
         }]
     };
 
     // Data for Bar Chart
     const barLabels = [
-        {% for resoconto in resoconti | groupby('data[:7]') %}
-        '{{ resoconto.grouper }}',
+        {% for group in grouped %}
+        '{{ group.grouper[5:7] }}/{{ group.grouper[0:4] }}',
         {% endfor %}
     ];
     const barData = [
-        {% for resoconto in resoconti | groupby('data[:7]') %}
-        {{ resoconto.list | sum(attribute='ore_lavoro') }},
+        {% for group in grouped %}
+        {{ group.list | sum(attribute='ore_lavoro') }},
         {% endfor %}
     ];
 
@@ -132,6 +149,12 @@
                 }
             },
             scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Mese'
+                    }
+                },
                 y: {
                     beginAtZero: true
                 }

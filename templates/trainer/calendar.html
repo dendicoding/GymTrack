@@ -11,64 +11,29 @@
             <a href="{{ url_for('appuntamenti.add_appointment') }}" class="btn btn-primary">
                 <i class="fas fa-plus"></i> Nuovo Appuntamento
             </a>
-            <!-- Filtro per società -->
-            <form method="GET" action="{{ url_for('appuntamenti.trainer_calendar') }}" id="societa-filter-form" class="ms-2">
-                <div class="row">
-                    <div class="col-md-12">
-                        <select name="societa_id" class="form-select" onchange="this.form.submit()">
-                            <option value="">Tutte le società</option>
-                            {% for soc in societa %}
-                            <option value="{{ soc.id }}" {% if soc.id == selected_societa_id %}selected{% endif %}>
-                                {{ soc.nome }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </div>
-                {% if selected_sede_id %}
-                <input type="hidden" name="sede_id" value="{{ selected_sede_id }}">
-                {% endif %}
-                {% if selected_client_id %}
-                <input type="hidden" name="client_id" value="{{ selected_client_id }}">
-                {% endif %}
-                <input type="hidden" name="start_date" id="current-start-date-societa" value="{{ current_date.strftime('%Y-%m-%d') }}">
-            </form>
-            
-            <!-- Menu a tendina per filtrare gli eventi -->
-            <form method="GET" action="{{ url_for('appuntamenti.trainer_calendar') }}" id="sede-filter-form" class="ml-auto">
-                <div class="row">
-                    <div class="col-md-12">
-                        <select name="sede_id" class="form-select" onchange="this.form.submit()">
-                            <option value="">Tutte le sedi</option>
-                            {% for sede in sedi %}
-                            <option value="{{ sede.id }}" {% if sede.id == selected_sede_id %}selected{% endif %}>
-                                {{ sede.nome }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </div>
+            <form method="GET" action="{{ url_for('appuntamenti.trainer_calendar') }}" class="d-flex gap-2 mb-4" id="calendar-filter-form">
+                <select name="societa_id" class="form-select" style="max-width:180px;" onchange="document.getElementById('calendar-filter-form').submit();">
+                    <option value="">Tutte le società</option>
+                    {% for soc in societa %}
+                        <option value="{{ soc.id }}" {% if soc.id|string == selected_societa_id %}selected{% endif %}>{{ soc.nome }}</option>
+                    {% endfor %}
+                </select>
+                <select name="sede_id" class="form-select" style="max-width:180px;" onchange="document.getElementById('calendar-filter-form').submit();">
+                    <option value="">Tutte le sedi</option>
+                    {% for sede in sedi %}
+                        <option value="{{ sede.id }}" {% if sede.id|string == selected_sede_id %}selected{% endif %}>{{ sede.nome }}</option>
+                    {% endfor %}
+                </select>
+                <select name="client_id" class="form-select" style="max-width:180px;" onchange="document.getElementById('calendar-filter-form').submit();">
+                    <option value="">Tutti i clienti</option>
+                    {% for cliente in clienti %}
+                        <option value="{{ cliente.id }}" {% if cliente.id|string == selected_client_id|string %}selected{% endif %}>
+                            {{ cliente.nome }} {{ cliente.cognome }}
+                        </option>
+                    {% endfor %}
+                </select>
                 <input type="hidden" name="start_date" id="current-start-date" value="{{ current_date.strftime('%Y-%m-%d') }}">
-            </form>
-
-            <!-- Menu a tendina per filtrare per cliente -->
-            <form method="GET" action="{{ url_for('appuntamenti.trainer_calendar') }}" id="client-filter-form" class="ml-auto">
-                <div class="row">
-                    <div class="col-md-12">
-                        <select name="client_id" class="form-select" onchange="this.form.submit()">
-                            <option value="">Tutti i clienti</option>
-                            {% for cliente in clienti %}
-                            <option value="{{ cliente.id }}" {% if cliente.id == selected_client_id %}selected{% endif %}>
-                                {{ cliente.nome }} {{ cliente.cognome }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </div>
-                <input type="hidden" name="start_date" id="current-start-date-client" value="{{ current_date.strftime('%Y-%m-%d') }}">
-                {% if selected_sede_id %}
-                <input type="hidden" name="sede_id" value="{{ selected_sede_id }}">
-                {% endif %}
+                <input type="hidden" name="calendar_view" id="calendar-view" value="{{ calendar_view }}">
             </form>
 
         </div>
@@ -655,5 +620,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
 </script>
 {% endblock %}

@@ -84,6 +84,7 @@
 
                             <dt class="col-sm-4">Obiettivo Cliente</dt>
                             <dd class="col-sm-8">{{ cliente.obiettivo_cliente or 'Non Specificato' }}</dd>
+                            
                         </dl>
                     </div>
                 </div>
@@ -237,6 +238,24 @@
                 {% endif %}
             </div>
         </div>
+        <div class="card mb-4">
+        <div class="card-header bg-info text-white">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-building me-2"></i>Sedi aggiuntive
+            </h5>
+        </div>
+        <div class="card-body">
+            {% if sedi_aggiuntive %}
+                <ul class="mb-0 ps-3">
+                    {% for sede in sedi_aggiuntive %}
+                        <li>{{ sede.nome }}{% if sede.citta %} - {{ sede.citta }}{% endif %}</li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <span class="text-muted">Nessuna sede aggiuntiva</span>
+            {% endif %}
+        </div>
+    </div>
     </div>
 </div>
 
