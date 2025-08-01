@@ -103,35 +103,66 @@ def calendario():
     # Fetch sede_ids based on user role
     user_role = session.get('user_role')
     user_email = session.get('user_email')
-    sede_ids = []
-    if user_role == 'sede':
+    societa_id = request.args.get('societa_id')
+    sede_id = request.args.get('sede_id')
+
+    
+    if societa_id is None and sede_id is None:
+        societa_id = session.get('societa_id')
+        sede_id = session.get('sede_id')
+
+    if request.args.get('societa_id') is not None:
+        session['societa_id'] = societa_id
+    if request.args.get('sede_id') is not None:
+        session['sede_id'] = sede_id
+
+    societa = []
+    sedi = []
+    hierarchy = db.build_hierarchy(user_role, user_email)
+    if user_role == 'franchisor':
+        for area_manager in hierarchy[0].get('area_managers', []):
+            for soc in area_manager.get('societa', []):
+                societa.append({'id': soc['id'], 'nome': soc['nome']})
+        if societa_id:
+            sedi = [{'id': sede['id'], 'nome': sede['nome']} for sede in db.get_sedi_by_societa(societa_id)]
+        else:
+            for area_manager in hierarchy[0].get('area_managers', []):
+                for soc in area_manager.get('societa', []):
+                    sedi.extend([{'id': sede['id'], 'nome': sede['nome']} for sede in soc.get('sedi', [])])
+    elif user_role == 'area manager':
+        for area_manager in hierarchy[0].get('area_managers', []):
+            if area_manager.get('email') == user_email:
+                for soc in area_manager.get('societa', []):
+                    societa.append({'id': soc['id'], 'nome': soc['nome']})
+        if societa_id:
+            sedi = [{'id': sede['id'], 'nome': sede['nome']} for sede in db.get_sedi_by_societa(societa_id)]
+        else:
+            for area_manager in hierarchy[0].get('area_managers', []):
+                if area_manager.get('email') == user_email:
+                    for soc in area_manager.get('societa', []):
+                        sedi.extend([{'id': sede['id'], 'nome': sede['nome']} for sede in soc.get('sedi', [])])
+    elif user_role == 'societa':
+        societa_obj = db.get_societa_by_email(user_email)
+        if societa_obj:
+            societa.append({'id': societa_obj['id'], 'nome': societa_obj['nome']})
+            sedi = [{'id': sede['id'], 'nome': sede['nome']} for sede in db.get_sedi_by_societa(societa_obj['id'])]
+    elif user_role == 'sede':
         sede = db.get_sede_by_email(user_email)
         if sede:
-            sede_ids.append(sede['id'])
+            sedi = [{'id': sede['id'], 'nome': sede['nome']}]
     elif user_role == 'trainer':
         sede = db.get_sede_by_trainer_email(user_email)
         if sede:
-            sede_ids.append(sede['id'])
-    elif user_role == 'societa':
-        societa = db.get_societa_by_email(user_email)
-        if societa:
-            sedi = db.get_sedi_by_societa(societa['id'])
-            sede_ids.extend([sede['id'] for sede in sedi])
-    elif user_role == 'area manager':
-        societa = db.get_societa_by_area_manager_email(user_email)
-        for company in societa:
-            sedi = db.get_sedi_by_societa(company['id'])
-            sede_ids.extend([sede['id'] for sede in sedi])
-    elif user_role == 'franchisor':
-        area_managers = db.get_area_managers_by_franchisor_email(user_email)
-        for manager in area_managers:
-            societa = db.get_societa_by_area_manager(manager['id'])
-            for company in societa:
-                sedi = db.get_sedi_by_societa(company['id'])
-                sede_ids.extend([sede['id'] for sede in sedi])
+            sedi = [{'id': sede['id'], 'nome': sede['nome']}]
 
-    # Ensure only valid sede_ids are used
-    sede_ids = [sede_id for sede_id in sede_ids if sede_id is not None]
+    # Determina i sede_ids da usare per il filtro
+    if sede_id:
+        sede_ids = [int(sede_id)]
+    elif societa_id:
+        sedi_societa = db.get_sedi_by_societa(societa_id)
+        sede_ids = [sede['id'] for sede in sedi_societa]
+    else:
+        sede_ids = [sede['id'] for sede in sedi]
 
     # Ottieni le scadenze dal database
     scadenze = db.get_rate_calendario(mese, anno, sede_ids)
@@ -174,46 +205,83 @@ def calendario():
                          mese_corrente=mese,
                          anno_corrente=anno,
                          mese_precedente=mese_precedente,
-                         mese_successivo=mese_successivo)
+                         mese_successivo=mese_successivo,
+                         societa=societa,
+                         sedi=sedi,
+                         selected_societa_id=str(societa_id) if societa_id else '',
+                         selected_sede_id=str(sede_id) if sede_id else '')
 
 @rate_bp.route('/scadenziario')
 @login_required
 def scadenziario():
     user_role = session.get('user_role')
     user_email = session.get('user_email')
-    # Directly fetch the sede_id for the logged-in user if the role is 'sede'
-    sede_ids = []
-    if user_role == 'sede':
+    societa_id = request.args.get('societa_id')
+    sede_id = request.args.get('sede_id')
+
+    if societa_id is None and sede_id is None:
+        societa_id = session.get('societa_id')
+        sede_id = session.get('sede_id')
+
+    if request.args.get('societa_id') is not None:
+        session['societa_id'] = societa_id
+    if request.args.get('sede_id') is not None:
+        session['sede_id'] = sede_id
+
+    societa = []
+    sedi = []
+    hierarchy = db.build_hierarchy(user_role, user_email)
+    if user_role == 'franchisor':
+        for area_manager in hierarchy[0].get('area_managers', []):
+            for soc in area_manager.get('societa', []):
+                societa.append({'id': soc['id'], 'nome': soc['nome']})
+        if societa_id:
+            sedi = [{'id': sede['id'], 'nome': sede['nome']} for sede in db.get_sedi_by_societa(societa_id)]
+        else:
+            for area_manager in hierarchy[0].get('area_managers', []):
+                for soc in area_manager.get('societa', []):
+                    sedi.extend([{'id': sede['id'], 'nome': sede['nome']} for sede in soc.get('sedi', [])])
+    elif user_role == 'area manager':
+        for area_manager in hierarchy[0].get('area_managers', []):
+            if area_manager.get('email') == user_email:
+                for soc in area_manager.get('societa', []):
+                    societa.append({'id': soc['id'], 'nome': soc['nome']})
+        if societa_id:
+            sedi = [{'id': sede['id'], 'nome': sede['nome']} for sede in db.get_sedi_by_societa(societa_id)]
+        else:
+            for area_manager in hierarchy[0].get('area_managers', []):
+                if area_manager.get('email') == user_email:
+                    for soc in area_manager.get('societa', []):
+                        sedi.extend([{'id': sede['id'], 'nome': sede['nome']} for sede in soc.get('sedi', [])])
+    elif user_role == 'societa':
+        societa_obj = db.get_societa_by_email(user_email)
+        if societa_obj:
+            societa.append({'id': societa_obj['id'], 'nome': societa_obj['nome']})
+            sedi = [{'id': sede['id'], 'nome': sede['nome']} for sede in db.get_sedi_by_societa(societa_obj['id'])]
+    elif user_role == 'sede':
         sede = db.get_sede_by_email(user_email)
         if sede:
-            sede_ids.append(sede['id'])
+            sedi = [{'id': sede['id'], 'nome': sede['nome']}]
     elif user_role == 'trainer':
-        # Fetch the sede associated with the trainer
         sede = db.get_sede_by_trainer_email(user_email)
         if sede:
-            sede_ids.append(sede['id'])
-    elif user_role == 'societa':
-        # Fetch all sedi under the company
-        societa = db.get_societa_by_email(user_email)
-        if societa:
-            sedi = db.get_sedi_by_societa(societa['id'])
-            sede_ids.extend([sede['id'] for sede in sedi])
-    elif user_role == 'area manager':
-        societa = db.get_societa_by_area_manager_email(user_email)
-        for company in societa:
-            sedi = db.get_sedi_by_societa(company['id'])
-            sede_ids.extend([sede['id'] for sede in sedi])
-    elif user_role == 'franchisor':
-        area_managers = db.get_area_managers_by_franchisor_email(user_email)
-        for manager in area_managers:
-            societa = db.get_societa_by_area_manager(manager['id'])
-            for company in societa:
-                sedi = db.get_sedi_by_societa(company['id'])
-                sede_ids.extend([sede['id'] for sede in sedi])
+            sedi = [{'id': sede['id'], 'nome': sede['nome']}]
 
-    # Ensure only valid sede_ids are used
-    sede_ids = [sede_id for sede_id in sede_ids if sede_id is not None]
+    if sede_id:
+        sede_ids = [int(sede_id)]
+    elif societa_id:
+        sedi_societa = db.get_sedi_by_societa(societa_id)
+        sede_ids = [sede['id'] for sede in sedi_societa]
+    else:
+        sede_ids = [sede['id'] for sede in sedi]
+
     rate = db.get_rate_scadenza(sede_ids)
     oggi = date.today()
-    return render_template('scadenziario.html', rate=rate, oggi=oggi)
+    return render_template('scadenziario.html',
+                           rate=rate,
+                           oggi=oggi,
+                           societa=societa,
+                           sedi=sedi,
+                           selected_societa_id=str(societa_id) if societa_id else '',
+                           selected_sede_id=str(sede_id) if sede_id else '')
 

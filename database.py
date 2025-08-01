@@ -528,11 +528,15 @@ def get_rate_scadenza(sede_ids):
             c.nome || ' ' || c.cognome as nome_cliente,
             c.id as cliente_id,
             p.nome as tipo_pacchetto,
-            a.id as abbonamento_id
+            a.id as abbonamento_id,
+            s.nome as nome_sede,
+            so.nome as nome_societa
         FROM rate r
         JOIN abbonamenti a ON r.abbonamento_id = a.id
         JOIN clienti c ON a.cliente_id = c.id
         JOIN pacchetti p ON a.pacchetto_id = p.id
+        JOIN sede s ON c.sede_id = s.id
+        JOIN societa so ON s.societa_id = so.id
         WHERE r.pagato = FALSE AND c.sede_id IN ({placeholders})
         ORDER BY r.data_scadenza ASC
     '''
@@ -2554,10 +2558,8 @@ def get_appointments_by_users(user_ids, start_date):
 
 def get_appointments_by_clienti(clienti_ids, start_date):
     """
-    Recupera gli appuntamenti per una lista di clienti a partire da una data specifica.
-    :param clienti_ids: Lista di ID dei clienti.
-    :param start_date: Data di inizio (stringa in formato 'YYYY-MM-DD').
-    :return: Lista di appuntamenti.
+    Recupera gli appuntamenti per una lista di clienti a partire da una data specifica,
+    includendo progressivo_lezione e numero_lezioni.
     """
     if not clienti_ids:
         return []
@@ -2569,9 +2571,13 @@ def get_appointments_by_clienti(clienti_ids, start_date):
         end_date_str = end_date_dt.strftime('%Y-%m-%d %H:%M:%S')
         placeholders = ','.join(['%s'] * len(clienti_ids))
         query = f'''
-            SELECT a.*, c.nome || ' ' || c.cognome AS client_name
+            SELECT a.*, 
+                   c.nome || ' ' || c.cognome AS client_name,
+                   ab.numero_lezioni,
+                   a.progressivo_lezione
             FROM appointments a
             JOIN clienti c ON a.client_id = c.id
+            LEFT JOIN abbonamenti ab ON a.package_id = ab.id
             WHERE a.client_id IN ({placeholders})
             AND a.date_time BETWEEN %s AND %s
             ORDER BY a.date_time ASC
@@ -2579,17 +2585,23 @@ def get_appointments_by_clienti(clienti_ids, start_date):
         params = clienti_ids + [start_date_str, end_date_str]
         cursor = conn.cursor()
         cursor.execute(query, params)
-        appointments = cursor.fetchall()
         columns = [desc[0] for desc in cursor.description]
-        parsed_appointments = []
-        for row in appointments:
+        appointments = []
+        for row in cursor.fetchall():
             appointment = dict(zip(columns, row))
             try:
                 appointment['date_time'] = datetime.strptime(str(appointment['date_time']), '%Y-%m-%d %H:%M:%S')
             except ValueError:
                 appointment['date_time'] = datetime.strptime(str(appointment['date_time']), '%Y-%m-%dT%H:%M')
-            parsed_appointments.append(appointment)
-        return parsed_appointments
+            # Progressivo e totale lezioni
+            if appointment.get('progressivo_lezione') and appointment.get('numero_lezioni'):
+                appointment['lezione_numero'] = appointment['progressivo_lezione']
+                appointment['numero_lezioni'] = appointment['numero_lezioni']
+            else:
+                appointment['lezione_numero'] = None
+                appointment['numero_lezioni'] = None
+            appointments.append(appointment)
+        return appointments
     finally:
         conn.close()
 
@@ -3181,3 +3193,20 @@ def get_sedi_aggiuntive_cliente(cliente_id, sede_principale_id):
     sedi_aggiuntive = [dict(zip(['id', 'nome', 'citta'], row)) for row in cursor.fetchall()]
     conn.close()
     return sedi_aggiuntive
+
+
+def get_nome_societa_by_id(societa_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT nome FROM societa WHERE id = %s', (societa_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return row[0] if row else None
+
+def get_nome_sede_by_id(sede_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT nome FROM sede WHERE id = %s', (sede_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return row[0] if row else None

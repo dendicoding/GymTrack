@@ -5,6 +5,28 @@
 {% block content %}
 <div class="container">
     <h1 class="mt-4">Stato Trainer</h1>
+    <form method="GET" id="trainer-status-filter-form" class="mb-4">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-4">
+                <label for="societa_id" class="form-label mb-1">Società</label>
+                <select class="form-select" name="societa_id" id="societa_id">
+                    <option value="">Tutte</option>
+                    {% for soc in societa %}
+                        <option value="{{ soc.id }}" {% if soc.id|string == selected_societa_id %}selected{% endif %}>{{ soc.nome }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label for="sede_id" class="form-label mb-1">Sede</label>
+                <select class="form-select" name="sede_id" id="sede_id" onchange="document.getElementById('trainer-status-filter-form').submit();">
+                    <option value="">Tutte</option>
+                    {% for sede in sedi %}
+                        <option value="{{ sede.id }}" {% if sede.id|string == selected_sede_id %}selected{% endif %}>{{ sede.nome }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </form>
     <div class="row mt-4">
         {% for trainer in trainers %}
         <div class="col-md-4 mb-4">
@@ -26,4 +48,17 @@
         {% endfor %}
     </div>
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var societaSelect = document.getElementById('societa_id');
+    var sedeSelect = document.getElementById('sede_id');
+    var form = societaSelect && societaSelect.form ? societaSelect.form : null;
+    if (societaSelect && sedeSelect && form) {
+        societaSelect.addEventListener('change', function() {
+            sedeSelect.selectedIndex = 0;
+            form.submit();
+        });
+    }
+});
+</script>
 {% endblock %}

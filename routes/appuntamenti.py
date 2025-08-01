@@ -10,7 +10,18 @@ appuntamenti_bp = Blueprint('appuntamenti', __name__)
 @appuntamenti_bp.route('/trainer/appointment/new', methods=['GET', 'POST'])
 @login_required
 def add_appointment():
+    start_date = request.args.get('date_time')
+    if start_date:
+        # Gestisce sia "YYYY-MM-DD" che "YYYY-MM-DDTHH:MM:SS"
+        try:
+            current_date = datetime.strptime(start_date[:10], '%Y-%m-%d')
+        except Exception:
+            current_date = date.today()
+    else:
+        current_date = date.today()
     
+    if not start_date:
+        start_date = current_date.strftime('%Y-%m-%d')
 
     # Step 1: Ottieni il ruolo e l'email dell'utente loggato
     user_role = session.get('user_role')
@@ -115,10 +126,10 @@ def add_appointment():
                 user_id, client_id, title, notes, date_time, end_date_time,
                 appointment_type, status, is_trial, is_recovery, is_lesson_zero, package_id
             )
-
             if appointment_id:
                 flash('Appuntamento aggiunto con successo!', 'success')
-                return redirect(url_for('appuntamenti.trainer_calendar'))
+                # Redirect alla data dell'appuntamento appena creato
+                return redirect(url_for('appuntamenti.trainer_calendar', start_date=date_time.strftime('%Y-%m-%d')))
             else:
                 flash('Errore durante l\'aggiunta dell\'appuntamento.', 'error')
 
@@ -314,7 +325,16 @@ def trainer_calendar():
 
     # Step 4: Ottieni gli appuntamenti per gli utenti trovati
     print(f"User IDs per gli appuntamenti: {user_ids}")
-    start_date = (date.today() - timedelta(days=30)).strftime('%Y-%m-%d')
+    start_date = request.args.get('start_date')
+    if start_date:
+        try:
+            current_date = datetime.strptime(start_date[:10], '%Y-%m-%d')
+        except Exception:
+            current_date = date.today()
+    else:
+        current_date = date.today()
+        start_date = current_date.strftime('%Y-%m-%d')  # <--- AGGIUNGI QUESTA RIGA
+
     print(f"Data di inizio per gli appuntamenti: {start_date}")
     # Ottieni gli ID dei clienti della sede selezionata
     if selected_sede_id_int:
@@ -356,7 +376,7 @@ def trainer_calendar():
     # Step 5: Renderizza il template del calendario
     return render_template(
         'trainer/calendar.html',
-        current_date=datetime.strptime(start_date, '%Y-%m-%d'),
+        current_date=current_date,
         timedelta=timedelta,
         date=date,
         clienti=clienti,

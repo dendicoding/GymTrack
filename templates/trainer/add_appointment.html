@@ -174,6 +174,8 @@
     const durationInput = document.getElementById('duration');
     const endDateTimeInput = document.getElementById('end_date_time');
 
+    
+
     // Funzione per calcolare la data di fine
     function updateEndDateTime() {
         const startDateValue = dateTimeInput.value;
@@ -353,10 +355,12 @@
         clientSelect.dispatchEvent(event);
     }
     const isTrialCheckbox = document.getElementById('is_trial');
+    const statusSelect = document.getElementById('status');
     isTrialCheckbox.addEventListener('change', function () {
         packageSelect.disabled = this.checked;
         if (this.checked) {
             packageSelect.value = '';
+            statusSelect.value = "Prova Fissata"; // imposta dinamicamente lo stato
         }
     });
 

@@ -134,6 +134,9 @@ def index():
         appointments = db.get_appointments_by_users(user_ids, oggi.strftime('%Y-%m-%d'))
         appointments_today = [a for a in appointments if a['date_time'].date() == oggi]
 
+    nome_societa_corrente = db.get_nome_societa_by_id(societa_id) if societa_id else None
+    nome_sede_corrente = db.get_nome_sede_by_id(sede_id) if sede_id else None
+
     return render_template(
         'dashboard.html',
         stats=stats,
@@ -144,11 +147,22 @@ def index():
         societa=societa,
         sedi=sedi,
         selected_societa_id=str(societa_id) if societa_id else '',
-        selected_sede_id=str(sede_id) if sede_id else ''
+        selected_sede_id=str(sede_id) if sede_id else '',
+        nome_societa_corrente=nome_societa_corrente,
+        nome_sede_corrente=nome_sede_corrente
     )
 
 
-
+@app.context_processor
+def inject_societa_sede_names():
+    societa_id = session.get('societa_id')
+    sede_id = session.get('sede_id')
+    nome_societa_corrente = db.get_nome_societa_by_id(societa_id) if societa_id else None
+    nome_sede_corrente = db.get_nome_sede_by_id(sede_id) if sede_id else None
+    return dict(
+        nome_societa_corrente=nome_societa_corrente,
+        nome_sede_corrente=nome_sede_corrente
+    )
 
 @app.route('/eventi')
 @login_required

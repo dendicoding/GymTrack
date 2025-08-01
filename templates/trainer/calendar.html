@@ -12,13 +12,13 @@
                 <i class="fas fa-plus"></i> Nuovo Appuntamento
             </a>
             <form method="GET" action="{{ url_for('appuntamenti.trainer_calendar') }}" class="d-flex gap-2 mb-4" id="calendar-filter-form">
-                <select name="societa_id" class="form-select" style="max-width:180px;" onchange="document.getElementById('calendar-filter-form').submit();">
+                <select name="societa_id" class="form-select" style="max-width:180px;" id="societa_id">
                     <option value="">Tutte le società</option>
                     {% for soc in societa %}
                         <option value="{{ soc.id }}" {% if soc.id|string == selected_societa_id %}selected{% endif %}>{{ soc.nome }}</option>
                     {% endfor %}
                 </select>
-                <select name="sede_id" class="form-select" style="max-width:180px;" onchange="document.getElementById('calendar-filter-form').submit();">
+                <select name="sede_id" class="form-select" style="max-width:180px;" id="sede_id" onchange="document.getElementById('calendar-filter-form').submit();">
                     <option value="">Tutte le sedi</option>
                     {% for sede in sedi %}
                         <option value="{{ sede.id }}" {% if sede.id|string == selected_sede_id %}selected{% endif %}>{{ sede.nome }}</option>
@@ -339,7 +339,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Inizializza il calendario
     const calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'timeGridWeek',
-        initialDate: new Date().toISOString().split('T')[0], // Imposta la data iniziale su oggi
+        initialDate: "{{ current_date.strftime('%Y-%m-%d') if current_date else '' }}",// Imposta la data iniziale su oggi
         headerToolbar: {
             left: 'prev,next today',
             center: 'title',
@@ -620,6 +620,16 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
-
+document.addEventListener('DOMContentLoaded', function() {
+    var societaSelect = document.getElementById('societa_id');
+    var sedeSelect = document.getElementById('sede_id');
+    var form = societaSelect && societaSelect.form ? societaSelect.form : null;
+    if (societaSelect && sedeSelect && form) {
+        societaSelect.addEventListener('change', function() {
+            sedeSelect.selectedIndex = 0; // resetta la sede su "Tutte"
+            form.submit(); // invia il form per filtrare solo per società
+        });
+    }
+});
 </script>
 {% endblock %}

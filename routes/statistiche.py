@@ -134,34 +134,72 @@ def incassi_mese():
 @login_required
 def statistiche():
     oggi = date.today()
-    # Recupera tutte le sedi sotto la gerarchia dell'utente
     user_role = session.get('user_role')
     user_email = session.get('user_email')
+
+    # Filtri società/sede
+    societa_id = request.args.get('societa_id')
+    sede_id = request.args.get('sede_id')
+
+    # Se non ci sono parametri, usa la sessione come default
+    if societa_id is None and sede_id is None:
+        societa_id = session.get('societa_id')
+        sede_id = session.get('sede_id')
+
+    # Aggiorna la sessione se l'utente cambia filtro
+    if request.args.get('societa_id') is not None:
+        session['societa_id'] = societa_id
+    if request.args.get('sede_id') is not None:
+        session['sede_id'] = sede_id
+
+    # Costruisci la gerarchia per i menu a tendina
+    societa = []
     sedi = []
-    if user_role == 'trainer':
-        sede = db.get_sede_by_trainer_email(user_email)
-        if sede:
-            sedi.append(sede)
+    hierarchy = db.build_hierarchy(user_role, user_email)
+    if user_role == 'franchisor':
+        for area_manager in hierarchy[0].get('area_managers', []):
+            for soc in area_manager.get('societa', []):
+                societa.append({'id': soc['id'], 'nome': soc['nome']})
+        if societa_id:
+            sedi = [{'id': sede['id'], 'nome': sede['nome']} for sede in db.get_sedi_by_societa(societa_id)]
+        else:
+            for area_manager in hierarchy[0].get('area_managers', []):
+                for soc in area_manager.get('societa', []):
+                    sedi.extend([{'id': sede['id'], 'nome': sede['nome']} for sede in soc.get('sedi', [])])
+    elif user_role == 'area manager':
+        for area_manager in hierarchy[0].get('area_managers', []):
+            if area_manager.get('email') == user_email:
+                for soc in area_manager.get('societa', []):
+                    societa.append({'id': soc['id'], 'nome': soc['nome']})
+        if societa_id:
+            sedi = [{'id': sede['id'], 'nome': sede['nome']} for sede in db.get_sedi_by_societa(societa_id)]
+        else:
+            for area_manager in hierarchy[0].get('area_managers', []):
+                if area_manager.get('email') == user_email:
+                    for soc in area_manager.get('societa', []):
+                        sedi.extend([{'id': sede['id'], 'nome': sede['nome']} for sede in soc.get('sedi', [])])
+    elif user_role == 'societa':
+        societa_obj = db.get_societa_by_email(user_email)
+        if societa_obj:
+            societa.append({'id': societa_obj['id'], 'nome': societa_obj['nome']})
+            sedi = [{'id': sede['id'], 'nome': sede['nome']} for sede in db.get_sedi_by_societa(societa_obj['id'])]
     elif user_role == 'sede':
         sede = db.get_sede_by_email(user_email)
         if sede:
-            sedi.append(sede)
-    elif user_role == 'area manager':
-        societa = db.get_societa_by_area_manager_email(user_email)
-        for company in societa:
-            sedi.extend(db.get_sedi_by_societa(company['id']))
-    elif user_role == 'societa':
-        societa = db.get_societa_by_email(user_email)
-        if societa:
-            sedi = db.get_sedi_by_societa(societa['id'])
-    elif user_role == 'franchisor':
-        area_managers = db.get_area_managers_by_franchisor_email(user_email)
-        for manager in area_managers:
-            societa = db.get_societa_by_area_manager(manager['id'])
-            for company in societa:
-                sedi.extend(db.get_sedi_by_societa(company['id']))
+            sedi = [{'id': sede['id'], 'nome': sede['nome']}]
+    elif user_role == 'trainer':
+        sede = db.get_sede_by_trainer_email(user_email)
+        if sede:
+            sedi = [{'id': sede['id'], 'nome': sede['nome']}]
 
-    sede_ids = [sede['id'] for sede in sedi if sede and 'id' in sede]
+    # Determina i sede_ids da usare per il filtro
+    if sede_id:
+        sede_ids = [int(sede_id)]
+    elif societa_id:
+        sedi_societa = db.get_sedi_by_societa(societa_id)
+        sede_ids = [sede['id'] for sede in sedi_societa]
+    else:
+        sede_ids = [sede['id'] for sede in sedi]
 
     # Clienti attivi: hanno almeno un appuntamento da oggi in poi
     appointments = db.get_appointments_by_sedi(sede_ids, oggi.strftime('%Y-%m-%d'))
@@ -269,7 +307,7 @@ def statistiche():
         clienti_non_attivi=clienti_non_attivi,
         abbonamenti_venduti=abbonamenti_venduti,
         n_prove=len(prove),
-        numero_prove_mese = numero_prove_mese,
+        numero_prove_mese=numero_prove_mese,
         prove=prove,
         clienti_prove=clienti_prove,
         mesi_labels=mesi_labels,
@@ -277,11 +315,13 @@ def statistiche():
         n_rate_contanti=n_rate_contanti,
         n_prove_annullate=n_prove_annullate,
         n_prove_effettuate=n_prove_effettuate,
-        n_upgrade= n_upgrade,
+        n_upgrade=n_upgrade,
         n_rinnovi=n_rinnovi,
-        n_rinnovi_non=n_rinnovi_non
-
-
+        n_rinnovi_non=n_rinnovi_non,
+        societa=societa,
+        sedi=sedi,
+        selected_societa_id=str(societa_id) if societa_id else '',
+        selected_sede_id=str(sede_id) if sede_id else ''
     )
 
 @stats_bp.route('/prove_non_prese')

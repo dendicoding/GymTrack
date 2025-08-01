@@ -45,7 +45,7 @@
                     <div class="row g-2 align-items-end">
                         <div class="col-md-4">
                             <label for="societa_id" class="form-label mb-1">Società</label>
-                            <select class="form-select" name="societa_id" id="societa_id" onchange="document.getElementById('clienti-filter-form').submit();">
+                            <select class="form-select" name="societa_id" id="societa_id">
                                 <option value="">Tutte</option>
                                 {% for soc in societa %}
                                     <option value="{{ soc.id }}" {% if soc.id|string == selected_societa_id %}selected{% endif %}>{{ soc.nome }}</option>
@@ -66,6 +66,7 @@
                         </div>
                     </div>
                 </form>
+
             </div>
         </div>
         <div class="table-responsive">
@@ -301,5 +302,16 @@
         showPage(currentPage);
         createPaginationControls();
     });
+    document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('clienti-filter-form');
+    const societaSelect = document.getElementById('societa_id');
+    const sedeSelect = document.getElementById('sede_id');
+
+    societaSelect.addEventListener('change', function() {
+        // Quando cambio società, resetto la sede
+        sedeSelect.selectedIndex = 0;
+        form.submit();
+    });
+});
 </script>
 {% endblock %}

@@ -12,7 +12,7 @@
     </div>
 </div>
 <!-- FILTRI SOCIETA E SEDE -->
-{% if societa|length > 1 or sedi|length > 1 %}
+{% if societa|length > 0 or sedi|length > 0 %}
 <form method="GET" class="mb-4">
     <div class="row g-2 align-items-end">
         <div class="col-md-4">
@@ -256,4 +256,17 @@
         </div>
     </div>
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var societaSelect = document.getElementById('societa_id');
+    var sedeSelect = document.getElementById('sede_id');
+    var form = societaSelect && societaSelect.form ? societaSelect.form : null;
+    if (societaSelect && sedeSelect && form) {
+        societaSelect.addEventListener('change', function() {
+            sedeSelect.selectedIndex = 0; // resetta la sede su "Tutte"
+            form.submit(); // invia il form per filtrare solo per società
+        });
+    }
+});
+</script>
 {% endblock %}
