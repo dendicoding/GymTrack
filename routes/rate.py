@@ -48,6 +48,11 @@ def paga_rata(rata_id):
         flash('Questa rata è già stata pagata', 'warning')
         return redirect(url_for('abbonamenti.dettaglio_abbonamento', abbonamento_id=rata['abbonamento_id']))
     
+    # --- AGGIUNTA: verifica se il pacchetto è a pagamento unico ---
+    abbonamento = db.get_abbonamento(rata['abbonamento_id'])
+    pacchetto = db.get_pacchetto(abbonamento['pacchetto_id']) if abbonamento else None
+    pagamento_unico = pacchetto['pagamento_unico'] if pacchetto else False
+
     if request.method == 'POST':
         from decimal import Decimal
         data_pagamento = request.form.get('data_pagamento', datetime.now().strftime('%Y-%m-%d'))
@@ -55,6 +60,9 @@ def paga_rata(rata_id):
         importo_pagato = Decimal(request.form.get('importo_pagato'))
         pagamento_parziale = 'pagamento_parziale' in request.form
         
+        if pagamento_unico:
+            metodo_pagamento = "HeyLight"  # forza il metodo di pagamento
+
         if importo_pagato < rata['importo'] and pagamento_parziale:
             importo_rimanente = rata['importo'] - importo_pagato
             if isinstance(rata['data_scadenza'], str):
@@ -77,7 +85,7 @@ def paga_rata(rata_id):
         
         return redirect(url_for('abbonamenti.dettaglio_abbonamento', abbonamento_id=rata['abbonamento_id']))
     
-    return render_template('rate/paga.html', rata=rata, oggi=oggi)
+    return render_template('rate/paga.html', rata=rata, oggi=oggi, pagamento_unico=pagamento_unico)
 
 # --- CALENDARIO E SCADENZIARIO ---
 @rate_bp.route('/calendario')

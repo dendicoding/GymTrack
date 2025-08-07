@@ -12,24 +12,45 @@
     <!--<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">-->
     {% block extra_css %}{% endblock %}
         <style>
-        .navbar .nav-link,
-        .navbar .dropdown-item,
-        .navbar .navbar-brand,
-        .navbar .navbar-text,
-        .navbar .btn-outline-primary {
-            color: #00388E !important;
-            border-color: #00388E !important;
-        }
-        .navbar .nav-link.active,
-        .navbar .dropdown-item.active {
-            color: rgb(40, 55, 115) !important;
-        }
-        .navbar .btn-outline-primary:hover,
-        .navbar .btn-outline-primary:focus {
-            background-color: #00388E !important;
-            color: #fff !important;
-            border-color: #00388E !important;
-        }
+            .navbar .nav-link,
+            .navbar .dropdown-item,
+            .navbar .navbar-brand,
+            .navbar .navbar-text,
+            .navbar .btn-outline-primary {
+                color: #00388E !important;
+                border-color: #00388E !important;
+            }
+            .navbar .nav-link.active,
+            .navbar .dropdown-item.active {
+                color: rgb(40, 55, 115) !important;
+            }
+            .navbar .btn-outline-primary:hover,
+            .navbar .btn-outline-primary:focus {
+                background-color: #00388E !important;
+                color: #fff !important;
+                border-color: #00388E !important;
+            }
+            
+            /* Stili per le notifiche eventi */
+            #notification-container .alert {
+                animation: slideIn 0.3s ease-out;
+            }
+            
+            @keyframes slideIn {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+            
+            #notification-container .alert:hover {
+                transform: scale(1.02);
+                transition: transform 0.2s ease;
+            }
     </style>
 </head>
 <body>
@@ -118,6 +139,13 @@
                         </ul>
                     </li>
                     {% endif %}
+                    {% if session.user_role == 'area manager' %}
+                    <li class="nav-item">
+                        <a class="nav-link text-primary fw-bold {% if request.path == url_for('segreteria.eventi_segreteria') %}active{% endif %}" href="{{ url_for('segreteria.eventi_segreteria') }}">
+                            <i class="fas fa-user-shield me-1"></i>Segreteria
+                        </a>
+                    </li>
+                    {% endif %}
                     
                     <li class="nav-item dropdown">
                         <a class="nav-link text-primary fw-bold dropdown-toggle {% if '/trainer' in request.path %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown">
@@ -188,9 +216,9 @@
                                 </span>
                             {% endif %}
                             {% if session.user_role == 'trainer' and not session.get('is_present') %}
-                                <span class="badge bg-warning text-dark ms-2" style="font-size:0.95em;">
+                                <a href="{{ url_for('trainers.trainer_attendance') }}" class="badge bg-warning text-dark ms-2 text-decoration-none" style="font-size:0.95em;">
                                     <i class="fas fa-signature"></i> Firma Presenza
-                                </span>
+                                </a>
                             {% endif %}
                         </span>
                         {% if session.user_role == 'trainer' %}
@@ -221,7 +249,7 @@
 
     <footer class="footer mt-auto py-3 bg-light fixed-bottom">
         <div class="container text-center">
-            <span class="text-muted">© 2025 GymTrack - DGB, V: 0.1.23</span>
+            <span class="text-muted">© 2025 GymTrack - DGB, V: 0.1.24</span>
         </div>
     </footer>
 
@@ -229,6 +257,7 @@
     <!--<script src="{{ url_for('static', filename='js/scripts.js') }}"></script>-->
     {% block extra_js %}{% endblock %}
     <script>
+
     document.addEventListener('DOMContentLoaded', function() {
         {% if session.user_role == 'trainer' %}
             var isPresent = {{ 'true' if session.get('is_present') else 'false' }};
@@ -247,6 +276,111 @@
             }
         {% endif %}
     });
+    </script>
+    <div id="loader-overlay" style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:9999;background:rgba(255,255,255,0.85);display:flex;align-items:center;justify-content:center;display:none;">
+        <div>
+            <div class="tenor-gif-embed" data-postid="18202107685991331077" data-share-method="host" data-aspect-ratio="1" data-width="120px">
+                <a href="https://tenor.com/view/loading-gif-18202107685991331077">Loading Sticker</a>
+            </div>
+            <div class="text-center mt-2 fw-bold text-primary">Caricamento...</div>
+        </div>
+    </div>
+    <script type="text/javascript" async src="https://tenor.com/embed.js"></script>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Mostra il loader subito
+        document.getElementById('loader-overlay').style.display = 'flex';
+        // Nascondi il loader quando la pagina è completamente caricata
+        window.addEventListener('load', function() {
+            document.getElementById('loader-overlay').style.display = 'none';
+        });
+    });
+
+    
+
+    // Sistema di notifiche per eventi segreteria
+    let eventiVisti = new Set(JSON.parse(localStorage.getItem('eventiVisti') || '[]'));
+    
+    function showEventNotification(evento) {
+        // Crea il container delle notifiche se non esiste
+        let notificationContainer = document.getElementById('notification-container');
+        if (!notificationContainer) {
+            notificationContainer = document.createElement('div');
+            notificationContainer.id = 'notification-container';
+            notificationContainer.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                z-index: 1050;
+                max-width: 400px;
+            `;
+            document.body.appendChild(notificationContainer);
+        }
+
+        // Crea la notifica
+        const notification = document.createElement('div');
+        notification.className = 'alert alert-info alert-dismissible fade show shadow';
+        notification.style.cssText = `
+            margin-bottom: 10px;
+            border-left: 4px solid #0dcaf0;
+        `;
+        
+        notification.innerHTML = `
+            <div class="d-flex">
+                <div class="flex-grow-1">
+                    <h6 class="alert-heading mb-1">
+                        <i class="fas fa-bell me-2"></i>Nuovo Evento
+                    </h6>
+                    <strong>${evento.azione}</strong><br>
+                    <small class="text-muted">${evento.dettagli}</small><br>
+                    <small class="text-muted">${new Date(evento.data_evento).toLocaleString()}</small>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        `;
+        
+        // Aggiungi la notifica al container
+        notificationContainer.appendChild(notification);
+        
+        // Auto-rimozione dopo 8 secondi
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, 8000);
+        
+        // Gestisci la chiusura manuale
+        notification.querySelector('.btn-close').addEventListener('click', function() {
+            eventiVisti.add(evento.id);
+            localStorage.setItem('eventiVisti', JSON.stringify([...eventiVisti]));
+        });
+        
+        // Aggiungi anche al set degli eventi visti dopo un po'
+        setTimeout(() => {
+            eventiVisti.add(evento.id);
+            localStorage.setItem('eventiVisti', JSON.stringify([...eventiVisti]));
+        }, 1000);
+    }
+
+    // Controllo periodico eventi solo per area manager
+    {% if session.user_role == 'area manager' %}
+    setInterval(function() {
+        fetch('/segreteria/eventi/nuovi?minuti=1')
+            .then(res => res.json())
+            .then(data => {
+                if (data.nuovi_eventi && data.nuovi_eventi.length > 0) {
+                    data.nuovi_eventi.forEach(function(evento) {
+                        // Mostra solo se non è già stato visto
+                        if (!eventiVisti.has(evento.id)) {
+                            showEventNotification(evento);
+                        }
+                    });
+                }
+            })
+            .catch(err => console.error('Errore nel recupero eventi:', err));
+    }, 10000); // ogni 10 secondi
+    {% endif %}
     </script>
 </body>
 </html>

@@ -50,14 +50,17 @@
                     </div>
                     <div class="mb-4">
                         <label for="metodo_pagamento" class="form-label">Metodo di Pagamento</label>
-                        <select class="form-select" id="metodo_pagamento" name="metodo_pagamento" required>
-                            <option value="Contanti">Contanti</option>
-                            <option value="POS">POS</option>
-                            <option value="Bonifico">Bonifico</option>
-                            <option value="HeyLight">HeyLight</option>
-                            <option value="Satispay">Satispay</option>
-
+                        <select class="form-select" id="metodo_pagamento" name="metodo_pagamento" required {% if pagamento_unico %}disabled{% endif %}>
+                            <option value="Contanti" {% if not pagamento_unico and rata.metodo_pagamento == 'Contanti' %}selected{% endif %}>Contanti</option>
+                            <option value="POS" {% if not pagamento_unico and rata.metodo_pagamento == 'POS' %}selected{% endif %}>POS</option>
+                            <option value="Bonifico" {% if not pagamento_unico and rata.metodo_pagamento == 'Bonifico' %}selected{% endif %}>Bonifico</option>
+                            <option value="HeyLight" {% if pagamento_unico or rata.metodo_pagamento == 'HeyLight' %}selected{% endif %}>HeyLight</option>
+                            <option value="Satispay" {% if not pagamento_unico and rata.metodo_pagamento == 'Satispay' %}selected{% endif %}>Satispay</option>
                         </select>
+                        {% if pagamento_unico %}
+                            <input type="hidden" name="metodo_pagamento" value="HeyLight">
+                            <div class="form-text text-success">Pagamento unico: il metodo è fissato su <b>HeyLight</b></div>
+                        {% endif %}
                     </div>
                     <div class="mb-4">
                         <label for="importo_pagato" class="form-label">Importo Pagato</label>

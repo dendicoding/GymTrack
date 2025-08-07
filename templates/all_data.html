@@ -10,6 +10,13 @@
         </h1>
     </div>
 </div>
+{% if session.user_role == 'franchisor' %}
+<div>
+    <a href="{{ url_for('segreteria.crea_segreteria') }}" class="btn btn-success">
+        <i class="fas fa-user-plus me-1"></i> Crea utente Segreteria
+    </a>
+</div>
+{% endif %}
 
 <div class="card mb-4">
     <div class="card-header bg-primary text-white">

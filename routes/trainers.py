@@ -116,6 +116,10 @@ def trainer_entrata():
         abort(403)
     trainer_id = session.get('user_id')
     db.log_event(trainer_id, session.get('user_email'), 'entra', 'Trainer entrato')
+    
+    # Aggiorna immediatamente lo stato della sessione
+    session['is_present'] = True
+    
     flash('Entrata registrata con successo!', 'success')
     return redirect(url_for('index'))
 
@@ -126,9 +130,12 @@ def trainer_uscita():
         abort(403)
     trainer_id = session.get('user_id')
     db.log_event(trainer_id, session.get('user_email'), 'esci', 'Trainer uscito')
+    
+    # Aggiorna immediatamente lo stato della sessione
+    session['is_present'] = False
+    
     flash('Uscita registrata con successo!', 'success')
     return redirect(url_for('index'))
-
 @trainers_bp.route('/trainer-status')
 @login_required
 def trainer_status():

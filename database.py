@@ -351,10 +351,24 @@ def delete_cliente(cliente_id):
 def get_all_pacchetti():
     conn = get_db_connection()
     cursor = conn.cursor()
+    oggi = datetime.now().date()
     cursor.execute('SELECT * FROM pacchetti ORDER BY nome')
     rows = cursor.fetchall()
     columns = [desc[0] for desc in cursor.description]
-    pacchetti = [dict(zip(columns, row)) for row in rows]
+    pacchetti = []
+    for row in rows:
+        pacchetto = dict(zip(columns, row))
+        data_scadenza = pacchetto.get('data_scadenza')
+        if data_scadenza:
+            # data_scadenza può essere datetime o stringa
+            if isinstance(data_scadenza, str):
+                data_scadenza = datetime.strptime(data_scadenza, '%Y-%m-%d').date()
+            elif isinstance(data_scadenza, datetime):
+                data_scadenza = data_scadenza.date()
+            pacchetto['attivo'] = (data_scadenza >= oggi)
+        else:
+            pacchetto['attivo'] = True
+        pacchetti.append(pacchetto)
     conn.close()
     return pacchetti
 
@@ -2750,14 +2764,29 @@ def migrate_appointments_table():
             print(f"Errore durante la migrazione: {e}")
     finally:
         conn.close()
-
-def update_appointment(appointment_id, title, client_id, notes, date_time, end_date_time, appointment_type, status, is_trial, is_recovery, is_lesson_zero):
+        
+def update_appointment(appointment_id, title, client_id, notes, date_time, end_date_time, appointment_type, status, is_trial, is_recovery, is_lesson_zero, user_id=None):
     """
     Aggiorna un appuntamento esistente nel database.
     """
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
+        
+        # Recupera i dettagli dell'appuntamento prima della modifica
+        cursor.execute('''
+            SELECT a.*, c.nome || ' ' || c.cognome AS client_name
+            FROM appointments a
+            JOIN clienti c ON a.client_id = c.id
+            WHERE a.id = %s
+        ''', (appointment_id,))
+        row = cursor.fetchone()
+        old_appointment = None
+        if row:
+            columns = [desc[0] for desc in cursor.description]
+            old_appointment = dict(zip(columns, row))
+        
+        # Aggiorna l'appuntamento
         cursor.execute('''
         UPDATE appointments
         SET title = %s,
@@ -2772,6 +2801,46 @@ def update_appointment(appointment_id, title, client_id, notes, date_time, end_d
             is_lesson_zero = %s
         WHERE id = %s
         ''', (title, client_id, notes, date_time, end_date_time, appointment_type, status, is_trial, is_recovery, is_lesson_zero, appointment_id))
+        
+        # Log degli eventi se qualcosa è cambiato e abbiamo user_id
+        if old_appointment and user_id:
+            # Recupera email dell'utente loggato
+            cursor.execute('SELECT email FROM utenti WHERE id = %s', (user_id,))
+            user_row = cursor.fetchone()
+            user_email = user_row[0] if user_row else None
+            
+            if user_email:
+                old_datetime = old_appointment.get('date_time')
+                old_status = old_appointment.get('status', '')
+                new_datetime = datetime.strptime(date_time, '%Y-%m-%dT%H:%M') if isinstance(date_time, str) else date_time
+                client_name = old_appointment.get('client_name', '')
+                
+                # Confronta le date (converti old_datetime se necessario)
+                if isinstance(old_datetime, str):
+                    old_datetime = datetime.strptime(old_datetime, '%Y-%m-%d %H:%M:%S')
+                
+                # Log per spostamento appuntamento
+                if old_datetime != new_datetime:
+                    dettagli = f"Appuntamento con {client_name} spostato da {old_datetime.strftime('%d/%m/%Y %H:%M')} a {new_datetime.strftime('%d/%m/%Y %H:%M')}"
+                    
+                    log_event(
+                        utente_id=user_id,
+                        email=user_email,
+                        azione='spostamento appuntamento',
+                        dettagli=dettagli
+                    )
+                
+                # Log per cambio stato appuntamento
+                if old_status != status:
+                    dettagli = f"Appuntamento con {client_name}: stato cambiato da '{old_status}' a '{status}'"
+                    
+                    log_event(
+                        utente_id=user_id,
+                        email=user_email,
+                        azione='modifica appuntamento',
+                        dettagli=dettagli
+                    )
+        
         conn.commit()
         return True
     except Exception as e:
@@ -3210,3 +3279,47 @@ def get_nome_sede_by_id(sede_id):
     row = cursor.fetchone()
     conn.close()
     return row[0] if row else None
+
+def get_eventi_segreteria(sedi_ids):
+    """
+    Restituisce eventi relativi a cambiamenti appuntamenti e entrate/uscite trainer per le sedi indicate.
+    """
+    if not sedi_ids:
+        return []
+    
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        placeholders = ','.join(['%s'] * len(sedi_ids))
+        
+        # Query per ottenere eventi di trainer (entra/esci) e appuntamenti (spostamento/modifica)
+        # che appartengono alle sedi gestite dall'area manager
+        query = f'''
+            SELECT DISTINCT e.*, u.nome, u.cognome
+            FROM eventi e
+            LEFT JOIN utenti u ON e.utente_id = u.id
+            LEFT JOIN trainer t ON u.email = t.email
+            LEFT JOIN appointments a ON e.utente_id = a.created_by
+            LEFT JOIN clienti c ON a.client_id = c.id
+            WHERE (
+                -- Eventi trainer: entra/esci
+                (e.azione IN ('entra', 'esci') AND t.sede_id IN ({placeholders}))
+                OR
+                -- Eventi appuntamenti: spostamento/modifica
+                (e.azione IN ('spostamento appuntamento', 'modifica appuntamento') AND c.sede_id IN ({placeholders}))
+            )
+            ORDER BY e.data_evento DESC
+            LIMIT 100
+        '''
+        
+        # Parametri duplicati per le due condizioni WHERE
+        params = sedi_ids + sedi_ids
+        cursor.execute(query, params)
+        
+        rows = cursor.fetchall()
+        columns = [desc[0] for desc in cursor.description]
+        eventi = [dict(zip(columns, row)) for row in rows]
+        return eventi
+        
+    finally:
+        conn.close()

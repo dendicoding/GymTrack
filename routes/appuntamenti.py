@@ -120,6 +120,8 @@ def add_appointment():
                     )
                 current_date += timedelta(days=1)
             flash('Appuntamenti ripetuti creati con successo!', 'success')
+            return redirect(url_for('appuntamenti.trainer_calendar', start_date=date_time.strftime('%Y-%m-%d')))
+
         else:
             # Salva l'appuntamento singolo nel database
             appointment_id = db.add_appointment(
@@ -204,7 +206,8 @@ def edit_appointment(appointment_id):
             status=request.form.get('status'),
             is_trial=bool(request.form.get('is_trial')),
             is_recovery=bool(request.form.get('is_recovery')),
-            is_lesson_zero=bool(request.form.get('is_lesson_zero'))
+            is_lesson_zero=bool(request.form.get('is_lesson_zero')),
+            user_id=session.get('user_id')
         )
         
         flash('Appuntamento aggiornato con successo', 'success')
@@ -224,9 +227,6 @@ def edit_appointment(appointment_id):
 def delete_appointment(appointment_id):
     print("CSRF Token ricevuto:", request.headers.get('X-CSRFToken'))
 
-    if session.get('user_role') != 'trainer':
-        flash('Non hai i permessi per eliminare questo appuntamento.', 'error')
-        return redirect(url_for('appuntamenti.trainer_calendar'))
 
     appointment = db.get_appointment_by_id(appointment_id)
     print(appointment)

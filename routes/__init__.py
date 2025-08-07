@@ -10,6 +10,7 @@ from .gerarchie import gerarchie_bp
 from .statistiche import stats_bp
 from .utils import utils_bp
 from .auth import auth_bp
+from .segreteria import segreteria_bp
 #from .calendario import calendario_bp
 #from .statistiche import statistiche_bp
 # ... altri blueprint
@@ -25,5 +26,6 @@ blueprints = [
     gerarchie_bp,
     stats_bp,
     utils_bp,
-    auth_bp
+    auth_bp,
+    segreteria_bp
 ]
