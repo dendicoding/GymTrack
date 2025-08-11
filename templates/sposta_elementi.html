@@ -1,0 +1,318 @@
+{% extends "base.html" %}
+
+{% block title %}Sposta Elementi Gerarchia - Gestionale Palestra{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="display-5">
+            <i class="fas fa-exchange-alt me-2"></i>Sposta Elementi Gerarchia
+        </h1>
+        <a href="{{ url_for('gerarchie.hierarchy') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Torna alla Gerarchia
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Sposta Società</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('gerarchie.sposta_societa') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="mb-3">
+                            <label for="societa_id" class="form-label">Seleziona Società</label>
+                            <select name="societa_id" id="societa_id" class="form-select" required>
+                                <option value="">-- Seleziona Società --</option>
+                                {% for am in hierarchy[0].area_managers %}
+                                    {% for societa in am.societa %}
+                                        <option value="{{ societa.id }}">{{ societa.nome }} ({{ am.nome }} {{ am.cognome }})</option>
+                                    {% endfor %}
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="nuovo_area_manager" class="form-label">Nuovo Area Manager</label>
+                            <select name="nuovo_area_manager" id="nuovo_area_manager" class="form-select" required>
+                                <option value="">-- Seleziona Area Manager --</option>
+                                {% for am in hierarchy[0].area_managers %}
+                                    <option value="{{ am.id }}">{{ am.nome }} {{ am.cognome }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Sposta Società</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">Sposta Sede</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('gerarchie.sposta_sede') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="mb-3">
+                            <label for="sede_id" class="form-label">Seleziona Sede</label>
+                            <select name="sede_id" id="sede_id" class="form-select" required>
+                                <option value="">-- Seleziona Sede --</option>
+                                {% for am in hierarchy[0].area_managers %}
+                                    {% for societa in am.societa %}
+                                        {% for sede in societa.sedi %}
+                                            <option value="{{ sede.id }}">{{ sede.nome }} ({{ societa.nome }})</option>
+                                        {% endfor %}
+                                    {% endfor %}
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="nuova_societa" class="form-label">Nuova Società</label>
+                            <select name="nuova_societa" id="nuova_societa" class="form-select" required>
+                                <option value="">-- Seleziona Società --</option>
+                                {% for am in hierarchy[0].area_managers %}
+                                    {% for societa in am.societa %}
+                                        <option value="{{ societa.id }}">{{ societa.nome }} ({{ am.nome }} {{ am.cognome }})</option>
+                                    {% endfor %}
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-success">Sposta Sede</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">Sposta Trainer</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('gerarchie.sposta_trainer') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="mb-3">
+                            <label for="trainer_id" class="form-label">Seleziona Trainer</label>
+                            <select name="trainer_id" id="trainer_id" class="form-select" required>
+                                <option value="">-- Seleziona Trainer --</option>
+                                {% for am in hierarchy[0].area_managers %}
+                                    {% for societa in am.societa %}
+                                        {% for sede in societa.sedi %}
+                                            {% for trainer in sede.trainers %}
+                                                <option value="{{ trainer.id }}">{{ trainer.nome }} {{ trainer.cognome }} ({{ sede.nome }})</option>
+                                            {% endfor %}
+                                        {% endfor %}
+                                    {% endfor %}
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="nuova_sede" class="form-label">Nuova Sede</label>
+                            <select name="nuova_sede" id="nuova_sede" class="form-select" required>
+                                <option value="">-- Seleziona Sede --</option>
+                                {% for am in hierarchy[0].area_managers %}
+                                    {% for societa in am.societa %}
+                                        {% for sede in societa.sedi %}
+                                            <option value="{{ sede.id }}">{{ sede.nome }} ({{ societa.nome }})</option>
+                                        {% endfor %}
+                                    {% endfor %}
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-warning">Sposta Trainer</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabella riassuntiva spostamenti recenti -->
+    <div class="card">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0">Spostamenti Recenti</h5>
+        </div>
+        <div class="card-body">
+            {% if spostamenti_recenti %}
+                <div class="table-responsive">
+                    <table class="table table-striped" id="spostamentiTable">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Tipo</th>
+                                <th>Elemento</th>
+                                <th>Da</th>
+                                <th>A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for spostamento in spostamenti_recenti %}
+                            <tr>
+                                <td>{{ spostamento.data_evento.strftime('%d/%m/%Y %H:%M') }}</td>
+                                <td>
+                                    <span class="badge bg-secondary">{{ spostamento.azione }}</span>
+                                </td>
+                                <td>{{ spostamento.elemento_nome }}</td>
+                                <td>{{ spostamento.origine }}</td>
+                                <td>{{ spostamento.destinazione }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Controlli paginazione -->
+                <div class="d-flex justify-content-between align-items-center mt-3">
+                    <div>
+                        <span id="pageInfo" class="text-muted"></span>
+                    </div>
+                    <div>
+                        <nav aria-label="Paginazione spostamenti">
+                            <ul class="pagination pagination-sm mb-0" id="paginationControls">
+                                <!-- I controlli verranno generati dinamicamente -->
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
+            {% else %}
+                <p class="text-muted">Nessun spostamento effettuato recentemente.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const table = document.getElementById('spostamentiTable');
+    if (table) {
+        const tbody = table.querySelector('tbody');
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        const rowsPerPage = 5;
+        let currentPage = 1;
+        const totalPages = Math.ceil(rows.length / rowsPerPage);
+
+        function showPage(page) {
+            // Nascondi tutte le righe
+            rows.forEach(row => row.style.display = 'none');
+            
+            // Mostra solo le righe della pagina corrente
+            const start = (page - 1) * rowsPerPage;
+            const end = start + rowsPerPage;
+            const pageRows = rows.slice(start, end);
+            
+            pageRows.forEach(row => row.style.display = '');
+            
+            // Aggiorna info pagina
+            const pageInfo = document.getElementById('pageInfo');
+            const startItem = rows.length === 0 ? 0 : start + 1;
+            const endItem = Math.min(end, rows.length);
+            pageInfo.textContent = `Mostrando ${startItem}-${endItem} di ${rows.length} elementi`;
+            
+            // Aggiorna controlli paginazione
+            updatePaginationControls(page);
+        }
+
+        function updatePaginationControls(currentPage) {
+            const paginationControls = document.getElementById('paginationControls');
+            paginationControls.innerHTML = '';
+
+            // Bottone Precedente
+            const prevLi = document.createElement('li');
+            prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+            const prevLink = document.createElement('a');
+            prevLink.className = 'page-link';
+            prevLink.href = '#';
+            prevLink.innerHTML = '&laquo;';
+            prevLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (currentPage > 1) {
+                    showPage(currentPage - 1);
+                    window.currentPage = currentPage - 1;
+                }
+            });
+            prevLi.appendChild(prevLink);
+            paginationControls.appendChild(prevLi);
+
+            // Numeri delle pagine
+            const maxVisiblePages = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+            let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+            if (endPage - startPage + 1 < maxVisiblePages) {
+                startPage = Math.max(1, endPage - maxVisiblePages + 1);
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                const pageLi = document.createElement('li');
+                pageLi.className = `page-item ${i === currentPage ? 'active' : ''}`;
+                const pageLink = document.createElement('a');
+                pageLink.className = 'page-link';
+                pageLink.href = '#';
+                pageLink.textContent = i;
+                pageLink.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    showPage(i);
+                    window.currentPage = i;
+                });
+                pageLi.appendChild(pageLink);
+                paginationControls.appendChild(pageLi);
+            }
+
+            // Bottone Successivo
+            const nextLi = document.createElement('li');
+            nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+            const nextLink = document.createElement('a');
+            nextLink.className = 'page-link';
+            nextLink.href = '#';
+            nextLink.innerHTML = '&raquo;';
+            nextLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (currentPage < totalPages) {
+                    showPage(currentPage + 1);
+                    window.currentPage = currentPage + 1;
+                }
+            });
+            nextLi.appendChild(nextLink);
+            paginationControls.appendChild(nextLi);
+        }
+
+        // Inizializza la paginazione
+        if (rows.length > 0) {
+            window.currentPage = currentPage;
+            showPage(currentPage);
+        } else {
+            document.getElementById('pageInfo').textContent = 'Nessun elemento da mostrare';
+        }
+    }
+});
+</script>
+
+{% endblock %}
+{% block extra_css %}
+<style>
+    .card {
+        transition: transform 0.2s ease;
+    }
+    .card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .form-select {
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+    }
+    .form-select:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+    }
+    .badge {
+        font-size: 0.8em;
+    }
+    .table th {
+        border-top: none;
+        font-weight: 600;
+        color: #495057;
+    }
+</style>
+{% endblock %}

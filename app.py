@@ -152,16 +152,42 @@ def index():
         nome_sede_corrente=nome_sede_corrente
     )
 
+@app.context_processor
+def inject_session_data():
+    """Make session data available in all templates"""
+    societa_id = session.get('societa_id')
+    sede_id = session.get('sede_id')
+    
+    return dict(
+        nome_societa_corrente=db.get_nome_societa_by_id(societa_id) if societa_id else None,
+        nome_sede_corrente=db.get_nome_sede_by_id(sede_id) if sede_id else None,
+        selected_societa_id=str(societa_id) if societa_id else '',
+        selected_sede_id=str(sede_id) if sede_id else ''
+    )
 
 @app.context_processor
 def inject_societa_sede_names():
-    societa_id = session.get('societa_id')
-    sede_id = session.get('sede_id')
-    nome_societa_corrente = db.get_nome_societa_by_id(societa_id) if societa_id else None
-    nome_sede_corrente = db.get_nome_sede_by_id(sede_id) if sede_id else None
+    def get_societa_name(societa_id):
+        return db.get_nome_societa_by_id(societa_id)
+    
+    def get_sede_name(sede_id):
+        return db.get_nome_sede_by_id(sede_id)
+    
+    def get_sedi_aggiuntive_trainer(trainer_id, sede_principale_id):
+        return db.get_sedi_aggiuntive_trainer(trainer_id, sede_principale_id)
+    
+    def get_all_trainers_for_sede(sede_id):
+        return db.get_all_trainers_for_sede(sede_id)
+    
+    def get_sede_by_trainer_email(email):
+        return db.get_sede_by_trainer_email(email)
+    
     return dict(
-        nome_societa_corrente=nome_societa_corrente,
-        nome_sede_corrente=nome_sede_corrente
+        get_societa_name=get_societa_name,
+        get_sede_name=get_sede_name,
+        get_sedi_aggiuntive_trainer=get_sedi_aggiuntive_trainer,
+        get_all_trainers_for_sede=get_all_trainers_for_sede,
+        get_sede_by_trainer_email=get_sede_by_trainer_email
     )
 
 @app.route('/eventi')

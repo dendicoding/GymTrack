@@ -41,11 +41,11 @@
                 <label for="filter-date-to" class="form-label mb-0">Scadenza a</label>
                 <input type="date" id="filter-date-to" class="form-control" autocomplete="off">
             </div>
-            
         </div>
+        
         {% if rate %}
             <div class="table-responsive">
-                <table class="table table-hover">
+                <table class="table table-hover" id="scadenziario-table">
                     <thead>
                         <tr>
                             <th>Scadenza</th>
@@ -60,24 +60,24 @@
                             <th>Sede</th>
                             <th>
                                 Pacchetto
-                                <span class="filter-icon" data-col="2" style="cursor:pointer;">
-                                    <i class="fas fa-filter"></i>
-                                </span>
-                                <input type="text" class="filter-input form-control form-control-sm mt-1" data-col="2" style="display:none; width: 120px;" placeholder="Filtra...">
-                            </th>
-                            <th>
-                                Importo
-                                <span class="filter-icon" data-col="3" style="cursor:pointer;">
-                                    <i class="fas fa-filter"></i>
-                                </span>
-                                <input type="text" class="filter-input form-control form-control-sm mt-1" data-col="3" style="display:none; width: 90px;" placeholder="Filtra...">
-                            </th>
-                            <th>
-                                Stato
                                 <span class="filter-icon" data-col="4" style="cursor:pointer;">
                                     <i class="fas fa-filter"></i>
                                 </span>
-                                <input type="text" class="filter-input form-control form-control-sm mt-1" data-col="4" style="display:none; width: 90px;" placeholder="Filtra...">
+                                <input type="text" class="filter-input form-control form-control-sm mt-1" data-col="4" style="display:none; width: 120px;" placeholder="Filtra...">
+                            </th>
+                            <th>
+                                Importo
+                                <span class="filter-icon" data-col="5" style="cursor:pointer;">
+                                    <i class="fas fa-filter"></i>
+                                </span>
+                                <input type="text" class="filter-input form-control form-control-sm mt-1" data-col="5" style="display:none; width: 90px;" placeholder="Filtra...">
+                            </th>
+                            <th>
+                                Stato
+                                <span class="filter-icon" data-col="6" style="cursor:pointer;">
+                                    <i class="fas fa-filter"></i>
+                                </span>
+                                <input type="text" class="filter-input form-control form-control-sm mt-1" data-col="6" style="display:none; width: 90px;" placeholder="Filtra...">
                             </th>
                             <th>Azioni</th>
                         </tr>
@@ -116,9 +116,20 @@
                         {% endfor %}
                     </tbody>
                 </table>
-                <nav>
-                    <ul class="pagination justify-content-center" id="pagination-scadenziario"></ul>
-                </nav>
+                
+                <!-- Controlli paginazione -->
+                <div class="d-flex justify-content-between align-items-center mt-3">
+                    <div>
+                        <span id="pageInfo" class="text-muted"></span>
+                    </div>
+                    <div>
+                        <nav aria-label="Paginazione scadenziario">
+                            <ul class="pagination pagination-sm mb-0" id="paginationControls">
+                                <!-- I controlli verranno generati dinamicamente -->
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
             </div>
         {% else %}
             <div class="alert alert-info">
@@ -127,8 +138,116 @@
         {% endif %}
     </div>
 </div>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    const table = document.getElementById('scadenziario-table');
+    if (!table) return;
+    
+    const tbody = table.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    const rowsPerPage = 10;
+    let currentPage = 1;
+
+    function getVisibleRows() {
+        // Solo le righe che non sono state filtrate (non hanno la classe filtered-out)
+        return rows.filter(row => !row.classList.contains('filtered-out'));
+    }
+
+    function showPage(page) {
+        const visibleRows = getVisibleRows();
+        const totalPages = Math.ceil(visibleRows.length / rowsPerPage);
+        
+        // Nascondi TUTTE le righe prima
+        rows.forEach(row => {
+            row.style.display = 'none';
+        });
+        
+        // Mostra solo le righe della pagina corrente che non sono filtrate
+        const start = (page - 1) * rowsPerPage;
+        const end = start + rowsPerPage;
+        const pageRows = visibleRows.slice(start, end);
+        
+        pageRows.forEach(row => {
+            row.style.display = '';
+        });
+        
+        // Aggiorna info pagina
+        const pageInfo = document.getElementById('pageInfo');
+        const startItem = visibleRows.length === 0 ? 0 : start + 1;
+        const endItem = Math.min(end, visibleRows.length);
+        pageInfo.textContent = `Mostrando ${startItem}-${endItem} di ${visibleRows.length} elementi`;
+        
+        // Aggiorna controlli paginazione
+        updatePaginationControls(page, totalPages);
+    }
+
+    function updatePaginationControls(currentPage, totalPages) {
+        const paginationControls = document.getElementById('paginationControls');
+        paginationControls.innerHTML = '';
+
+        if (totalPages <= 1) return;
+
+        // Bottone Precedente
+        const prevLi = document.createElement('li');
+        prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+        const prevLink = document.createElement('a');
+        prevLink.className = 'page-link';
+        prevLink.href = '#';
+        prevLink.innerHTML = '&laquo;';
+        prevLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (currentPage > 1) {
+                window.currentPage = currentPage - 1;
+                showPage(window.currentPage);
+            }
+        });
+        prevLi.appendChild(prevLink);
+        paginationControls.appendChild(prevLi);
+
+        // Numeri delle pagine
+        const maxVisiblePages = 5;
+        let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+        let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+        if (endPage - startPage + 1 < maxVisiblePages) {
+            startPage = Math.max(1, endPage - maxVisiblePages + 1);
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+            const pageLi = document.createElement('li');
+            pageLi.className = `page-item ${i === currentPage ? 'active' : ''}`;
+            const pageLink = document.createElement('a');
+            pageLink.className = 'page-link';
+            pageLink.href = '#';
+            pageLink.textContent = i;
+            pageLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                window.currentPage = i;
+                showPage(window.currentPage);
+            });
+            pageLi.appendChild(pageLink);
+            paginationControls.appendChild(pageLi);
+        }
+
+        // Bottone Successivo
+        const nextLi = document.createElement('li');
+        nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+        const nextLink = document.createElement('a');
+        nextLink.className = 'page-link';
+        nextLink.href = '#';
+        nextLink.innerHTML = '&raquo;';
+        nextLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (currentPage < totalPages) {
+                window.currentPage = currentPage + 1;
+                showPage(window.currentPage);
+            }
+        });
+        nextLi.appendChild(nextLink);
+        paginationControls.appendChild(nextLi);
+    }
+
     // Mostra/nasconde il filtro input quando si clicca sull'icona
     document.querySelectorAll('.filter-icon').forEach(function(icon) {
         icon.addEventListener('click', function(e) {
@@ -141,9 +260,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Funzione di filtro per colonna
     function filterTable() {
-        const table = document.querySelector('.table');
-        const rows = table.querySelectorAll('tbody tr');
-        // Prendi i valori dei filtri attivi
         const filters = {};
         document.querySelectorAll('.filter-input').forEach(function(input) {
             if (input.value.trim() !== '') {
@@ -155,7 +271,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const cells = row.querySelectorAll('td');
             let show = true;
             for (const col in filters) {
-                const cellText = cells[col].textContent.toLowerCase();
+                const cellText = cells[col] ? cells[col].textContent.toLowerCase() : '';
                 if (!cellText.includes(filters[col])) {
                     show = false;
                     break;
@@ -167,6 +283,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 row.classList.add('filtered-out');
             }
         });
+
+        // Reset alla prima pagina dopo il filtro
+        window.currentPage = 1;
+        showPage(window.currentPage);
     }
 
     // Attiva il filtro su input
@@ -174,102 +294,57 @@ document.addEventListener('DOMContentLoaded', function() {
         input.addEventListener('input', filterTable);
     });
 
-    // Mantieni anche il filtro per data se già presente
+    // Filtro per data
     const dateFromInput = document.getElementById('filter-date-from');
     const dateToInput = document.getElementById('filter-date-to');
-    if (dateFromInput && dateToInput) {
-        function filterByDate() {
-            const table = document.querySelector('.table');
-            const rows = table.querySelectorAll('tbody tr');
-            const dateFrom = dateFromInput.value;
-            const dateTo = dateToInput.value;
-            rows.forEach(row => {
-                const cells = row.querySelectorAll('td');
-                const scadenza = cells[0].textContent.trim().split('/').reverse().join('-');
-                let show = true;
+    
+    function filterByDate() {
+        const dateFrom = dateFromInput.value;
+        const dateTo = dateToInput.value;
+        
+        rows.forEach(row => {
+            const cells = row.querySelectorAll('td');
+            const scadenzaText = cells[0].textContent.trim();
+            let show = true;
+            
+            // Converti la data dal formato DD/MM/YYYY a YYYY-MM-DD per il confronto
+            const dateParts = scadenzaText.split('/');
+            if (dateParts.length === 3) {
+                const scadenza = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;
+                
                 if (dateFrom && scadenza < dateFrom) show = false;
                 if (dateTo && scadenza > dateTo) show = false;
-                if (!show) {
-                    row.style.display = 'none';
-                }
-            });
-        }
+            }
+            
+            if (show) {
+                row.classList.remove('filtered-out');
+            } else {
+                row.classList.add('filtered-out');
+            }
+        });
+
+        // Reset alla prima pagina dopo il filtro
+        window.currentPage = 1;
+        showPage(window.currentPage);
+    }
+    
+    if (dateFromInput && dateToInput) {
         dateFromInput.addEventListener('change', filterByDate);
         dateToInput.addEventListener('change', filterByDate);
     }
-});
-document.addEventListener('DOMContentLoaded', function() {
-    const table = document.querySelector('.table');
-    const rows = table.querySelectorAll('tbody tr');
-    const rowsPerPage = 10;
-    let currentPage = 1;
-
-    function getVisibleRows() {
-        return Array.from(rows).filter(row => !row.classList.contains('filtered-out'));
-    }
-
-    function showPage(page) {
-        const visibleRows = getVisibleRows();
-        const start = (page - 1) * rowsPerPage;
-        const end = start + rowsPerPage;
-        let count = 0;
-        for (let i = 0; i < rows.length; i++) {
-            if (!rows[i].classList.contains('filtered-out')) {
-                if (count >= start && count < end) {
-                    rows[i].style.display = '';
-                } else {
-                    rows[i].style.display = 'none';
-                }
-                count++;
-            } else {
-                rows[i].style.display = 'none';
-            }
-        }
-    }
-
-    function createPaginationControls() {
-        const visibleRows = getVisibleRows();
-        const totalPages = Math.ceil(visibleRows.length / rowsPerPage);
-        const pagination = document.getElementById('pagination-scadenziario');
-        pagination.innerHTML = '';
-        if (totalPages > 1) {
-            for (let i = 1; i <= totalPages; i++) {
-                const li = document.createElement('li');
-                li.className = 'page-item' + (i === currentPage ? ' active' : '');
-                const a = document.createElement('a');
-                a.className = 'page-link';
-                a.href = '#';
-                a.textContent = i;
-                a.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    currentPage = i;
-                    showPage(currentPage);
-                    createPaginationControls();
-                });
-                li.appendChild(a);
-                pagination.appendChild(li);
-            }
-        }
-    }
 
     // Inizializza paginazione
-    showPage(currentPage);
-    createPaginationControls();
-
-    // Aggiorna paginazione dopo ogni filtro
-    document.querySelectorAll('.filter-input, #filter-date-from, #filter-date-to').forEach(function(input) {
-        input.addEventListener('input', function() {
-            currentPage = 1;
-            showPage(currentPage);
-            createPaginationControls();
-        });
-        input.addEventListener('change', function() {
-            currentPage = 1;
-            showPage(currentPage);
-            createPaginationControls();
-        });
-    });
+    window.currentPage = currentPage;
+    if (rows.length > 0) {
+        showPage(window.currentPage);
+    } else {
+        const pageInfo = document.getElementById('pageInfo');
+        if (pageInfo) {
+            pageInfo.textContent = 'Nessun elemento da mostrare';
+        }
+    }
 });
+
 document.addEventListener('DOMContentLoaded', function() {
     var societaSelect = document.getElementById('societa_id');
     var sedeSelect = document.getElementById('sede_id');
@@ -282,4 +357,27 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+
+{% block extra_css %}
+<style>
+    .pagination .page-link {
+        color: #0d6efd;
+        border-color: #dee2e6;
+    }
+    .pagination .page-item.active .page-link {
+        background-color: #0d6efd;
+        border-color: #0d6efd;
+    }
+    .pagination .page-link:hover {
+        color: #0a58ca;
+        background-color: #e9ecef;
+        border-color: #dee2e6;
+    }
+    .pagination .page-item.disabled .page-link {
+        color: #6c757d;
+        background-color: #fff;
+        border-color: #dee2e6;
+    }
+</style>
+{% endblock %}
 {% endblock %}

@@ -194,7 +194,19 @@
                     {% endif %}
                 </tbody>
             </table>
-            <div id="paginationControls" class="mt-3 d-flex justify-content-center"></div>
+            <!-- Controlli paginazione -->
+            <div class="d-flex justify-content-between align-items-center mt-3">
+                <div>
+                    <span id="pageInfo" class="text-muted"></span>
+                </div>
+                <div>
+                    <nav aria-label="Paginazione clienti">
+                        <ul class="pagination pagination-sm mb-0" id="paginationControls">
+                            <!-- I controlli verranno generati dinamicamente -->
+                        </ul>
+                    </nav>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -205,60 +217,105 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const table = document.getElementById('clienti-table');
-        const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+        const tbody = table.querySelector('tbody');
+        const rows = Array.from(tbody.querySelectorAll('tr'));
         const rowsPerPage = 10;
-        const paginationControls = document.getElementById('paginationControls');
         let currentPage = 1;
+        let filteredRows = rows;
 
         function getVisibleRows() {
             // Solo le righe non filtrate
-            return Array.from(rows).filter(row => row.style.display !== 'none');
+            return rows.filter(row => row.style.display !== 'none');
         }
 
         function showPage(page) {
             const visibleRows = getVisibleRows();
+            const totalPages = Math.ceil(visibleRows.length / rowsPerPage);
+            
+            // Nascondi tutte le righe
+            rows.forEach(row => row.style.display = 'none');
+            
+            // Mostra solo le righe della pagina corrente
             const start = (page - 1) * rowsPerPage;
             const end = start + rowsPerPage;
-
-            let count = 0;
-            for (let i = 0; i < rows.length; i++) {
-                if (rows[i].style.display !== 'none') {
-                    if (count >= start && count < end) {
-                        rows[i].style.display = '';
-                    } else {
-                        rows[i].style.display = 'none';
-                    }
-                    count++;
-                } else {
-                    rows[i].style.display = 'none';
-                }
-            }
+            const pageRows = visibleRows.slice(start, end);
+            
+            pageRows.forEach(row => row.style.display = '');
+            
+            // Aggiorna info pagina
+            const pageInfo = document.getElementById('pageInfo');
+            const startItem = visibleRows.length === 0 ? 0 : start + 1;
+            const endItem = Math.min(end, visibleRows.length);
+            pageInfo.textContent = `Mostrando ${startItem}-${endItem} di ${visibleRows.length} elementi`;
+            
+            // Aggiorna controlli paginazione
+            updatePaginationControls(page, totalPages);
         }
 
-        function createPaginationControls() {
-            const visibleRows = getVisibleRows();
-            const totalPages = Math.ceil(visibleRows.length / rowsPerPage);
+        function updatePaginationControls(currentPage, totalPages) {
+            const paginationControls = document.getElementById('paginationControls');
             paginationControls.innerHTML = '';
 
-            if (totalPages > 1) {
-                for (let i = 1; i <= totalPages; i++) {
-                    const button = document.createElement('button');
-                    button.className = 'btn btn-sm btn-primary mx-1';
-                    button.textContent = i;
+            if (totalPages <= 1) return;
 
-                    if (i === currentPage) {
-                        button.classList.add('active');
-                    }
-
-                    button.addEventListener('click', function () {
-                        currentPage = i;
-                        showPage(currentPage);
-                        createPaginationControls();
-                    });
-
-                    paginationControls.appendChild(button);
+            // Bottone Precedente
+            const prevLi = document.createElement('li');
+            prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+            const prevLink = document.createElement('a');
+            prevLink.className = 'page-link';
+            prevLink.href = '#';
+            prevLink.innerHTML = '&laquo;';
+            prevLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (currentPage > 1) {
+                    window.currentPage = currentPage - 1;
+                    showPage(window.currentPage);
                 }
+            });
+            prevLi.appendChild(prevLink);
+            paginationControls.appendChild(prevLi);
+
+            // Numeri delle pagine
+            const maxVisiblePages = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+            let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+            if (endPage - startPage + 1 < maxVisiblePages) {
+                startPage = Math.max(1, endPage - maxVisiblePages + 1);
             }
+
+            for (let i = startPage; i <= endPage; i++) {
+                const pageLi = document.createElement('li');
+                pageLi.className = `page-item ${i === currentPage ? 'active' : ''}`;
+                const pageLink = document.createElement('a');
+                pageLink.className = 'page-link';
+                pageLink.href = '#';
+                pageLink.textContent = i;
+                pageLink.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    window.currentPage = i;
+                    showPage(window.currentPage);
+                });
+                pageLi.appendChild(pageLink);
+                paginationControls.appendChild(pageLi);
+            }
+
+            // Bottone Successivo
+            const nextLi = document.createElement('li');
+            nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+            const nextLink = document.createElement('a');
+            nextLink.className = 'page-link';
+            nextLink.href = '#';
+            nextLink.innerHTML = '&raquo;';
+            nextLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (currentPage < totalPages) {
+                    window.currentPage = currentPage + 1;
+                    showPage(window.currentPage);
+                }
+            });
+            nextLi.appendChild(nextLink);
+            paginationControls.appendChild(nextLi);
         }
 
         // Filtri per colonna
@@ -299,8 +356,12 @@
         });
 
         // Inizializza paginazione
-        showPage(currentPage);
-        createPaginationControls();
+        window.currentPage = currentPage;
+        if (rows.length > 0) {
+            showPage(window.currentPage);
+        } else {
+            document.getElementById('pageInfo').textContent = 'Nessun elemento da mostrare';
+        }
     });
     document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('clienti-filter-form');

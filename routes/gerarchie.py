@@ -229,8 +229,15 @@ def add_trainer():
         email = request.form['email']
         password = request.form['password']
         sede_id = request.form['sede_id']  # Assuming you have a way to get the sede_id
+         # Gestisci multi-sede
+        multi_sede = request.form.get('multi_sede')
+        sedi_aggiuntive = []
+        if multi_sede:
+            sedi_agg_form = request.form.getlist('sedi_aggiuntive')
+            sedi_aggiuntive = [int(sid) for sid in sedi_agg_form if sid != sede_id]
         
-        trainer_id = db.register_trainer(sede_id, nome, cognome, email, password)
+        trainer_id = db.register_trainer(sede_id, nome, cognome, email, password, sedi_aggiuntive)
+        
         if trainer_id:
             flash('Trainer aggiunto con successo!', 'success')
             return redirect(url_for('gerarchie.hierarchy'))  # Redirect to the hierarchy management page
@@ -240,17 +247,66 @@ def add_trainer():
     # Render the form for adding a trainer
     return render_template('auth/add_trainer.html')  # Create this template for the form
 
-
-@gerarchie_bp.route('/update-trainer/<int:trainer_id>', methods=['POST'])
+@gerarchie_bp.route('/update_trainer/<int:trainer_id>', methods=['POST'])
 @login_required
 def update_trainer_route(trainer_id):
     nome = request.form['nome']
     cognome = request.form['cognome']
     email = request.form['email']
     password = request.form['password']
-    db.update_trainer(trainer_id, nome, cognome, email, password)
-    flash('Trainer updated successfully!', 'success')
-    return redirect(url_for('gerarchie.hierarchy'))  # Redirect to the hierarchy management page
+    
+    try:
+        print(f"Aggiornamento trainer {trainer_id}: nome={nome}, email={email}")
+        
+        # Aggiorna i dati del trainer
+        success = db.update_trainer(trainer_id, nome, cognome, email, password)
+        print(f"Update trainer result: {success}")
+        
+        if success:
+            # Recupera la sede principale del trainer
+            trainer = db.get_trainer_by_id(trainer_id)
+            print(f"Trainer recuperato: {trainer}")
+            
+            if trainer:
+                sede_principale = trainer['sede_id']
+                print(f"Sede principale: {sede_principale}")
+                
+                # Gestisci multi-sede
+                multi_sede = request.form.get('multi_sede')
+                print(f"Multi sede checkbox: {multi_sede}")
+                
+                if multi_sede:
+                    # Se multi-sede è selezionato, aggiungi le sedi aggiuntive
+                    sedi_agg_form = request.form.getlist('sedi_aggiuntive')
+                    print(f"Sedi aggiuntive form: {sedi_agg_form}")
+                    sedi_aggiuntive = [int(sid) for sid in sedi_agg_form if sid != str(sede_principale)]
+                    tutte_sedi = [sede_principale] + sedi_aggiuntive
+                    print(f"Tutte le sedi: {tutte_sedi}")
+                else:
+                    # Se multi-sede non è selezionato, solo sede principale
+                    tutte_sedi = [sede_principale]
+                    print(f"Solo sede principale: {tutte_sedi}")
+                
+                # Aggiorna le sedi associate
+                sedi_success = db.set_trainer_sedi(trainer_id, tutte_sedi)
+                print(f"Set trainer sedi result: {sedi_success}")
+                
+                if sedi_success:
+                    flash('Trainer aggiornato con successo!', 'success')
+                else:
+                    flash('Errore durante l\'aggiornamento delle sedi del trainer.', 'error')
+            else:
+                flash('Errore: trainer non trovato.', 'error')
+        else:
+            flash('Errore durante l\'aggiornamento del trainer.', 'error')
+            
+    except Exception as e:
+        print(f"Errore in update_trainer_route: {e}")
+        import traceback
+        traceback.print_exc()
+        flash('Errore durante l\'aggiornamento del trainer.', 'error')
+    
+    return redirect(url_for('gerarchie.hierarchy'))
 
 @gerarchie_bp.route('/delete-trainer/<int:trainer_id>', methods=['POST'])
 @login_required
@@ -258,3 +314,119 @@ def delete_trainer_route(trainer_id):
     db.delete_trainer(trainer_id)
     flash('Trainer deleted successfully!', 'success')
     return redirect(url_for('gerarchie.hierarchy'))  # Redirect to the hierarchy management page
+
+
+@gerarchie_bp.route('/sposta-elementi')
+@login_required
+def sposta_elementi():
+    if session.get('user_role') != 'franchisor':
+        flash('Solo il franchisor può spostare elementi nella gerarchia', 'error')
+        return redirect(url_for('gerarchie.hierarchy'))
+    
+    user_role = session.get('user_role')
+    user_email = session.get('user_email')
+    user_hierarchy = db.build_hierarchy(user_role=user_role, user_email=user_email)
+    
+    # Recupera gli spostamenti recenti
+    spostamenti_recenti = db.get_spostamenti_recenti()
+    
+    return render_template('sposta_elementi.html', 
+                         hierarchy=user_hierarchy, 
+                         spostamenti_recenti=spostamenti_recenti)
+
+@gerarchie_bp.route('/sposta-societa', methods=['POST'])
+@login_required
+def sposta_societa():
+    if session.get('user_role') != 'franchisor':
+        abort(403)
+    
+    societa_id = request.form['societa_id']
+    nuovo_area_manager_id = request.form['nuovo_area_manager']
+    
+    # IMPORTANTE: Recupera i dati PRIMA dello spostamento
+    societa = db.get_societa_by_id(societa_id)
+    area_manager_old = db.get_area_manager_by_societa_id(societa_id)  # Area manager attuale
+    area_manager_new = db.get_area_manager_by_id(nuovo_area_manager_id)  # Nuovo area manager
+    
+    success = db.sposta_societa(societa_id, nuovo_area_manager_id)
+    if success:
+        # Log dell'evento con i dati recuperati PRIMA dello spostamento
+        dettagli = f"Società '{societa['nome']}' spostata da '{area_manager_old['nome']} {area_manager_old['cognome']}' a '{area_manager_new['nome']} {area_manager_new['cognome']}'"
+        
+        db.log_event(
+            utente_id=session.get('user_id'),
+            email=session.get('user_email'),
+            azione='sposta società',
+            dettagli=dettagli
+        )
+        
+        flash('Società spostata con successo!', 'success')
+    else:
+        flash('Errore durante lo spostamento della società.', 'error')
+    
+    return redirect(url_for('gerarchie.sposta_elementi'))
+
+@gerarchie_bp.route('/sposta-sede', methods=['POST'])
+@login_required
+def sposta_sede():
+    if session.get('user_role') != 'franchisor':
+        abort(403)
+    
+    sede_id = request.form['sede_id']
+    nuova_societa_id = request.form['nuova_societa']
+    
+    # IMPORTANTE: Recupera i dati PRIMA dello spostamento
+    sede = db.get_sede_by_id(sede_id)
+    societa_old = db.get_societa_by_sede_id(sede_id)  # Società attuale
+    societa_new = db.get_societa_by_id(nuova_societa_id)  # Nuova società
+    
+    success = db.sposta_sede(sede_id, nuova_societa_id)
+    if success:
+        # Log dell'evento con i dati recuperati PRIMA dello spostamento
+        dettagli = f"Sede '{sede['nome']}' spostata da '{societa_old['nome']}' a '{societa_new['nome']}'"
+        
+        db.log_event(
+            utente_id=session.get('user_id'),
+            email=session.get('user_email'),
+            azione='sposta sede',
+            dettagli=dettagli
+        )
+        
+        flash('Sede spostata con successo!', 'success')
+    else:
+        flash('Errore durante lo spostamento della sede.', 'error')
+    
+    return redirect(url_for('gerarchie.sposta_elementi'))
+
+
+@gerarchie_bp.route('/sposta-trainer', methods=['POST'])
+@login_required
+def sposta_trainer():
+    if session.get('user_role') != 'franchisor':
+        abort(403)
+    
+    trainer_id = request.form['trainer_id']
+    nuova_sede_id = request.form['nuova_sede']
+    
+    # IMPORTANTE: Recupera i dati PRIMA dello spostamento
+    trainer = db.get_trainer_by_id(trainer_id)
+    sede_old = db.get_sede_by_trainer_id(trainer_id)  # Sede attuale
+    sede_new = db.get_sede_by_id(nuova_sede_id)  # Nuova sede
+    
+    success = db.sposta_trainer(trainer_id, nuova_sede_id)
+    if success:
+        # Log dell'evento con i dati recuperati PRIMA dello spostamento
+        dettagli = f"Trainer '{trainer['nome']} {trainer['cognome']}' spostato da '{sede_old['nome']}' a '{sede_new['nome']}'"
+        
+        db.log_event(
+            utente_id=session.get('user_id'),
+            email=session.get('user_email'),
+            azione='sposta trainer',
+            dettagli=dettagli
+        )
+        
+        flash('Trainer spostato con successo!', 'success')
+    else:
+        flash('Errore durante lo spostamento del trainer.', 'error')
+    
+    return redirect(url_for('gerarchie.sposta_elementi'))

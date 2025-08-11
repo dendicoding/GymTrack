@@ -4,6 +4,9 @@
 
 {% block content %}
     <h1 class="mt-5">Gerarchia Utenti</h1>
+    <a href="{{ url_for('gerarchie.sposta_elementi') }}" class="btn btn-outline-primary">
+        <i class="fas fa-exchange-alt"></i> Sposta Elementi
+    </a>
     <div class="tree">
         {% include 'hierarchy_partial.html' %}
     </div>

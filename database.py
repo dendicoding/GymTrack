@@ -2037,9 +2037,11 @@ def update_trainer(trainer_id, nome, cognome, email, password):
             ''', (nome, cognome, email, password, old_email))
 
         conn.commit()
+        return True
     except Exception as e:
         print(f"Error updating trainer: {e}")
         conn.rollback()
+        return False
     finally:
         conn.close()
 
@@ -2153,7 +2155,7 @@ def register_sede(societa_id, nome, indirizzo, citta, cap, email, password):
     finally:
         conn.close()
 
-def register_trainer(sede_id, nome, cognome, email, password):
+def register_trainer(sede_id, nome, cognome, email, password, sedi_aggiuntive=None):
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
@@ -2166,7 +2168,22 @@ def register_trainer(sede_id, nome, cognome, email, password):
         trainer_id = cursor.fetchone()[0]
         
         # Create a new user with the provided credentials using the same connection
-        user_created = create_user(cursor, nome, cognome, email, password, 'trainer')  # Pass cursor instead of creating a new connection
+        user_created = create_user(cursor, nome, cognome, email, password, 'trainer')
+        
+        # Se ci sono sedi aggiuntive, gestiscile
+        if sedi_aggiuntive:
+            sedi_ids = [sede_id] + sedi_aggiuntive
+            for sede_agg_id in sedi_ids:
+                cursor.execute(
+                    'INSERT INTO trainer_sedi (trainer_id, sede_id) VALUES (%s, %s)',
+                    (trainer_id, sede_agg_id)
+                )
+        else:
+            # Inserisci solo la sede principale
+            cursor.execute(
+                'INSERT INTO trainer_sedi (trainer_id, sede_id) VALUES (%s, %s)',
+                (trainer_id, sede_id)
+            )
 
         conn.commit()
         return trainer_id if user_created else None
@@ -2200,9 +2217,16 @@ def get_trainer_by_email(email):
     return None
 
 def get_trainers_by_sede(sede_id):
+    """Restituisce tutti i trainer associati a una sede (principale + aggiuntivi)"""
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM trainer WHERE sede_id = %s', (sede_id,))
+    cursor.execute('''
+        SELECT DISTINCT t.id, t.nome, t.cognome, t.email, t.sede_id
+        FROM trainer t
+        LEFT JOIN trainer_sedi ts ON t.id = ts.trainer_id
+        WHERE t.sede_id = %s OR ts.sede_id = %s
+        ORDER BY t.nome, t.cognome
+    ''', (sede_id, sede_id))
     rows = cursor.fetchall()
     columns = [desc[0] for desc in cursor.description]
     trainers = [dict(zip(columns, row)) for row in rows]
@@ -2430,16 +2454,17 @@ def is_trainer_present(trainer_id):
         conn.close()
 
 def get_trainers_with_status(sede_ids):
-    """Fetch trainers and their current status (entered or not) for the given sede_ids."""
+    """Fetch trainers and their current status (entered or not) for the given sede_ids, including additional locations."""
     conn = get_db_connection()
     try:
         placeholders = ','.join(['%s'] * len(sede_ids))
         query = f'''
-            SELECT 
+            SELECT DISTINCT
                 t.id, 
                 t.nome, 
                 t.cognome, 
                 t.email,
+                t.sede_id,
                 COALESCE((
                     SELECT e.azione
                     FROM eventi e
@@ -2448,11 +2473,13 @@ def get_trainers_with_status(sede_ids):
                     LIMIT 1
                 ), 'esci') AS stato
             FROM trainer t
-            WHERE t.sede_id IN ({placeholders})
+            LEFT JOIN trainer_sedi ts ON t.id = ts.trainer_id
+            WHERE t.sede_id IN ({placeholders}) OR ts.sede_id IN ({placeholders})
             ORDER BY t.cognome, t.nome
         '''
         cursor = conn.cursor()
-        cursor.execute(query, sede_ids)
+        # sede_ids viene passato due volte per le due condizioni WHERE
+        cursor.execute(query, sede_ids + sede_ids)
         rows = cursor.fetchall()
         columns = [desc[0] for desc in cursor.description]
         trainers = [dict(zip(columns, row)) for row in rows]
@@ -2764,7 +2791,7 @@ def migrate_appointments_table():
             print(f"Errore durante la migrazione: {e}")
     finally:
         conn.close()
-        
+
 def update_appointment(appointment_id, title, client_id, notes, date_time, end_date_time, appointment_type, status, is_trial, is_recovery, is_lesson_zero, user_id=None):
     """
     Aggiorna un appuntamento esistente nel database.
@@ -3323,3 +3350,298 @@ def get_eventi_segreteria(sedi_ids):
         
     finally:
         conn.close()
+
+def set_trainer_sedi(trainer_id, sedi_ids):
+    """Imposta le sedi associate a un trainer"""
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        # Cancella associazioni precedenti
+        cursor.execute('DELETE FROM trainer_sedi WHERE trainer_id = %s', (trainer_id,))
+        # Inserisci nuove associazioni
+        for sede_id in sedi_ids:
+            cursor.execute(
+                'INSERT INTO trainer_sedi (trainer_id, sede_id) VALUES (%s, %s) ON CONFLICT (trainer_id, sede_id) DO NOTHING',
+                (trainer_id, sede_id)
+            )
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Errore in set_trainer_sedi: {e}")
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
+
+def get_sedi_aggiuntive_trainer(trainer_id, sede_principale_id):
+    """Restituisce la lista delle sedi aggiuntive (oltre la principale) associate a un trainer"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT s.id, s.nome, s.citta
+        FROM trainer_sedi ts
+        JOIN sede s ON ts.sede_id = s.id
+        WHERE ts.trainer_id = %s AND s.id != %s
+    ''', (trainer_id, sede_principale_id))
+    sedi_aggiuntive = [dict(zip(['id', 'nome', 'citta'], row)) for row in cursor.fetchall()]
+    conn.close()
+    return sedi_aggiuntive
+
+def get_all_trainers_for_sede(sede_id):
+    """Restituisce tutti i trainer associati a una sede (principale + aggiuntivi)"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT DISTINCT t.id, t.nome, t.cognome, t.email, t.sede_id,
+               CASE WHEN t.sede_id = %s THEN 'principale' ELSE 'aggiuntiva' END as tipo_sede
+        FROM trainer t
+        LEFT JOIN trainer_sedi ts ON t.id = ts.trainer_id
+        WHERE t.sede_id = %s OR ts.sede_id = %s
+        ORDER BY t.nome, t.cognome
+    ''', (sede_id, sede_id, sede_id))
+    
+    trainers = []
+    for row in cursor.fetchall():
+        trainers.append({
+            'id': row[0],
+            'nome': row[1],
+            'cognome': row[2],
+            'email': row[3],
+            'sede_id': row[4],
+            'tipo_sede': row[5]
+        })
+    
+    conn.close()
+    return trainers
+
+def get_trainer_by_id(trainer_id):
+    """Recupera un trainer per ID"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM trainer WHERE id = %s', (trainer_id,))
+    row = cursor.fetchone()
+    columns = [desc[0] for desc in cursor.description]
+    conn.close()
+    if row:
+        return dict(zip(columns, row))
+    return None
+
+def sposta_societa(societa_id, nuovo_area_manager_id):
+    """Sposta una società sotto un nuovo area manager"""
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute('''
+            UPDATE societa
+            SET area_manager_id = %s
+            WHERE id = %s
+        ''', (nuovo_area_manager_id, societa_id))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Errore durante lo spostamento della società: {e}")
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
+
+def sposta_sede(sede_id, nuova_societa_id):
+    """Sposta una sede sotto una nuova società"""
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute('''
+            UPDATE sede
+            SET societa_id = %s
+            WHERE id = %s
+        ''', (nuova_societa_id, sede_id))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Errore durante lo spostamento della sede: {e}")
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
+
+def sposta_trainer(trainer_id, nuova_sede_id):
+    """Sposta un trainer sotto una nuova sede"""
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        # Aggiorna la sede principale del trainer
+        cursor.execute('''
+            UPDATE trainer
+            SET sede_id = %s
+            WHERE id = %s
+        ''', (nuova_sede_id, trainer_id))
+        
+        # Rimuovi tutte le sedi aggiuntive del trainer
+        cursor.execute('''
+            DELETE FROM trainer_sedi
+            WHERE trainer_id = %s
+        ''', (trainer_id,))
+        
+        # Aggiungi la nuova sede principale come associazione
+        cursor.execute('''
+            INSERT INTO trainer_sedi (trainer_id, sede_id)
+            VALUES (%s, %s)
+        ''', (trainer_id, nuova_sede_id))
+        
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Errore durante lo spostamento del trainer: {e}")
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
+
+def get_spostamenti_recenti():
+    """Recupera gli spostamenti recenti dalla tabella eventi"""
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT *
+            FROM eventi
+            WHERE azione IN ('sposta società', 'sposta sede', 'sposta trainer')
+            ORDER BY data_evento DESC
+            LIMIT 20
+        ''')
+        rows = cursor.fetchall()
+        columns = [desc[0] for desc in cursor.description]
+        eventi = []
+        for row in rows:
+            evento = dict(zip(columns, row))
+            # Estrai informazioni dai dettagli usando una logica più precisa
+            dettagli = evento['dettagli']
+            
+            if 'Società' in dettagli and 'spostata da' in dettagli:
+                # Esempio: "Società 'Nome Società' spostata da 'Nome AreaManager1' a 'Nome AreaManager2'"
+                parts = dettagli.split("'")
+                if len(parts) >= 6:
+                    evento['elemento_nome'] = parts[1]  # Nome della società
+                    evento['origine'] = parts[3]       # Nome area manager origine
+                    evento['destinazione'] = parts[5]  # Nome area manager destinazione
+                else:
+                    evento['elemento_nome'] = 'N/A'
+                    evento['origine'] = 'N/A'
+                    evento['destinazione'] = 'N/A'
+            elif 'Sede' in dettagli and 'spostata da' in dettagli:
+                # Esempio: "Sede 'Nome Sede' spostata da 'Nome Società1' a 'Nome Società2'"
+                parts = dettagli.split("'")
+                if len(parts) >= 6:
+                    evento['elemento_nome'] = parts[1]  # Nome della sede
+                    evento['origine'] = parts[3]       # Nome società origine
+                    evento['destinazione'] = parts[5]  # Nome società destinazione
+                else:
+                    evento['elemento_nome'] = 'N/A'
+                    evento['origine'] = 'N/A'
+                    evento['destinazione'] = 'N/A'
+            elif 'Trainer' in dettagli and 'spostato da' in dettagli:
+                # Esempio: "Trainer 'Nome Cognome' spostato da 'Nome Sede1' a 'Nome Sede2'"
+                parts = dettagli.split("'")
+                if len(parts) >= 6:
+                    evento['elemento_nome'] = parts[1]  # Nome del trainer
+                    evento['origine'] = parts[3]       # Nome sede origine
+                    evento['destinazione'] = parts[5]  # Nome sede destinazione
+                else:
+                    evento['elemento_nome'] = 'N/A'
+                    evento['origine'] = 'N/A'
+                    evento['destinazione'] = 'N/A'
+            else:
+                # Fallback per casi non previsti
+                evento['elemento_nome'] = 'N/A'
+                evento['origine'] = 'N/A'
+                evento['destinazione'] = 'N/A'
+            
+            eventi.append(evento)
+        return eventi
+    finally:
+        conn.close()
+
+def get_societa_by_id(societa_id):
+    """Recupera una società per ID"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM societa WHERE id = %s', (societa_id,))
+    row = cursor.fetchone()
+    columns = [desc[0] for desc in cursor.description]
+    conn.close()
+    if row:
+        return dict(zip(columns, row))
+    return None
+
+def get_area_manager_by_societa_id(societa_id):
+    """Recupera l'area manager di una società"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT am.* FROM area_manager am
+        JOIN societa s ON am.id = s.area_manager_id
+        WHERE s.id = %s
+    ''', (societa_id,))
+    row = cursor.fetchone()
+    columns = [desc[0] for desc in cursor.description]
+    conn.close()
+    if row:
+        return dict(zip(columns, row))
+    return None
+
+def get_area_manager_by_id(area_manager_id):
+    """Recupera un area manager per ID"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM area_manager WHERE id = %s', (area_manager_id,))
+    row = cursor.fetchone()
+    columns = [desc[0] for desc in cursor.description]
+    conn.close()
+    if row:
+        return dict(zip(columns, row))
+    return None
+
+def get_sede_by_id(sede_id):
+    """Recupera una sede per ID"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM sede WHERE id = %s', (sede_id,))
+    row = cursor.fetchone()
+    columns = [desc[0] for desc in cursor.description]
+    conn.close()
+    if row:
+        return dict(zip(columns, row))
+    return None
+
+def get_societa_by_sede_id(sede_id):
+    """Recupera la società di una sede"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT s.* FROM societa s
+        JOIN sede se ON s.id = se.societa_id
+        WHERE se.id = %s
+    ''', (sede_id,))
+    row = cursor.fetchone()
+    columns = [desc[0] for desc in cursor.description]
+    conn.close()
+    if row:
+        return dict(zip(columns, row))
+    return None
+
+def get_sede_by_trainer_id(trainer_id):
+    """Recupera la sede di un trainer"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT s.* FROM sede s
+        JOIN trainer t ON s.id = t.sede_id
+        WHERE t.id = %s
+    ''', (trainer_id,))
+    row = cursor.fetchone()
+    columns = [desc[0] for desc in cursor.description]
+    conn.close()
+    if row:
+        return dict(zip(columns, row))
+    return None
+
